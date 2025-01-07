@@ -1,0 +1,19 @@
+{
+    "name": "laravel/cashier-chargebee",
+    "description": "Laravel Cashier for Chargebee provides an expressive, fluent interface to Chargebee's subscription billing services.",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Laravel\\CashierChargebee\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Padraig Nolan",
+            "email": "padraig@threadable.io"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {}
+}
