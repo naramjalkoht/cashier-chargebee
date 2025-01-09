@@ -8,10 +8,21 @@
             "Laravel\\CashierChargebee\\": "src/"
         }
     },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Laravel\\CashierChargebee\\CashierServiceProvider"
+            ]
+        }
+    },
     "authors": [
         {
             "name": "Padraig Nolan",
             "email": "padraig@threadable.io"
+        },
+        {
+            "name": "Anna Karykowska",
+            "email": "anna@threadable.io"
         }
     ],
     "minimum-stability": "dev",
