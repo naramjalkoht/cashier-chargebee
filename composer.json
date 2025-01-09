@@ -26,5 +26,9 @@
         }
     ],
     "minimum-stability": "dev",
-    "require": {}
+    "prefer-stable": true,
+    "require": {
+        "illuminate/support": "^11.37",
+        "illuminate/database": "^11.37"
+    }
 }
