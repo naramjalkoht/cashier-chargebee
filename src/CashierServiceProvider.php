@@ -34,7 +34,7 @@ class CashierServiceProvider extends ServiceProvider
     protected function registerPublishing()
     {
         if ($this->app->runningInConsole()) {
-            $this->publishes([
+            $this->publishesMigrations([
                 __DIR__.'/../database/migrations' => $this->app->databasePath('migrations'),
             ], 'cashier-migrations');
         }
