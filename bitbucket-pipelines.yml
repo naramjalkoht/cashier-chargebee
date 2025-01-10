@@ -1,3 +1,11 @@
+clone:
+  depth: full
+
+options:
+  docker: true
+
+image: threadable/linuxnginxphp_ci_20.04:2024.12.01
+
 definitions:
   services:
     mysql:
@@ -12,25 +20,14 @@ pipelines:
   branches:
     "devops":
       - step:
-          name: Run Tests - PHP 8.4, Laravel 11
-          image: php:8.4
+          name: Run Tests - PHP 8.3, Laravel 11
           services:
             - mysql
           caches:
             - composer
           script:
             - export LARAVEL_VERSION=11
-            - apt-get update && apt-get install -y \
-              git \
-              unzip \
-              zip \
-              curl \
-              ca-certificates \
-              lsb-release \
-              apt-transport-https \
-              gnupg \
-              software-properties-common
-            - apt-get update && apt-get install -y libxml2-dev libcurl4-openssl-dev libpng-dev libjpeg-dev libfreetype6-dev
+            - update-alternatives --set php /usr/bin/php8.3
             - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
             - vendor/bin/phpunit --display-deprecations --fail-on-deprecation 
