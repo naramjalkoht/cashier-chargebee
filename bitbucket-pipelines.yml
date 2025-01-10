@@ -31,3 +31,8 @@ pipelines:
             - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
             - vendor/bin/phpunit --display-deprecations --fail-on-deprecation 
+    "qa":
+      - step:
+          name: Composer Deploy
+          script:
+            - composer update mirrors
