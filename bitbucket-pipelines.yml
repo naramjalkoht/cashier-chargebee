@@ -7,10 +7,8 @@ definitions:
         MYSQL_DATABASE: app
         MYSQL_USER: user
         MYSQL_PASSWORD: password
-
-
-run-tests: &run-tests
-  - step:
+  steps:
+    run-tests: &run-tests
       name: Run tests
       caches:
         - composer
@@ -21,6 +19,7 @@ run-tests: &run-tests
         - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
         - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^${LARAVEL_VERSION}"
         - vendor/bin/phpunit --display-deprecations --fail-on-deprecation 
+
 pipelines:
   branches:
     "devops":
