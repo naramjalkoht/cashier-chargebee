@@ -1,3 +1,20 @@
+definitions:
+  services:
+    mysql:
+      image: mysql:5.7
+      environment:
+        MYSQL_ROOT_PASSWORD: root
+        MYSQL_DATABASE: app
+        MYSQL_USER: user
+        MYSQL_PASSWORD: password
+
+
+ reusableSteps:
+  - &php-setup apt-get update && apt-get install -y libxml2-dev libcurl4-openssl-dev libpng-dev libjpeg-dev libfreetype6-dev
+  - &composer-setup curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+  - &composer-update composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^${LARAVEL_VERSION}"
+  - &run-tests vendor/bin/phpunit --display-deprecations --fail-on-deprecation 
+
 pipelines:
   branches:
     devops:
@@ -10,6 +27,9 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=10
+            - *php-setup
+            - *composer-setup
+            - *composer-update
             - *run-tests
 
       - step:
@@ -21,6 +41,9 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=10
+            - *php-setup
+            - *composer-setup
+            - *composer-update
             - *run-tests
 
       - step:
@@ -32,8 +55,10 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=10
+            - *php-setup
+            - *composer-setup
+            - *composer-update
             - *run-tests
-
       - step:
           name: Run Tests - PHP 8.4, Laravel 10
           image: php:8.4
@@ -43,8 +68,10 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=10
+            - *php-setup
+            - *composer-setup
+            - *composer-update
             - *run-tests
-
       - step:
           name: Run Tests - PHP 8.1, Laravel 11
           image: php:8.1
@@ -54,8 +81,10 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=11
+            - *php-setup
+            - *composer-setup
+            - *composer-update
             - *run-tests
-
       - step:
           name: Run Tests - PHP 8.2, Laravel 11
           image: php:8.2
@@ -65,8 +94,10 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=11
+            - *php-setup
+            - *composer-setup
+            - *composer-update
             - *run-tests
-
       - step:
           name: Run Tests - PHP 8.3, Laravel 11
           image: php:8.3
@@ -76,8 +107,10 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=11
+            - *php-setup
+            - *composer-setup
+            - *composer-update
             - *run-tests
-
       - step:
           name: Run Tests - PHP 8.4, Laravel 11
           image: php:8.4
@@ -87,23 +120,7 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=11
+            - *php-setup
+            - *composer-setup
+            - *composer-update
             - *run-tests
-
-definitions:
-  services:
-    mysql:
-      image: mysql:5.7
-      environment:
-        MYSQL_ROOT_PASSWORD: root
-        MYSQL_DATABASE: app
-        MYSQL_USER: user
-        MYSQL_PASSWORD: password
-  caches:
-    composer: ~/.composer/cache
-  steps:
-    - step: &run-tests
-        script:
-          - apt-get update && apt-get install -y libxml2-dev libcurl4-openssl-dev libpng-dev libjpeg-dev libfreetype6-dev
-          - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-          - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^${LARAVEL_VERSION}"
-          - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
