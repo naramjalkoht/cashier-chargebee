@@ -1,6 +1,6 @@
 pipelines:
   branches:
-    "{feature/*,bugfix/*,devops}":
+    devops:
       - step:
           name: Run Tests - PHP 8.1, Laravel 10
           image: php:8.1
