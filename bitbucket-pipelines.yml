@@ -20,7 +20,7 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=11
-              apt-get update && apt-get install -y \
+            - apt-get update && apt-get install -y \
               git \
               unzip \
               zip \
