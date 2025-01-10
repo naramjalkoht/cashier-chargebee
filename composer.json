@@ -25,10 +25,19 @@
             "email": "anna@threadable.io"
         }
     ],
-    "minimum-stability": "dev",
-    "prefer-stable": true,
     "require": {
         "illuminate/support": "^11.37",
         "illuminate/database": "^11.37"
-    }
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.18|^9.0",
+        "phpunit/phpunit": "^10.4"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Laravel\\CashierChargebee\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }
