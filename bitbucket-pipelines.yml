@@ -13,8 +13,19 @@ definitions:
   - &php-setup apt-get update && apt-get install -y libxml2-dev libcurl4-openssl-dev libpng-dev libjpeg-dev libfreetype6-dev
   - &composer-setup curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
   - &composer-update composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^${LARAVEL_VERSION}"
-  - &run-tests vendor/bin/phpunit --display-deprecations --fail-on-deprecation 
 
+run-tests: &run-tests
+  - step:
+      name: Run tests
+      caches:
+        - composer
+      services:
+        - mysql
+      script:
+        - *php-setup
+        - *composer-setup
+        - *composer-update
+        - vendor/bin/phpunit --display-deprecations --fail-on-deprecation 
 pipelines:
   branches:
     devops:
@@ -55,9 +66,6 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=10
-            - *php-setup
-            - *composer-setup
-            - *composer-update
             - *run-tests
       - step:
           name: Run Tests - PHP 8.4, Laravel 10
@@ -68,9 +76,6 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=10
-            - *php-setup
-            - *composer-setup
-            - *composer-update
             - *run-tests
       - step:
           name: Run Tests - PHP 8.1, Laravel 11
@@ -81,9 +86,6 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=11
-            - *php-setup
-            - *composer-setup
-            - *composer-update
             - *run-tests
       - step:
           name: Run Tests - PHP 8.2, Laravel 11
@@ -94,9 +96,6 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=11
-            - *php-setup
-            - *composer-setup
-            - *composer-update
             - *run-tests
       - step:
           name: Run Tests - PHP 8.3, Laravel 11
@@ -107,9 +106,6 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=11
-            - *php-setup
-            - *composer-setup
-            - *composer-update
             - *run-tests
       - step:
           name: Run Tests - PHP 8.4, Laravel 11
@@ -120,7 +116,4 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=11
-            - *php-setup
-            - *composer-setup
-            - *composer-update
             - *run-tests
