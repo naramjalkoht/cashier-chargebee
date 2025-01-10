@@ -20,6 +20,16 @@ pipelines:
             - composer
           script:
             - export LARAVEL_VERSION=11
+              apt-get update && apt-get install -y \
+              git \
+              unzip \
+              zip \
+              curl \
+              ca-certificates \
+              lsb-release \
+              apt-transport-https \
+              gnupg \
+              software-properties-common
             - apt-get update && apt-get install -y libxml2-dev libcurl4-openssl-dev libpng-dev libjpeg-dev libfreetype6-dev
             - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
