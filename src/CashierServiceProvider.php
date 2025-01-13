@@ -34,11 +34,9 @@ class CashierServiceProvider extends ServiceProvider
     protected function registerPublishing()
     {
         if ($this->app->runningInConsole()) {
-
             $publishesMigrationsMethod = method_exists($this, 'publishesMigrations')
             ? 'publishesMigrations'
             : 'publishes';
-
 
             $this->{$publishesMigrationsMethod}([
                 __DIR__.'/../database/migrations' => $this->app->databasePath('migrations'),
