@@ -8,6 +8,13 @@
             "Laravel\\CashierChargebee\\": "src/"
         }
     },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Laravel\\CashierChargebee\\CashierServiceProvider"
+            ]
+        }
+    },
     "authors": [
         {
             "name": "Padraig Nolan",
