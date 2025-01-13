@@ -25,7 +25,7 @@ pipelines:
           script:
             - COMMIT_MSG="$(git log -1 --pretty=format:%s)"
             - echo $COMMIT_MSG
-            - if [[ $COMMIT_MSG != "[CI]"* ]]; then exit 1 fi
+            - if [[ $COMMIT_MSG != "[CI]"* ]]; then exit 1; fi
 
       - step:
           name: Submit to CI/CD
