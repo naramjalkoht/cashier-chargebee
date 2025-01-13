@@ -4,6 +4,7 @@
 
 - [Installation](#installation)
 - [Configuration](#configuration)
+    - [Billable Model](#billable-model)
     - [Chargebee API](#chargebee-api)
 
 <a name="installation"></a>
@@ -36,6 +37,20 @@ php artisan vendor:publish --tag="cashier-config"
 
 <a name="configuration"></a>
 ## Configuration
+
+<a name="billable-model"></a>
+### Billable Model
+
+Before using Cashier, add the `Billable` trait to your billable model definition. Typically, this will be the `App\Models\User` model. This trait provides various methods to allow you to perform common billing tasks, such as creating subscriptions, applying coupons, and updating payment method information:
+
+```php
+use Laravel\CashierChargebee\Billable;
+
+class User extends Authenticatable
+{
+    use Billable;
+}
+```
 
 <a name="chargebee-api"></a>
 ### Chargebee API
