@@ -23,7 +23,7 @@ pipelines:
       - step:
           name: Submit to CI/CD
           script:
-            - if [[ $BITBUCKET_BRANCH =~ ([A-Z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 1; fi
+            - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 1; fi
             - pipe: atlassian/jira-transition:0.5.1
               variables:
                 JIRA_BASE_URL: $JIRA_BASE_URL
@@ -31,6 +31,7 @@ pipelines:
                 JIRA_API_TOKEN: $JIRA_API_TOKEN
                 ISSUE: $JIRA_ISSUE
                 TRANSITION: 'Submit to CI/CD'
+          allow_failure: true
 
       - step: 
           name: Static Analysis
@@ -38,6 +39,7 @@ pipelines:
             - composer
           script:
             - update-alternatives --set php /usr/bin/php8.4
+            - apt install -y php8.4-common php8.4-{bcmath,bz2,curl,gd,gmp,intl,mbstring,opcache,readline,xml,zip,xdebug,dom}
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
             - vendor/bin/phpstan --display-deprecations --fail-on-deprecation
       
@@ -113,6 +115,17 @@ pipelines:
                 SONAR_SCANNER_OPTS: -Xmx2048m
             - pipe: sonarsource/sonarcloud-quality-gate:0.1.6
 
+      - step:
+          name: Failed CI/CD
+          script:
+            - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 1; fi
+            - pipe: atlassian/jira-transition:0.5.1
+              variables:
+                JIRA_BASE_URL: $JIRA_BASE_URL
+                JIRA_USER_EMAIL: $JIRA_USER_EMAIL
+                JIRA_API_TOKEN: $JIRA_API_TOKEN
+                ISSUE: $JIRA_ISSUE
+                TRANSITION: 'Failed CI'
     "qa":
       - step:
           name: Composer Deploy
