@@ -23,6 +23,7 @@ pipelines:
       - step:
           name: Submit to CI/CD
           script:
+            - set +e
             - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 1; fi
             - pipe: atlassian/jira-transition:0.5.1
               variables:
@@ -31,7 +32,7 @@ pipelines:
                 JIRA_API_TOKEN: $JIRA_API_TOKEN
                 ISSUE: $JIRA_ISSUE
                 TRANSITION: 'Submit to CI/CD'
-          allow_failure: true
+            - set -e
 
       - step: 
           name: Static Analysis
@@ -116,7 +117,7 @@ pipelines:
             - pipe: sonarsource/sonarcloud-quality-gate:0.1.6
 
       - step:
-          name: Failed CI/CD
+          name: Ready for QA
           script:
             - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 1; fi
             - pipe: atlassian/jira-transition:0.5.1
@@ -125,8 +126,7 @@ pipelines:
                 JIRA_USER_EMAIL: $JIRA_USER_EMAIL
                 JIRA_API_TOKEN: $JIRA_API_TOKEN
                 ISSUE: $JIRA_ISSUE
-                TRANSITION: 'Failed CI'
-          when: on_failure
+                TRANSITION: 'Passed CI'
     "qa":
       - step:
           name: Composer Deploy
