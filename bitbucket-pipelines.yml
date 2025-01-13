@@ -30,7 +30,7 @@ pipelines:
                 JIRA_USER_EMAIL: $JIRA_USER_EMAIL
                 JIRA_API_TOKEN: $JIRA_API_TOKEN
                 ISSUE: $JIRA_ISSUE
-                TRANSITION: 'Submit to CI/CD'
+                TRANSITION: 'Submit to CI/CD' || echo "Jira transition failed, continuing pipeline..."
           allow_failure: true
 
       - step: 
