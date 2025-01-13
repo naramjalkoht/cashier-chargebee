@@ -4,3 +4,5 @@ composer.lock
 .phpunit.result.cache
 /junit.xml
 /compose-dev.yaml
+/coverage.xml
+/report

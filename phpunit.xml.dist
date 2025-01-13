@@ -20,4 +20,9 @@
     <logging>
         <junit outputFile="junit.xml"/>
     </logging>
+        <source>
+        <include>
+            <directory>./src</directory>
+        </include>
+    </source>
 </phpunit>

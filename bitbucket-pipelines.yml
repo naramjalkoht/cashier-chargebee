@@ -26,7 +26,6 @@ pipelines:
           caches:
             - composer
           script:
-            - export LARAVEL_VERSION=11
             - update-alternatives --set php /usr/bin/php8.3
             - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
