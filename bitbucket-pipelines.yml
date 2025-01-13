@@ -30,8 +30,6 @@ pipelines:
             - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
             - vendor/bin/phpunit --display-deprecations --fail-on-deprecation 
-            - sed -i 's@'$BITBUCKET_WORKSPACE'@/bitbucket/workspace/@g' src/coverage.xml
-            - sed -i 's@'$BITBUCKET_WORKSPACE'@/bitbucket/workspace/@g' src/junit.xml
             - pipe: sonarsource/sonarcloud-scan:2.0.0
               variables:
                 DEBUG: "true"
