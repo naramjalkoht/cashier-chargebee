@@ -126,6 +126,7 @@ pipelines:
                 JIRA_API_TOKEN: $JIRA_API_TOKEN
                 ISSUE: $JIRA_ISSUE
                 TRANSITION: 'Failed CI'
+          when: on_failure
     "qa":
       - step:
           name: Composer Deploy
