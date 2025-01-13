@@ -215,7 +215,7 @@ pipelines:
             - set -e
 
       - step:
-          name: Create Pull Request to QA
+          name: PR to QA
           script:
             - apt-get update && apt-get install -y jq
             - export PR_TITLE=$BITBUCKET_BRANCH
@@ -231,7 +231,7 @@ pipelines:
                       "branch": { "name": "qa" }
                     }
                   }'
-              "https://api.bitbucket.org/2.0/repositories/$BITBUCKET_REPO_FULL_NAME/pullrequests"
+              "https://api.bitbucket.org/2.0/repositories/${BITBUCKET_REPO_FULL_NAME}/pullrequests"
             - echo "Pull request created (or already exists)."
     "qa":
       - step:
