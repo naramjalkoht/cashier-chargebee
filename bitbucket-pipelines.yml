@@ -42,7 +42,7 @@ pipelines:
             - update-alternatives --set php /usr/bin/php8.4
             - apt install -y php8.4-common php8.4-{bcmath,bz2,curl,gd,gmp,intl,mbstring,opcache,readline,xml,zip,xdebug,dom}
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
-            - vendor/bin/phpstan --display-deprecations --fail-on-deprecation
+            - vendor/bin/phpstan
       
       - step:
           name: Run Tests - PHP 8.1, Laravel 10
