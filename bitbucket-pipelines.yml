@@ -16,48 +16,106 @@ definitions:
         MYSQL_USER: user
         MYSQL_PASSWORD: password
 
-php84Laravel11: &php83Laravel11
-  - step:
-      name: Run Tests - PHP 8.3, Laravel 11
-      services:
-        - mysql
-      caches:
-        - composer
-      script:
-        - update-alternatives --set php /usr/bin/php8.3
-        - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-        - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
-        - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
+  steps:
+    setup-composer: &setup-composer
+      - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-php84Laravel11: &php84Laravel11
-  - step:
-      name: Run Tests - PHP 8.4, Laravel 11
-      services:
-        - mysql
-      caches:
-        - composer
-      script:
-        - update-alternatives --set php /usr/bin/php8.4
-        - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-        - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
-        - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
-        - pipe: sonarsource/sonarcloud-scan:2.0.0
-          variables:
-            DEBUG: "true"
-            SONAR_SCANNER_OPTS: -Xmx2048m
-        - pipe: sonarsource/sonarcloud-quality-gate:0.1.6
+    update-composer: &update-composer
+      - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^<LaravelVersion>"
+      - php -v
+      - composer --version
+
+    phpunit-tests: &phpunit-tests
+      - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
+
+    sonarcloud-scan: &sonarcloud-scan
+      - pipe: sonarsource/sonarcloud-scan:2.0.0
+        variables:
+          DEBUG: "true"
+          SONAR_SCANNER_OPTS: -Xmx2048m
+      - pipe: sonarsource/sonarcloud-quality-gate:0.1.6
 
 pipelines:
   branches:
     "{feature/*,bugfix/*,devops}":
-      - <<: *php83Laravel11
-      - <<: *php84Laravel11
-      
+      - step:
+          name: Run Tests - PHP 8.1, Laravel 10
+          services:
+            - mysql
+          caches:
+            - composer
+          script:
+            - update-alternatives --set php /usr/bin/php8.1
+            - *setup-composer
+            - *update-composer
+            - *phpunit-tests
+
+      - step:
+          name: Run Tests - PHP 8.2, Laravel 10
+          services:
+            - mysql
+          caches:
+            - composer
+          script:
+            - update-alternatives --set php /usr/bin/php8.2
+            - *setup-composer
+            - *update-composer
+            - *phpunit-tests
+
+      - step:
+          name: Run Tests - PHP 8.3, Laravel 10
+          services:
+            - mysql
+          caches:
+            - composer
+          script:
+            - update-alternatives --set php /usr/bin/php8.3
+            - *setup-composer
+            - *update-composer
+            - *phpunit-tests
+
+      - step:
+          name: Run Tests - PHP 8.2, Laravel 11
+          services:
+            - mysql
+          caches:
+            - composer
+          script:
+            - update-alternatives --set php /usr/bin/php8.2
+            - *setup-composer
+            - *update-composer
+            - *phpunit-tests
+
+      - step:
+          name: Run Tests - PHP 8.3, Laravel 11
+          services:
+            - mysql
+          caches:
+            - composer
+          script:
+            - update-alternatives --set php /usr/bin/php8.3
+            - *setup-composer
+            - *update-composer
+            - *phpunit-tests
+
+      - step:
+          name: Run Tests - PHP 8.4, Laravel 11
+          services:
+            - mysql
+          caches:
+            - composer
+          script:
+            - update-alternatives --set php /usr/bin/php8.4
+            - *setup-composer
+            - *update-composer
+            - *phpunit-tests
+            - *sonarcloud-scan
+
     "qa":
       - step:
           name: Composer Deploy
           script:
             - update-alternatives --set php /usr/bin/php8.3
-            - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+            - *setup-composer
             - composer update --prefer-dist --no-interaction --no-progress
             - composer update mirrors
