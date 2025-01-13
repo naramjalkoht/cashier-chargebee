@@ -27,9 +27,7 @@ pipelines:
             - echo "Branch Name: $BRANCH_NAME"
             - if [[ $BRANCH_NAME =~ ([A-Z]+-[0-9]+) ]]; then
                 export JIRA_ISSUE=${BASH_REMATCH[1]};
-                echo "Jira Issue Key: $JIRA_ISSUE";
               else
-                echo "No Jira Issue Key found in branch name: $BRANCH_NAME";
                 exit 1;
               fi
             - pipe: atlassian/jira-transition:0.5.1
