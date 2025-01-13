@@ -23,7 +23,6 @@ class CashierServiceProvider extends ServiceProvider
      */
     public function register()
     {
-
     }
 
     /**
