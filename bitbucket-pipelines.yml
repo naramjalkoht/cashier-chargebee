@@ -24,7 +24,7 @@ pipelines:
           name: Submit to CI/CD
           script:
             - set +e
-            - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 1; fi
+            - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
             - pipe: atlassian/jira-transition:0.5.1
               variables:
                 JIRA_BASE_URL: $JIRA_BASE_URL
@@ -43,6 +43,18 @@ pipelines:
             - apt install -y php8.4-common php8.4-{bcmath,bz2,curl,gd,gmp,intl,mbstring,opcache,readline,xml,zip,xdebug,dom}
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
             - vendor/bin/phpstan
+          after_script:
+            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; else echo "Step failed"; fi
+                        - set +e
+            - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
+            - pipe: atlassian/jira-transition:0.5.1
+              variables:
+                JIRA_BASE_URL: $JIRA_BASE_URL
+                JIRA_USER_EMAIL: $JIRA_USER_EMAIL
+                JIRA_API_TOKEN: $JIRA_API_TOKEN
+                ISSUE: $JIRA_ISSUE
+                TRANSITION: 'Failed CI'
+            - set -e
       
       - step:
           name: Run Tests - PHP 8.1, Laravel 10
