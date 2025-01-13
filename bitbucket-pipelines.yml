@@ -45,7 +45,7 @@ pipelines:
             - vendor/bin/phpstan
           after_script:
             - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; else echo "Step failed"; fi
-                        - set +e
+            - set +e
             - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
             - pipe: atlassian/jira-transition:0.5.1
               variables:
@@ -66,6 +66,18 @@ pipelines:
             - update-alternatives --set php /usr/bin/php8.1
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^10"
             - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
+          after_script:
+            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; else echo "Step failed"; fi
+            - set +e
+            - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
+            - pipe: atlassian/jira-transition:0.5.1
+              variables:
+                JIRA_BASE_URL: $JIRA_BASE_URL
+                JIRA_USER_EMAIL: $JIRA_USER_EMAIL
+                JIRA_API_TOKEN: $JIRA_API_TOKEN
+                ISSUE: $JIRA_ISSUE
+                TRANSITION: 'Failed CI'
+            - set -e
 
       - step:
           name: Run Tests - PHP 8.2, Laravel 10
@@ -77,6 +89,18 @@ pipelines:
             - update-alternatives --set php /usr/bin/php8.2
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^10"
             - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
+          after_script:
+            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; else echo "Step failed"; fi
+            - set +e
+            - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
+            - pipe: atlassian/jira-transition:0.5.1
+              variables:
+                JIRA_BASE_URL: $JIRA_BASE_URL
+                JIRA_USER_EMAIL: $JIRA_USER_EMAIL
+                JIRA_API_TOKEN: $JIRA_API_TOKEN
+                ISSUE: $JIRA_ISSUE
+                TRANSITION: 'Failed CI'
+            - set -e
 
       - step:
           name: Run Tests - PHP 8.3, Laravel 10
@@ -88,6 +112,18 @@ pipelines:
             - update-alternatives --set php /usr/bin/php8.3
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^10"
             - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
+          after_script:
+            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; else echo "Step failed"; fi
+            - set +e
+            - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
+            - pipe: atlassian/jira-transition:0.5.1
+              variables:
+                JIRA_BASE_URL: $JIRA_BASE_URL
+                JIRA_USER_EMAIL: $JIRA_USER_EMAIL
+                JIRA_API_TOKEN: $JIRA_API_TOKEN
+                ISSUE: $JIRA_ISSUE
+                TRANSITION: 'Failed CI'
+            - set -e
 
       - step:
           name: Run Tests - PHP 8.2, Laravel 11
@@ -99,6 +135,18 @@ pipelines:
             - update-alternatives --set php /usr/bin/php8.2
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
             - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
+          after_script:
+            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; else echo "Step failed"; fi
+            - set +e
+            - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
+            - pipe: atlassian/jira-transition:0.5.1
+              variables:
+                JIRA_BASE_URL: $JIRA_BASE_URL
+                JIRA_USER_EMAIL: $JIRA_USER_EMAIL
+                JIRA_API_TOKEN: $JIRA_API_TOKEN
+                ISSUE: $JIRA_ISSUE
+                TRANSITION: 'Failed CI'
+            - set -e
 
       - step:
           name: Run Tests - PHP 8.3, Laravel 11
@@ -110,6 +158,18 @@ pipelines:
             - update-alternatives --set php /usr/bin/php8.3
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
             - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
+          after_script:
+            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; else echo "Step failed"; fi
+            - set +e
+            - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
+            - pipe: atlassian/jira-transition:0.5.1
+              variables:
+                JIRA_BASE_URL: $JIRA_BASE_URL
+                JIRA_USER_EMAIL: $JIRA_USER_EMAIL
+                JIRA_API_TOKEN: $JIRA_API_TOKEN
+                ISSUE: $JIRA_ISSUE
+                TRANSITION: 'Failed CI'
+            - set -e
 
       - step:
           name: Run Tests - PHP 8.4, Laravel 11 & Code Coverage
@@ -127,10 +187,23 @@ pipelines:
                 DEBUG: "true"
                 SONAR_SCANNER_OPTS: -Xmx2048m
             - pipe: sonarsource/sonarcloud-quality-gate:0.1.6
+          after_script:
+            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; else echo "Step failed"; fi
+            - set +e
+            - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
+            - pipe: atlassian/jira-transition:0.5.1
+              variables:
+                JIRA_BASE_URL: $JIRA_BASE_URL
+                JIRA_USER_EMAIL: $JIRA_USER_EMAIL
+                JIRA_API_TOKEN: $JIRA_API_TOKEN
+                ISSUE: $JIRA_ISSUE
+                TRANSITION: 'Failed CI'
+            - set -e
 
       - step:
           name: Ready for QA
           script:
+            - set +e
             - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 1; fi
             - pipe: atlassian/jira-transition:0.5.1
               variables:
@@ -139,6 +212,7 @@ pipelines:
                 JIRA_API_TOKEN: $JIRA_API_TOKEN
                 ISSUE: $JIRA_ISSUE
                 TRANSITION: 'Passed CI'
+            - set -e
     "qa":
       - step:
           name: Composer Deploy
