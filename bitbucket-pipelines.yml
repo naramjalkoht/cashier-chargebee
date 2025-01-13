@@ -50,7 +50,7 @@ pipelines:
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
             - vendor/bin/phpstan
           after-script:
-            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; else echo "Step failed"; fi
+            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; fi
             - set +e
             - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
             - pipe: atlassian/jira-transition:0.5.1
@@ -73,7 +73,7 @@ pipelines:
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^10"
             - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
           after-script:
-            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; else echo "Step failed"; fi
+            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; fi
             - set +e
             - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
             - pipe: atlassian/jira-transition:0.5.1
@@ -96,7 +96,7 @@ pipelines:
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^10"
             - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
           after-script:
-            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; else echo "Step failed"; fi
+            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; fi
             - set +e
             - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
             - pipe: atlassian/jira-transition:0.5.1
@@ -119,7 +119,7 @@ pipelines:
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^10"
             - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
           after-script:
-            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; else echo "Step failed"; fi
+            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; fi
             - set +e
             - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
             - pipe: atlassian/jira-transition:0.5.1
@@ -142,7 +142,7 @@ pipelines:
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
             - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
           after-script:
-            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; else echo "Step failed"; fi
+            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; fi
             - set +e
             - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
             - pipe: atlassian/jira-transition:0.5.1
@@ -165,7 +165,7 @@ pipelines:
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
             - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
           after-script:
-            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; else echo "Step failed"; fi
+            - if [[ BITBUCKET_EXIT_CODE -eq 0 ]]; then exit 0; fi
             - set +e
             - if [[ $BITBUCKET_BRANCH =~ ([A-Za-z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 0; fi
             - pipe: atlassian/jira-transition:0.5.1
