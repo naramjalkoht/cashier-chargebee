@@ -4,7 +4,7 @@ clone:
 options:
   docker: true
 
-image: threadable/linuxnginxphp_ci_20.04:2024.12.01
+image: threadable/linuxnginxphp_ci_20.04:2025.01.01
 
 definitions:
   services:
@@ -18,7 +18,7 @@ definitions:
 
 pipelines:
   branches:
-    "devops":
+    "{feature/*,bugfix/*,devops}":
       - step:
           name: Run Tests - PHP 8.3, Laravel 11
           services:
@@ -26,13 +26,19 @@ pipelines:
           caches:
             - composer
           script:
-            - export LARAVEL_VERSION=11
             - update-alternatives --set php /usr/bin/php8.3
             - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
-            - vendor/bin/phpunit --display-deprecations --fail-on-deprecation 
+            - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
+            - vendor/bin/phpstan --verbose 
+            - pipe: sonarsource/sonarcloud-scan:2.0.0
+              variables:
+                DEBUG: "true"
+                SONAR_SCANNER_OPTS: -Xmx2048m
+            - pipe: sonarsource/sonarcloud-quality-gate:0.1.6
     "qa":
       - step:
           name: Composer Deploy
           script:
+            - composer update --prefer-dist --no-interaction --no-progress
             - composer update mirrors
