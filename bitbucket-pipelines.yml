@@ -21,9 +21,9 @@ pipelines:
     "{feature/*,bugfix/*}":
 
       - step:
-          name: Transistion IN CI
+          name: Submit to CI/CD
           script:
-            - if [[ $BITBUCKET_BRANCH =~ ([A-Z]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 1; fi
+            - if [[ $BITBUCKET_BRANCH =~ ([A-Z0-9]+-[0-9]+) ]]; then export JIRA_ISSUE=${BASH_REMATCH[1]}; else exit 1; fi
             - pipe: atlassian/jira-transition:0.5.1
               variables:
                 JIRA_BASE_URL: $JIRA_BASE_URL
