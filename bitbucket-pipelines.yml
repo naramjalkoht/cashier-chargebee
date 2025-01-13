@@ -50,15 +50,9 @@ php84Laravel11: &php84Laravel11
 pipelines:
   branches:
     "{feature/*,bugfix/*,devops}":
-      - step:
-          name: Run Tests - PHP 8.3, Laravel 11
-          services:
-            - mysql
-          caches:
-            - composer
-          script:
-            - <<: *php83Laravel11
-            - <<: *php84Laravel11
+      - <<: *php83Laravel11
+      - <<: *php84Laravel11
+      
     "qa":
       - step:
           name: Composer Deploy
