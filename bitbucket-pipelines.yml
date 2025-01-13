@@ -24,6 +24,7 @@ pipelines:
           name: Check CI Build
           script:
             - COMMIT_MSG="$(git log -1 --pretty=format:%s)"
+            - echo $COMMIT_MSG
             - if [[ $COMMIT_MSG != "[CI]"* ]]; then exit 1 fi
 
       - step:
