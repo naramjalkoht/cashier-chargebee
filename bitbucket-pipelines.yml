@@ -21,10 +21,11 @@ pipelines:
     "{feature/*,bugfix/*}":
 
       - step:
-        name: Check CI Build
-        script:
-          - COMMIT_MSG="$(git log -1 --pretty=format:%s)"
-          - if [[ $COMMIT_MSG != "[CI]"* ]]; then exit 1 fi
+          name: Check CI Build
+          script:
+            - COMMIT_MSG="$(git log -1 --pretty=format:%s)"
+            - if [[ $COMMIT_MSG != "[CI]"* ]]; then exit 1 fi
+
       - step:
           name: Submit to CI/CD
           script:
