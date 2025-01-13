@@ -227,16 +227,20 @@ pipelines:
             - echo "https://api.bitbucket.org/2.0/repositories/${BITBUCKET_REPO_FULL_NAME}/pullrequests"
             - apt-get update && apt-get install -y jq
             - export PR_TITLE=$BITBUCKET_BRANCH
-            - curl -s -X POST -u "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" -H "Content-Type: application/json" -d '{
-                "title": "'"$PR_TITLE"'",
-                "source": {
-                  "branch": { "name": "'"$BITBUCKET_BRANCH"'" }
-                },
-                "destination": {
-                  "branch": { "name": "qa" }
-                }
-              }'
-              "https://api.bitbucket.org/2.0/repositories/${BITBUCKET_REPO_FULL_NAME}/pullrequests"
+            - |
+              curl -s -X POST \
+                -u "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "title": "'"$PR_TITLE"'",
+                  "source": {
+                    "branch": { "name": "'"$BITBUCKET_BRANCH"'" }
+                  },
+                  "destination": {
+                    "branch": { "name": "qa" }
+                  }
+                }' \
+                "https://api.bitbucket.org/2.0/repositories/${BITBUCKET_REPO_FULL_NAME}/pullrequests"
     "qa":
       - step:
           name: Composer Deploy
