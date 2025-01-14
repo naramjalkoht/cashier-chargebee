@@ -245,10 +245,30 @@ pipelines:
                   }
                 }' \
                 "https://api.bitbucket.org/2.0/repositories/${BITBUCKET_REPO_FULL_NAME}/pullrequests"
+
     "qa":
       - step:
           name: Composer Deploy
           script:
             - update-alternatives --set php /usr/bin/php8.4
+            - apt install -y php8.4-common php8.4-{bcmath,bz2,curl,gd,gmp,intl,mbstring,opcache,readline,xml,zip,xdebug,dom}
             - composer update --prefer-dist --no-interaction --no-progress
             - composer update mirrors
+
+    "dev":
+      - step:
+          name: Sonar Cloud
+          services:
+            - mysql
+          caches:
+            - composer
+          script:
+            - update-alternatives --set php /usr/bin/php8.4
+            - apt install -y php8.4-common php8.4-{bcmath,bz2,curl,gd,gmp,intl,mbstring,opcache,readline,xml,zip,xdebug,dom}
+            - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
+            - vendor/bin/phpunit --display-deprecations --fail-on-deprecation
+            - pipe: sonarsource/sonarcloud-scan:2.0.0
+              variables:
+                DEBUG: "true"
+                SONAR_SCANNER_OPTS: -Xmx2048m
+            - pipe: sonarsource/sonarcloud-quality-gate:0.1.6
