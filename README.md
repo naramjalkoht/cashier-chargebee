@@ -3,6 +3,8 @@
 # Laravel Cashier (Chargebee)
 
 - [Installation](#installation)
+- [Configuration](#configuration)
+    - [Billable Model](#billable-model)
 
 <a name="installation"></a>
 ## Installation
@@ -13,6 +15,21 @@ First, install the Cashier package for Chargebee using the Composer package mana
 composer require laravel/cashier-chargebee
 ```
 
+<a name="configuration"></a>
+## Configuration
+
+<a name="billable-model"></a>
+### Billable Model
+
+Before using Cashier, add the `Billable` trait to your billable model definition. Typically, this will be the `App\Models\User` model. This trait provides various methods to allow you to perform common billing tasks, such as creating subscriptions, applying coupons, and updating payment method information:
+```php
+use Laravel\CashierChargebee\Billable;
+
+class User extends Authenticatable
+{
+    use Billable;
+}
+```
 After installing the package, publish Cashier's migrations using the `vendor:publish` Artisan command:
 
 ```shell
