@@ -228,7 +228,7 @@ pipelines:
             - apt-get update && apt-get install -y jq
             - export PR_TITLE=$BITBUCKET_BRANCH
             - |
-              curl -s -X POST \
+              curl -s -X POST
                 -u "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD"
                 -H "Content-Type: application/json"
                 -d '{
