@@ -23,6 +23,19 @@ class CashierServiceProvider extends ServiceProvider
      */
     public function register()
     {
+        $this->configure();
+    }
+
+    /**
+     * Setup the configuration for Cashier.
+     *
+     * @return void
+     */
+    protected function configure()
+    {
+        $this->mergeConfigFrom(
+            __DIR__.'/../config/cashier.php', 'cashier'
+        );
     }
 
     /**
