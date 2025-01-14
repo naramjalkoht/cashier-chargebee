@@ -26,12 +26,14 @@
         }
     ],
     "require": {
-        "illuminate/support": "^11.37",
-        "illuminate/database": "^11.37"
+        "php": "^8.1",
+        "illuminate/support": "^10.0|^11.0",
+        "illuminate/database": "^10.0|^11.0"
     },
     "require-dev": {
         "orchestra/testbench": "^8.18|^9.0",
-        "phpunit/phpunit": "^10.4"
+        "phpunit/phpunit": "^10.4",
+        "phpstan/phpstan": "^1.10"
     },
     "autoload-dev": {
         "psr-4": {
