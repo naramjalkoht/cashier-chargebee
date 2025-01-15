@@ -7,8 +7,8 @@ return [
     | Chargebee API Configuration
     |--------------------------------------------------------------------------
     |
-    | The site name is used to construct the base URL for all Chargebee API 
-    | requests, while the API key authenticates your application when making 
+    | The site name is used to construct the base URL for all Chargebee API
+    | requests, while the API key authenticates your application when making
     | those requests.
     |
     */
