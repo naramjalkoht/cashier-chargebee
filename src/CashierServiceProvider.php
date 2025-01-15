@@ -34,7 +34,7 @@ class CashierServiceProvider extends ServiceProvider
     protected function configure()
     {
         $this->mergeConfigFrom(
-            __DIR__ . '/../config/cashier.php',
+            __DIR__.'/../config/cashier.php',
             'cashier'
         );
     }
@@ -52,11 +52,11 @@ class CashierServiceProvider extends ServiceProvider
                 : 'publishes';
 
             $this->{$publishesMigrationsMethod}([
-                __DIR__ . '/../database/migrations' => $this->app->databasePath('migrations'),
+                __DIR__.'/../database/migrations' => $this->app->databasePath('migrations'),
             ], 'cashier-migrations');
 
             $this->{$publishesMigrationsMethod}([
-                __DIR__ . '/../config/cashier.php' => $this->app->configPath('cashier.php'),
+                __DIR__.'/../config/cashier.php' => $this->app->configPath('cashier.php'),
             ], 'cashier-config');
         }
     }
