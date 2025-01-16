@@ -12,17 +12,17 @@ use NumberFormatter;
 
 class CashierTest extends TestCase
 {
-    public function test_it_can_format_an_amount() : void
+    public function test_it_can_format_an_amount(): void
     {
         $this->assertSame('$10.00', Cashier::formatAmount(1000));
     }
 
-    public function test_it_can_format_an_amount_without_digits() : void
+    public function test_it_can_format_an_amount_without_digits(): void
     {
         $this->assertSame('$10', Cashier::formatAmount(1000, null, null, ['min_fraction_digits' => 0]));
     }
 
-    public function test_it_can_format_an_amount_with_locale_and_currency() : void
+    public function test_it_can_format_an_amount_with_locale_and_currency(): void
     {
         $formatted = Cashier::formatAmount(1000, 'EUR', 'fr_FR');
         $this->assertStringContainsString('10,00', $formatted);
@@ -31,7 +31,7 @@ class CashierTest extends TestCase
 
     public function test_format_currency_using_callback(): void
     {
-        Cashier::formatCurrencyUsing(function(){
+        Cashier::formatCurrencyUsing(function () {
             return $this->formatAmount(1000, 'EUR', 'fr_FR');
         });
         $formatted = Cashier::formatAmount(1000, 'EUR', 'fr_FR');
@@ -55,7 +55,7 @@ class CashierTest extends TestCase
         return $moneyFormatter->format($money);
     }
 
-    public function test_ignore_routes() : void
+    public function test_ignore_routes(): void
     {
         $cashier = new Cashier;
         Cashier::ignoreRoutes();
@@ -63,7 +63,7 @@ class CashierTest extends TestCase
         $this->assertSame(false, $cashier::$registersRoutes);
     }
 
-    public function test_keep_past_subscriptions_active() : void
+    public function test_keep_past_subscriptions_active(): void
     {
         $cashier = new Cashier;
         Cashier::keepPastDueSubscriptionsActive();
@@ -71,7 +71,7 @@ class CashierTest extends TestCase
         $this->assertSame(false, $cashier::$deactivatePastDue);
     }
 
-    public function test_keep_incomplete_subscriptions_active() : void
+    public function test_keep_incomplete_subscriptions_active(): void
     {
         $cashier = new Cashier;
         Cashier::keepIncompleteSubscriptionsActive();
@@ -79,7 +79,7 @@ class CashierTest extends TestCase
         $this->assertSame(false, $cashier::$deactivateIncomplete);
     }
 
-    public function test_use_subscription_model() : void
+    public function test_use_subscription_model(): void
     {
         $model = 'App\Models\Subscription';
         $cashier = new Cashier;
@@ -88,7 +88,7 @@ class CashierTest extends TestCase
         $this->assertSame($model, $cashier::$subscriptionModel);
     }
 
-    public function test_use_subscription_item_model() : void
+    public function test_use_subscription_item_model(): void
     {
         $model = 'App\Models\SubscriptionItem';
         $cashier = new Cashier;
