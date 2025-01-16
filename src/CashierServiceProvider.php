@@ -32,7 +32,7 @@ class CashierServiceProvider extends ServiceProvider
     protected function configure(): void
     {
         $this->mergeConfigFrom(
-            __DIR__ . '/../config/cashier.php',
+            __DIR__.'/../config/cashier.php',
             'cashier'
         );
     }
@@ -44,11 +44,11 @@ class CashierServiceProvider extends ServiceProvider
     {
         if (Cashier::$registersRoutes) {
             Route::group([
-                'prefix'    => config('cashier.path'),
+                'prefix' => config('cashier.path'),
                 'namespace' => 'Laravel\CashierChargebee\Http\Controllers',
-                'as'        => 'cashier.',
+                'as' => 'cashier.',
             ], function () {
-                $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
+                $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
             });
         }
     }
@@ -58,7 +58,7 @@ class CashierServiceProvider extends ServiceProvider
      */
     protected function registerResources(): void
     {
-        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'cashier');
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'cashier');
     }
 
     /**
@@ -72,15 +72,15 @@ class CashierServiceProvider extends ServiceProvider
                 : 'publishes';
 
             $this->{$publishesMigrationsMethod}([
-                __DIR__ . '/../database/migrations' => $this->app->databasePath('migrations'),
+                __DIR__.'/../database/migrations' => $this->app->databasePath('migrations'),
             ], 'cashier-migrations');
 
             $this->publishes([
-                __DIR__ . '/../config/cashier.php' => $this->app->configPath('cashier.php'),
+                __DIR__.'/../config/cashier.php' => $this->app->configPath('cashier.php'),
             ], 'cashier-config');
 
             $this->publishes([
-                __DIR__ . '/../resources/views' => $this->app->resourcePath('views/vendor/cashier'),
+                __DIR__.'/../resources/views' => $this->app->resourcePath('views/vendor/cashier'),
             ], 'cashier-views');
         }
     }

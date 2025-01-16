@@ -3,7 +3,6 @@
 namespace Laravel\CashierChargebee\Tests\Feature;
 
 use ChargeBee\ChargeBee\Models\Customer;
-use Laravel\CashierChargebee\Tests\Feature\FeatureTestCase;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
 
 class CustomerTest extends FeatureTestCase
@@ -29,6 +28,4 @@ class CustomerTest extends FeatureTestCase
 
         $this->assertSame($testIp, $user->customerIpAddress);
     }
-
-
 }

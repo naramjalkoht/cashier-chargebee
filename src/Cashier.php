@@ -95,7 +95,7 @@ final class Cashier
     /**
      * Set the custom currency formatter.
      *
-     * @param callable $callback
+     * @param  callable  $callback
      */
     public static function formatCurrencyUsing(callable $callback): void
     {
@@ -180,3 +180,4 @@ final class Cashier
         static::$subscriptionItemModel = $subscriptionItemModel;
     }
 }
+
