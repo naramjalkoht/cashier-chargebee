@@ -26,4 +26,38 @@ class CashierTest extends TestCase
         $this->assertStringContainsString('10,00', $formatted);
         $this->assertStringContainsString('€', $formatted);
     }
+
+    public function test_keep_past_subscriptions_active() : void
+    {
+        $cashier = new Cashier;
+        Cashier::keepPastDueSubscriptionsActive();
+
+        $this->assertSame(false, $cashier::$deactivatePastDue);
+    }
+
+    public function test_keep_incomplete_subscriptions_active() : void
+    {
+        $cashier = new Cashier;
+        Cashier::keepIncompleteSubscriptionsActive();
+
+        $this->assertSame(false, $cashier::$deactivateIncomplete);
+    }
+
+    public function test_use_subscription_model() : void
+    {
+        $model = 'App\Models\Subscription';
+        $cashier = new Cashier;
+        Cashier::useSubscriptionModel($model);
+
+        $this->assertSame($model, $cashier::$subscriptionModel);
+    }
+
+    public function test_use_subscription_item_model() : void
+    {
+        $model = 'App\Models\SubscriptionItem';
+        $cashier = new Cashier;
+        Cashier::useSubscriptionModel($model);
+
+        $this->assertSame($model, $cashier::$subscriptionModel);
+    }
 }
