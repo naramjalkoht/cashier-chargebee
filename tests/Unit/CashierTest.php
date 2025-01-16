@@ -27,6 +27,14 @@ class CashierTest extends TestCase
         $this->assertStringContainsString('€', $formatted);
     }
 
+    public function test_ignore_routes() : void
+    {
+        $cashier = new Cashier;
+        Cashier::ignoreRoutes();
+
+        $this->assertSame(false, $cashier::$registersRoutes);
+    }
+
     public function test_keep_past_subscriptions_active() : void
     {
         $cashier = new Cashier;
@@ -56,8 +64,8 @@ class CashierTest extends TestCase
     {
         $model = 'App\Models\SubscriptionItem';
         $cashier = new Cashier;
-        Cashier::useSubscriptionModel($model);
+        Cashier::useSubscriptionItemModel($model);
 
-        $this->assertSame($model, $cashier::$subscriptionModel);
+        $this->assertSame($model, $cashier::$subscriptionItemModel);
     }
 }
