@@ -2,11 +2,13 @@
 
 namespace Laravel\CashierChargebee\Tests\Unit;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\CashierChargebee\Cashier;
-use Laravel\CashierChargebee\Tests\Fixtures\User;
 use Laravel\CashierChargebee\Tests\TestCase;
+use Money\Currencies\ISOCurrencies;
+use Money\Currency;
+use Money\Formatter\IntlMoneyFormatter;
+use Money\Money;
+use NumberFormatter;
 
 class CashierTest extends TestCase
 {
@@ -25,6 +27,32 @@ class CashierTest extends TestCase
         $formatted = Cashier::formatAmount(1000, 'EUR', 'fr_FR');
         $this->assertStringContainsString('10,00', $formatted);
         $this->assertStringContainsString('€', $formatted);
+    }
+
+    public function test_format_currency_using_callback(): void
+    {
+        Cashier::formatCurrencyUsing(function(){
+            return $this->formatAmount(1000, 'EUR', 'fr_FR');
+        });
+        $formatted = Cashier::formatAmount(1000, 'EUR', 'fr_FR');
+        $this->assertStringContainsString('10,00', $formatted);
+    }
+
+    private function formatAmount(int $amount, ?string $currency = null, ?string $locale = null, array $options = []): string
+    {
+        $money = new Money($amount, new Currency(strtoupper($currency ?? config('cashier.currency'))));
+
+        $locale = $locale ?? config('cashier.currency_locale');
+
+        $numberFormatter = new NumberFormatter($locale, NumberFormatter::CURRENCY);
+
+        if (isset($options['min_fraction_digits'])) {
+            $numberFormatter->setAttribute(NumberFormatter::MIN_FRACTION_DIGITS, $options['min_fraction_digits']);
+        }
+
+        $moneyFormatter = new IntlMoneyFormatter($numberFormatter, new ISOCurrencies());
+
+        return $moneyFormatter->format($money);
     }
 
     public function test_ignore_routes() : void
