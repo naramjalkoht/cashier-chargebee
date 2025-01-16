@@ -4,6 +4,7 @@ namespace Laravel\CashierChargebee;
 
 use ChargeBee\ChargeBee\Models\Customer;
 use ChargeBee\ChargeBee\Environment;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Money\Currencies\ISOCurrencies;
 use Money\Currency;
@@ -18,14 +19,14 @@ class Cashier
      *
      * @var string
      */
-    const VERSION = '0.1.0';
+    public const VERSION = '0.1.0';
 
     /**
      * The Chargebee API version.
      *
      * @var string
      */
-    const CHARGEBEE_API_VERSION = '2024-12-19';
+    public const CHARGEBEE_API_VERSION = '2024-12-19';
 
     /**
      * The custom currency formatter.
@@ -36,53 +37,38 @@ class Cashier
 
     /**
      * Indicates if Cashier routes will be registered.
-     *
-     * @var bool
      */
-    public static $registersRoutes = true;
+    public static bool $registersRoutes = true;
 
     /**
      * Indicates if Cashier will mark past due subscriptions as inactive.
-     *
-     * @var bool
      */
-    public static $deactivatePastDue = true;
+    public static bool $deactivatePastDue = true;
 
     /**
      * Indicates if Cashier will mark incomplete subscriptions as inactive.
-     *
-     * @var bool
      */
-    public static $deactivateIncomplete = true;
+    public static bool $deactivateIncomplete = true;
 
     /**
      * The default customer model class name.
-     *
-     * @var string
      */
-    public static $customerModel = 'App\\Models\\User';
+    public static string $customerModel = 'App\\Models\\User';
 
     /**
      * The subscription model class name.
-     *
-     * @var string
      */
-    public static $subscriptionModel = Subscription::class;
+    public static string $subscriptionModel = Subscription::class;
 
     /**
      * The subscription item model class name.
-     *
-     * @var string
      */
-    public static $subscriptionItemModel = SubscriptionItem::class;
+    public static string $subscriptionItemModel = SubscriptionItem::class;
 
     /**
      * Get the customer instance by its Chargebee ID.
-     *
-     * @param  \Chargebee\ChargeBee\Models\Customer|string|null  $chargebeeId
-     * @return \Laravel\CashierChargebee\Billable|null
      */
-    public static function findBillable($chargebeeId)
+    public static function findBillable(\Chargebee\ChargeBee\Models\Customer|string|null $chargebeeId): ?Model
     {
         $chargebeeId = $chargebeeId instanceof Customer ? $chargebeeId->id : $chargebeeId;
 
@@ -97,10 +83,8 @@ class Cashier
 
     /**
      * Configure the Chargebee environment with the site and API key.
-     *
-     * @return void
      */
-    public static function configureEnvironment()
+    public static function configureEnvironment(): void
     {
         $site = config('cashier.site');
         $apiKey = config('cashier.api_key');
@@ -111,24 +95,17 @@ class Cashier
     /**
      * Set the custom currency formatter.
      *
-     * @param  callable  $callback
-     * @return void
+     * @param callable $callback
      */
-    public static function formatCurrencyUsing(callable $callback)
+    public static function formatCurrencyUsing(callable $callback): void
     {
         static::$formatCurrencyUsing = $callback;
     }
 
     /**
      * Format the given amount into a displayable currency.
-     *
-     * @param  int  $amount
-     * @param  string|null  $currency
-     * @param  string|null  $locale
-     * @param  array  $options
-     * @return string
      */
-    public static function formatAmount($amount, $currency = null, $locale = null, array $options = [])
+    public static function formatAmount(int $amount, ?string $currency = null, ?string $locale = null, array $options = []): string
     {
         if (static::$formatCurrencyUsing) {
             return call_user_func(static::$formatCurrencyUsing, $amount, $currency, $locale, $options);
@@ -151,10 +128,8 @@ class Cashier
 
     /**
      * Configure Cashier to not register its routes.
-     *
-     * @return static
      */
-    public static function ignoreRoutes()
+    public static function ignoreRoutes(): static
     {
         static::$registersRoutes = false;
 
@@ -163,10 +138,8 @@ class Cashier
 
     /**
      * Configure Cashier to maintain past due subscriptions as active.
-     *
-     * @return static
      */
-    public static function keepPastDueSubscriptionsActive()
+    public static function keepPastDueSubscriptionsActive(): static
     {
         static::$deactivatePastDue = false;
 
@@ -175,10 +148,8 @@ class Cashier
 
     /**
      * Configure Cashier to maintain incomplete subscriptions as active.
-     *
-     * @return static
      */
-    public static function keepIncompleteSubscriptionsActive()
+    public static function keepIncompleteSubscriptionsActive(): static
     {
         static::$deactivateIncomplete = false;
 
@@ -187,33 +158,24 @@ class Cashier
 
     /**
      * Set the customer model class name.
-     *
-     * @param  string  $customerModel
-     * @return void
      */
-    public static function useCustomerModel($customerModel)
+    public static function useCustomerModel(string $customerModel): void
     {
         static::$customerModel = $customerModel;
     }
 
     /**
      * Set the subscription model class name.
-     *
-     * @param  string  $subscriptionModel
-     * @return void
      */
-    public static function useSubscriptionModel($subscriptionModel)
+    public static function useSubscriptionModel(string $subscriptionModel): void
     {
         static::$subscriptionModel = $subscriptionModel;
     }
 
     /**
      * Set the subscription item model class name.
-     *
-     * @param  string  $subscriptionItemModel
-     * @return void
      */
-    public static function useSubscriptionItemModel($subscriptionItemModel)
+    public static function useSubscriptionItemModel(string $subscriptionItemModel): void
     {
         static::$subscriptionItemModel = $subscriptionItemModel;
     }

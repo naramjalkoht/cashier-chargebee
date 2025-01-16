@@ -2,6 +2,7 @@
 
 namespace Laravel\CashierChargebee\Tests\Feature;
 
+use ChargeBee\ChargeBee\Environment;
 use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Tests\Feature\FeatureTestCase;
 
@@ -19,7 +20,7 @@ class CashierTest extends FeatureTestCase
 
     public function test_it_can_configure_chargebee_environment() : void
     {
-        $config = \ChargeBee\ChargeBee\Environment::defaultEnv();
+        $config = Environment::defaultEnv();
 
         $this->assertSame(getenv('CHARGEBEE_SITE'), $config->getSite());
         $this->assertSame(getenv('CHARGEBEE_API_KEY'), $config->getApiKey());
