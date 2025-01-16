@@ -58,6 +58,6 @@ class CashierTest extends TestCase
         $cashier = new Cashier;
         Cashier::useSubscriptionItemModel($model);
 
-        $this->assertSame($model, $cashier::$subscriptionModel);
+        $this->assertSame($model, $cashier::$subscriptionItemModel);
     }
 }
