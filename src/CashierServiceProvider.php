@@ -10,7 +10,7 @@ class CashierServiceProvider extends ServiceProvider
     /**
      * Bootstrap any package services.
      */
-    public function boot() : void
+    public function boot(): void
     {
         $this->registerRoutes();
         $this->registerResources();
@@ -21,7 +21,7 @@ class CashierServiceProvider extends ServiceProvider
     /**
      * Register any application services.
      */
-    public function register() : void
+    public function register(): void
     {
         $this->configure();
     }
@@ -29,7 +29,7 @@ class CashierServiceProvider extends ServiceProvider
     /**
      * Setup the configuration for Cashier.
      */
-    protected function configure() : void
+    protected function configure(): void
     {
         $this->mergeConfigFrom(
             __DIR__.'/../config/cashier.php',
@@ -40,7 +40,7 @@ class CashierServiceProvider extends ServiceProvider
     /**
      * Register the package routes.
      */
-    protected function registerRoutes() : void
+    protected function registerRoutes(): void
     {
         if (Cashier::$registersRoutes) {
             Route::group([
@@ -56,7 +56,7 @@ class CashierServiceProvider extends ServiceProvider
     /**
      * Register the package resources.
      */
-    protected function registerResources() : void
+    protected function registerResources(): void
     {
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'cashier');
     }
@@ -64,7 +64,7 @@ class CashierServiceProvider extends ServiceProvider
     /**
      * Register the package's publishable resources.
      */
-    protected function registerPublishing() : void
+    protected function registerPublishing(): void
     {
         if ($this->app->runningInConsole()) {
             $publishesMigrationsMethod = method_exists($this, 'publishesMigrations')
