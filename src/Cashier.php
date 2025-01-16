@@ -180,4 +180,3 @@ final class Cashier
         static::$subscriptionItemModel = $subscriptionItemModel;
     }
 }
-
