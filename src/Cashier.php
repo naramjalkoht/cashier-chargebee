@@ -12,7 +12,7 @@ use Money\Formatter\IntlMoneyFormatter;
 use Money\Money;
 use NumberFormatter;
 
-class Cashier
+final class Cashier
 {
     /**
      * The Cashier for Chargebee library version.
