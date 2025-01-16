@@ -2,8 +2,8 @@
 
 namespace Laravel\CashierChargebee;
 
-use ChargeBee\ChargeBee\Models\Customer;
 use ChargeBee\ChargeBee\Environment;
+use ChargeBee\ChargeBee\Models\Customer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Money\Currencies\ISOCurrencies;
@@ -95,7 +95,7 @@ final class Cashier
     /**
      * Set the custom currency formatter.
      *
-     * @param callable $callback
+     * @param  callable  $callback
      */
     public static function formatCurrencyUsing(callable $callback): void
     {
