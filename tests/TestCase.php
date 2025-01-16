@@ -13,11 +13,11 @@ abstract class TestCase extends OrchestraTestCase
 {
     use WithWorkbench;
 
-    protected function getEnvironmentSetUp($app)
+    protected function getEnvironmentSetUp($app): void
     {
         $apiKey = config('cashier.api_key');
 
-        if ($apiKey && ! Str::startsWith($apiKey, 'test')) {
+        if ($apiKey && !Str::startsWith($apiKey, 'test')) {
             throw new InvalidArgumentException('Tests may not be run with a production Chargebee key.');
         }
 
