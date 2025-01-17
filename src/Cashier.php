@@ -51,6 +51,11 @@ final class Cashier
     public static bool $deactivateIncomplete = true;
 
     /**
+     * Indicates if Cashier will automatically calculate taxes using Stripe Tax.
+     */
+    public static bool $calculatesTaxes = false;
+
+    /**
      * The default customer model class name.
      */
     public static string $customerModel = 'App\\Models\\User';
