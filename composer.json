@@ -23,6 +23,10 @@
         {
             "name": "Anna Karykowska",
             "email": "anna@threadable.io"
+        },
+        {
+            "name": "Tomasz Mroziński",
+            "email": "tomasz@threadable.io"
         }
     ],
     "require": {
