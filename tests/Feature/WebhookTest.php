@@ -11,6 +11,14 @@ class WebhookTest extends FeatureTestCase
 {
     protected string $webhookUrl = 'chargebee/webhook';
 
+    public function setUp(): void
+    {
+        parent::setUp();
+
+        config(['cashier.webhook.username' => 'webhook_username']);
+        config(['cashier.webhook.password' => 'webhook_password']);
+    }
+
     public function test_valid_webhooks_are_authenticated_successfully()
     {
         $this->withValidCredentials();
