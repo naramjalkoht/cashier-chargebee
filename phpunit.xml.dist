@@ -15,7 +15,7 @@
         </testsuite>
     </testsuites>
     <php>
-        <env name="DB_CONNECTION" value="testing"/>
+        <server name="APP_ENV" value="testing"/>
     </php>
     <logging>
         <junit outputFile="junit.xml"/>
