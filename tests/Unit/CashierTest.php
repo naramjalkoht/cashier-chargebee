@@ -3,6 +3,8 @@
 namespace Laravel\CashierChargebee\Tests\Unit;
 
 use Laravel\CashierChargebee\Cashier;
+use Laravel\CashierChargebee\Subscription;
+use Laravel\CashierChargebee\SubscriptionItem;
 use Laravel\CashierChargebee\Tests\TestCase;
 use Money\Currencies\ISOCurrencies;
 use Money\Currency;
@@ -95,5 +97,17 @@ class CashierTest extends TestCase
         Cashier::useSubscriptionItemModel($model);
 
         $this->assertSame($model, $cashier::$subscriptionItemModel);
+    }
+
+    protected function tearDown(): void
+    {
+        Cashier::formatCurrencyUsing(null);
+        Cashier::$registersRoutes = true;
+        Cashier::$deactivatePastDue = true;
+        Cashier::$deactivateIncomplete = true;
+        Cashier::$subscriptionModel = Subscription::class;
+        Cashier::$subscriptionItemModel = SubscriptionItem::class;
+
+        parent::tearDown();
     }
 }
