@@ -3,7 +3,6 @@
 namespace Laravel\CashierChargebee\Tests\Feature;
 
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Log;
 use Laravel\CashierChargebee\Events\WebhookReceived;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -32,7 +31,7 @@ class WebhookTest extends FeatureTestCase
     public function test_invalid_credentials_result_in_http_401_response()
     {
         $response = $this->withHeaders([
-            'Authorization' => 'Basic ' . base64_encode('invalid_username:invalid_password'),
+            'Authorization' => 'Basic '.base64_encode('invalid_username:invalid_password'),
         ])->postJson($this->webhookUrl, ['event' => 'invalid_event']);
 
         $response->assertStatus(Response::HTTP_UNAUTHORIZED)
@@ -60,7 +59,7 @@ class WebhookTest extends FeatureTestCase
         $password = config('cashier.webhook.password');
 
         $this->withHeaders([
-            'Authorization' => 'Basic ' . base64_encode("$username:$password"),
+            'Authorization' => 'Basic '.base64_encode("$username:$password"),
         ]);
     }
 }
