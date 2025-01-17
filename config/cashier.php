@@ -19,6 +19,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Chargebee Webhook Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Webhook requests are authenticated using basic authentication.
+    |
+    */
+
+    'webhook' => [
+        'username' => env('CASHIER_WEBHOOK_USERNAME'),
+        'password' => env('CASHIER_WEBHOOK_PASSWORD'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Cashier Path
     |--------------------------------------------------------------------------
     |
