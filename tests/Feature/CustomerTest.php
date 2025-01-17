@@ -59,9 +59,8 @@ class CustomerTest extends FeatureTestCase
         $this->assertArrayHasKey('country', $user->estimationBillingAddress);
         $this->assertEquals($user->estimationBillingAddress, $testAddress);
 
-
         $testAddress = [
-            'country'     => $country,
+            'country' => $country,
             'postal_code' => $postalCode,
         ];
         $user->withTaxAddress($country, $postalCode);
@@ -73,11 +72,10 @@ class CustomerTest extends FeatureTestCase
         $this->assertArrayHasKey('postal_code', $user->estimationBillingAddress);
         $this->assertEquals($user->estimationBillingAddress, $testAddress);
 
-
         $testAddress = [
-            'country'     => $country,
+            'country' => $country,
             'postal_code' => $postalCode,
-            'state'       => $state,
+            'state' => $state,
         ];
 
         $user->withTaxAddress($country, $postalCode, $state);

@@ -37,9 +37,9 @@ trait HandlesTaxes
     public function withTaxAddress(string $country, ?string $postalCode = null, ?string $state = null): self
     {
         $this->estimationBillingAddress = array_filter([
-            'country'     => $country,
+            'country' => $country,
             'postal_code' => $postalCode,
-            'state'       => $state,
+            'state' => $state,
         ]);
 
         return $this;
@@ -51,8 +51,8 @@ trait HandlesTaxes
     protected function automaticTaxPayload(): ?array
     {
         return array_filter([
-            'customer_ip_address'        => $this->customerIpAddress,
-            'enabled'                    => $this->isAutomaticTaxEnabled(),
+            'customer_ip_address' => $this->customerIpAddress,
+            'enabled' => $this->isAutomaticTaxEnabled(),
             'estimation_billing_address' => $this->estimationBillingAddress,
         ]);
     }
@@ -74,5 +74,4 @@ trait HandlesTaxes
 
         return $this;
     }
-
 }
