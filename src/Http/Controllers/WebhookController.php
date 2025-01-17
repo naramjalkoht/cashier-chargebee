@@ -34,7 +34,7 @@ class WebhookController extends Controller
     /**
      * Handle successful calls on the controller.
      */
-    protected function success() : Response
+    protected function success(): Response
     {
         return new Response('Webhook Received', 200);
     }

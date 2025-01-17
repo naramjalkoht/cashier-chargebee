@@ -16,7 +16,7 @@ class AuthenticateWebhook
         $username = config('cashier.webhook.username');
         $password = config('cashier.webhook.password');
 
-        if (!$request->hasHeader('Authorization')) {
+        if (! $request->hasHeader('Authorization')) {
             return new Response('Unauthorized', 401);
         }
 
@@ -29,7 +29,7 @@ class AuthenticateWebhook
                 return $next($request);
             }
         }
-        
+
         return new Response('Unauthorized', 401);
     }
 }
