@@ -16,6 +16,9 @@
     </testsuites>
     <php>
         <server name="APP_ENV" value="testing"/>
+        <env name="DB_DATABASE" value="app"/>
+        <env name="DB_USERNAME" value="user"/>
+        <env name="DB_PASSWORD" value="password"/>
     </php>
     <logging>
         <junit outputFile="junit.xml"/>
