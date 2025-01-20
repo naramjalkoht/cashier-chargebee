@@ -32,7 +32,7 @@ class CustomerTest extends TestCase
     {
         $user = new User();
         $user->chargebee_id = 'foo';
-        
+
         $this->expectException(CustomerNotFound::class);
 
         $user->asChargebeeCustomer();
