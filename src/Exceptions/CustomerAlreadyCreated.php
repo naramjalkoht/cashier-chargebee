@@ -5,7 +5,7 @@ namespace Laravel\CashierChargebee\Exceptions;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
 
-class CustomerAlreadyCreated extends Exception
+final class CustomerAlreadyCreated extends Exception
 {
     /**
      * Create a new CustomerAlreadyCreated instance.
