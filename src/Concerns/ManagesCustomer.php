@@ -43,7 +43,7 @@ trait ManagesCustomer
             'locale' => $this->chargebeeLocale(),
             'metaData' => $this->chargebeeMetaData(),
         ];
-    
+
         $options = array_merge(array_filter($defaultOptions), $options);
 
         // Create a customer instance on Chargebee and store its ID for future retrieval.
