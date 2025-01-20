@@ -4,6 +4,7 @@ namespace Laravel\CashierChargebee\Tests\Feature;
 
 use ChargeBee\ChargeBee\Environment;
 use Laravel\CashierChargebee\Cashier;
+use Laravel\CashierChargebee\Tests\Fixtures\UserSoftDeletable;
 
 class CashierTest extends FeatureTestCase
 {
@@ -11,6 +12,12 @@ class CashierTest extends FeatureTestCase
     {
         $this->createCustomer('test', ['chargebee_id' => 'test_chargebee_id']);
 
+        $foundCustomer = Cashier::findBillable('test_chargebee_id');
+
+        $this->assertNotNull($foundCustomer);
+        $this->assertSame('test_chargebee_id', $foundCustomer->chargebee_id);
+
+        Cashier::useCustomerModel(UserSoftDeletable::class);
         $foundCustomer = Cashier::findBillable('test_chargebee_id');
 
         $this->assertNotNull($foundCustomer);
