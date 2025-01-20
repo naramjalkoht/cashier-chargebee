@@ -3,6 +3,7 @@
 namespace Laravel\CashierChargebee\Tests\Unit;
 
 use Laravel\CashierChargebee\Exceptions\CustomerAlreadyCreated;
+use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
 use Laravel\CashierChargebee\Tests\TestCase;
 
@@ -16,5 +17,24 @@ class CustomerTest extends TestCase
         $this->expectException(CustomerAlreadyCreated::class);
 
         $user->createAsChargebeeCustomer();
+    }
+
+    public function test_customer_not_found_is_throwed_with_no_chargebee_id(): void
+    {
+        $user = new User();
+
+        $this->expectException(CustomerNotFound::class);
+
+        $user->asChargebeeCustomer();
+    }
+
+    public function test_customer_not_found_is_throwed_with_invalid_chargebee_id(): void
+    {
+        $user = new User();
+        $user->chargebee_id = 'foo';
+        
+        $this->expectException(CustomerNotFound::class);
+
+        $user->asChargebeeCustomer();
     }
 }
