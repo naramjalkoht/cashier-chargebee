@@ -46,7 +46,7 @@ class CashierServiceProvider extends ServiceProvider
             Route::group([
                 'prefix' => config('cashier.path'),
                 'namespace' => 'Laravel\CashierChargebee\Http\Controllers',
-                'as' => 'cashier.',
+                'as' => 'chargebee.',
             ], function () {
                 $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
             });

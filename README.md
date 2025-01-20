@@ -8,6 +8,11 @@
     - [Chargebee API](#chargebee-api)
     - [Currency Configuration](#currency-configuration)
     - [Using Custom Models](#using-custom-models)
+- [Handling Chargebee Webhooks](#handling-chargebee-webhooks)
+    - [Configuring Webhooks in Chargebee](#configuring-webhooks-in-chargebee)
+    - [Route Configuration](#route-configuration)
+    - [Configuring Basic Authentication](#configuring-basic-authentication)
+    - [Handling Webhook Events](#handling-webhook-events)
 
 <a name="installation"></a>
 ## Installation
@@ -138,5 +143,70 @@ public function boot(): void
 {
     Cashier::useSubscriptionModel(Subscription::class);
     Cashier::useSubscriptionItemModel(SubscriptionItem::class);
+}
+```
+
+<a name="handling-chargebee-webhooks"></a>
+## Handling Chargebee Webhooks
+
+Any change that happens in Chargebee is captured as an event. Webhook configuration allows Chargebee to send event notifications to your system.
+
+<a name="configuring-webhooks-in-chargebee"></a>
+### Configuring Webhooks in Chargebee
+
+To configure webhooks in Chargebee, follow the [Chargebee webhook documentation](https://www.chargebee.com/docs/2.0/webhook_settings.html). You should set up your webhook URL to point to your application's webhook endpoint, typically:
+
+```
+https://your-application.com/chargebee/webhook
+```
+
+<a name="route-configuration"></a>
+### Route Configuration
+
+Webhook route is registered automatically when Cashier is loaded. The `chargebee` prefix is derived from the `CASHIER_PATH` configuration variable. If you want to customize this prefix, you can update the `CASHIER_PATH` variable in your `.env` file:
+
+```ini
+CASHIER_PATH=custom-path
+```
+
+For example, setting `CASHIER_PATH=custom-path` would change the webhook URL to:
+
+```
+https://your-application.com/custom-path/webhook
+```
+
+<a name="configuring-basic-authentication"></a>
+### Configuring Basic Authentication
+
+Set up Basic Authentication by adding the following variables to your .env file:
+
+```ini
+CASHIER_WEBHOOK_USERNAME=your_webhook_username
+CASHIER_WEBHOOK_PASSWORD=your_webhook_password
+```
+
+Cashier will automatically verify these credentials for incoming webhook requests.
+
+<a name="handling-webhook-events"></a>
+### Handling Webhook Events
+
+Cashier emits a `WebhookReceived` event for every incoming webhook, allowing you to handle these events in your application. To handle webhook events, you can create a dedicated event listener class:
+
+```php
+namespace App\Listeners;
+
+use Laravel\CashierChargebee\Events\WebhookReceived;
+
+class HandleWebhookReceived
+{
+    /**
+     * Handle the event.
+     */
+    public function handle(WebhookReceived $event): void
+    {
+        $payload = $event->payload;
+
+        // Handle the webhook payload
+    }
 }
 ```

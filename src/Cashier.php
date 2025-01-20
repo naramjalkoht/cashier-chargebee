@@ -94,10 +94,8 @@ final class Cashier
 
     /**
      * Set the custom currency formatter.
-     *
-     * @param  callable  $callback
      */
-    public static function formatCurrencyUsing(callable $callback): void
+    public static function formatCurrencyUsing(?callable $callback): void
     {
         static::$formatCurrencyUsing = $callback;
     }
