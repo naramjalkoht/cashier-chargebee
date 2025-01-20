@@ -9,17 +9,69 @@ use Laravel\CashierChargebee\Tests\Fixtures\User;
 
 class CustomerTest extends FeatureTestCase
 {
+    public function test_create_as_chargebee_customer_creates_a_new_customer(): void
+    {
+        $user = $this->createCustomer('testuser');
+        $customer = $user->createAsChargebeeCustomer();
+
+        $this->assertTrue($user->hasChargebeeId());
+        $this->assertSame($customer->id, $user->chargebeeId());
+        $this->assertSame($customer->email, "testuser@cashier-chargebee.com");
+    }
+
+    public function test_create_as_chargebee_customer_with_options(): void
+    {
+        $user = $this->createCustomer();
+
+        $options = [
+            'firstName' => 'Test',
+            'lastName' => 'User',
+            'phone' => '123456789',
+            'billingAddress' => [
+                'firstName' => 'Test',
+                'lastName' => 'User',
+                'line1' => 'PO Box 9999',
+                'city' => 'Walnut',
+                'state' => 'California',
+                'zip' => '91789',
+                'country' => 'US',
+            ],
+            'locale' => 'fr-FR',
+            'metaData' => json_encode([
+                'info' => 'This is a test customer.',
+            ]),
+        ];
+
+        $customer = $user->createAsChargebeeCustomer($options);
+
+        $this->assertTrue($user->hasChargebeeId());
+        $this->assertSame($customer->id, $user->chargebeeId());
+
+        $this->assertSame($customer->firstName, 'Test');
+        $this->assertSame($customer->lastName, 'User');
+        $this->assertSame($customer->phone, '123456789');
+
+        $this->assertSame($customer->billingAddress->firstName, 'Test');
+        $this->assertSame($customer->billingAddress->lastName, 'User');
+        $this->assertSame($customer->billingAddress->line1, 'PO Box 9999');
+        $this->assertSame($customer->billingAddress->city, 'Walnut');
+        $this->assertSame($customer->billingAddress->state, 'California');
+        $this->assertSame($customer->billingAddress->zip, '91789');
+        $this->assertSame($customer->billingAddress->country, 'US');
+
+        $this->assertSame($customer->locale, 'fr-FR');
+        $this->assertSame($customer->metaData['info'], 'This is a test customer.');
+    }
+
     public function test_it_can_fetch_customer_by_chargebee_id(): void
     {
-        // NOTE: This test is only temporary and assumes the existence of 'cbdemo_douglas'.
-        // Once a function for creating customers in Chargebee is implemented:
-        // 1. Create a customer.
-        // 2. Fetch the created customer and validate the response.
-
-        $response = Customer::retrieve('cbdemo_douglas');
+        $user = $this->createCustomer();
+        $customer = $user->createAsChargebeeCustomer();
+        
+        $response = Customer::retrieve($customer->id);
 
         $this->assertNotNull($response);
-        $this->assertSame('cbdemo_douglas', $response->customer()->id);
+        $this->assertSame($customer->id, $response->customer()->id);
     }
 
     public function test_with_tax_ip_address(): void
