@@ -2,7 +2,6 @@
 
 namespace Laravel\CashierChargebee\Tests\Feature;
 
-use ChargeBee\ChargeBee\Models\Customer;
 use Illuminate\Support\Str;
 use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
@@ -16,7 +15,7 @@ class CustomerTest extends FeatureTestCase
 
         $this->assertTrue($user->hasChargebeeId());
         $this->assertSame($customer->id, $user->chargebeeId());
-        $this->assertSame($customer->email, "testuser@cashier-chargebee.com");
+        $this->assertSame($customer->email, 'testuser@cashier-chargebee.com');
     }
 
     public function test_create_as_chargebee_customer_with_options(): void
@@ -67,7 +66,7 @@ class CustomerTest extends FeatureTestCase
     {
         $user = $this->createCustomer();
         $user->createAsChargebeeCustomer();
-        
+
         $customer = $user->asChargebeeCustomer();
 
         $this->assertSame($user->chargebeeId(), $customer->id);

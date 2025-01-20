@@ -45,7 +45,7 @@ trait ManagesCustomer
             'locale' => $this->chargebeeLocale(),
             'metaData' => $this->chargebeeMetaData(),
         ];
-    
+
         $options = array_merge(array_filter($defaultOptions), $options);
 
         // Create a customer instance on Chargebee and store its ID for future retrieval.
@@ -60,7 +60,7 @@ trait ManagesCustomer
 
     /**
      * Get the Chargebee customer for the model.
-     * 
+     *
      * @todo Add retrieving subscription info.
      */
     public function asChargebeeCustomer(): Customer
@@ -71,6 +71,7 @@ trait ManagesCustomer
 
         try {
             $response = Customer::retrieve($this->chargebeeId());
+
             return $response->customer();
         } catch (InvalidRequestException $exception) {
             if (strpos($exception->getMessage(), "Sorry, we couldn't find that resource") !== false) {
