@@ -107,8 +107,8 @@ trait ManagesCustomer
     /**
      * Get the default metadata.
      */
-    public function chargebeeMetaData(): null
+    public function chargebeeMetaData(): string|null
     {
-        return null;
+        return $this->chargebee_metadata ?? null;
     }
 }
