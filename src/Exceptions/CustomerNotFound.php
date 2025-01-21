@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 final class CustomerNotFound extends Exception
 {
     /**
-     * Create a new InvalidCustomer instance.
+     * Create a new CustomerNotFound instance.
      */
     public static function notFound(Model $owner): static
     {
