@@ -8,6 +8,9 @@
     - [Chargebee API](#chargebee-api)
     - [Currency Configuration](#currency-configuration)
     - [Using Custom Models](#using-custom-models)
+- [Customers](#customers)
+    - [Retrieving Customers](#retrieving-customers)
+    - [Creating Customers](#creating-customers)
 - [Handling Chargebee Webhooks](#handling-chargebee-webhooks)
     - [Configuring Webhooks in Chargebee](#configuring-webhooks-in-chargebee)
     - [Route Configuration](#route-configuration)
@@ -145,6 +148,35 @@ public function boot(): void
     Cashier::useSubscriptionItemModel(SubscriptionItem::class);
 }
 ```
+
+<a name="customers"></a>
+## Customers
+
+<a name="retrieving-customers"></a>
+### Retrieving Customers
+
+You can retrieve a customer by their Chargebee ID using the `Cashier::findBillable` method. This method will return an instance of the billable model:
+
+    use Laravel\CashierChargebee\Cashier;
+
+    $user = Cashier::findBillable($chargebeeId);
+
+<a name="creating-customers"></a>
+### Creating Customers
+
+Occasionally, you may wish to create a Chargebee customer without beginning a subscription. You may accomplish this using the `createAsChargebeeCustomer` method:
+
+```php
+$chargebeeCustomer = $user->createAsChargebeeCustomer();
+```
+
+Once the customer has been created in Chargebee, you may begin a subscription at a later date. You may provide an optional `$options` array to pass in any additional [customer creation parameters that are supported by the Chargebee API](https://apidocs.eu.chargebee.com/docs/api/customers#create_a_customer):
+
+```php
+$chargebeeCustomer = $user->createAsChargebeeCustomer($options);
+```
+
+If you attempt to create a Chargebee customer for a model that already has a `chargebee_id` (indicating that the customer already exists in Chargebee), the method will throw a `CustomerAlreadyCreated` exception.
 
 <a name="handling-chargebee-webhooks"></a>
 ## Handling Chargebee Webhooks
