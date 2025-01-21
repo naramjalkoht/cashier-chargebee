@@ -26,6 +26,18 @@ trait ManagesCustomer
     }
 
     /**
+     * Determine if the customer has a Chargebee customer ID and throw an exception if not.
+     *
+     * @throws \Laravel\CashierChargebee\Exceptions\CustomerNotFound
+     */
+    protected function assertCustomerExists()
+    {
+        if (! $this->hasChargebeeId()) {
+            throw CustomerNotFound::notFound($this);
+        }
+    }
+
+    /**
      * Create a Chargebee customer for the given model.
      *
      * @throws \Laravel\CashierChargebee\Exceptions\CustomerAlreadyCreated
@@ -65,9 +77,7 @@ trait ManagesCustomer
      */
     public function asChargebeeCustomer(): Customer
     {
-        if (! $this->hasChargebeeId()) {
-            throw CustomerNotFound::notFound($this);
-        }
+        $this->assertCustomerExists();
 
         try {
             $response = Customer::retrieve($this->chargebeeId());
@@ -86,9 +96,7 @@ trait ManagesCustomer
      */
     public function updateChargebeeCustomer(array $options = []): Customer
     {
-        if (! $this->hasChargebeeId()) {
-            throw CustomerNotFound::notFound($this);
-        }
+        $this->assertCustomerExists();
 
         try {
             Customer::update($this->chargebeeId(), $options);
