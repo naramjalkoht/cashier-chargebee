@@ -11,6 +11,7 @@
 - [Customers](#customers)
     - [Retrieving Customers](#retrieving-customers)
     - [Creating Customers](#creating-customers)
+    - [Updating Customers](#updating-customers)
 - [Handling Chargebee Webhooks](#handling-chargebee-webhooks)
     - [Configuring Webhooks in Chargebee](#configuring-webhooks-in-chargebee)
     - [Route Configuration](#route-configuration)
@@ -169,6 +170,8 @@ You may use the `asChargebeeCustomer` method if you want to return the Chargebee
 $chargebeeCustomer = $user->asChargebeeCustomer();
 ```
 
+If `chargebee_id` on your model is missing or invalid, the method will throw a `CustomerNotFound` exception.
+
 <a name="creating-customers"></a>
 ### Creating Customers
 
@@ -185,6 +188,32 @@ $chargebeeCustomer = $user->createAsChargebeeCustomer($options);
 ```
 
 If you attempt to create a Chargebee customer for a model that already has a `chargebee_id` (indicating that the customer already exists in Chargebee), the method will throw a `CustomerAlreadyCreated` exception.
+
+<a name="updating-customers"></a>
+### Updating Customers
+
+Occasionally, you may wish to update the Chargebee customer directly with additional information. You may accomplish this using the `updateChargebeeCustomer` method. This method accepts an array of [customer update](https://apidocs.chargebee.com/docs/api/customers?lang=php#update_a_customer) and [billing information update](https://apidocs.chargebee.com/docs/api/customers#update_billing_info_for_a_customer) parameters supported by the Chargebee API:
+
+```php
+$updateOptions = [
+    'firstName' => 'John',
+    'lastName' => 'Doe',
+    'phone' => '123456789',
+    'billingAddress' => [
+        'firstName' => 'John',
+        'lastName' => 'Doe',
+        'line1' => '221B Baker Street',
+        'city' => 'London',
+        'state' => 'England',
+        'zip' => 'NW1 6XE',
+        'country' => 'GB',
+    ],
+];
+
+$customer = $user->updateChargebeeCustomer($updateOptions);
+```
+
+If `chargebee_id` on your model is missing or invalid, the method will throw a `CustomerNotFound` exception.
 
 <a name="handling-chargebee-webhooks"></a>
 ## Handling Chargebee Webhooks
