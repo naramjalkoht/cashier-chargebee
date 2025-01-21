@@ -74,7 +74,30 @@ trait ManagesCustomer
 
             return $response->customer();
         } catch (InvalidRequestException $exception) {
-            if (strpos($exception->getMessage(), "Sorry, we couldn't find that resource") !== false) {
+            if (strpos($exception->getApiErrorCode(), "resource_not_found") !== false) {
+                throw CustomerNotFound::notFound($this);
+            }
+            throw $exception;
+        }
+    }
+
+    /**
+     * Update Chargebee customer information for the model.
+     */
+    public function updateChargebeeCustomer(array $options = []): Customer
+    {
+        if (! $this->hasChargebeeId()) {
+            throw CustomerNotFound::notFound($this);
+        }
+
+        try {
+            Customer::update($this->chargebeeId(), $options);
+            // We need to make a separate API call to update billing info.
+            $response = Customer::updateBillingInfo($this->chargebeeId(), $options);
+
+            return $response->customer();
+        } catch (InvalidRequestException $exception) {
+            if (strpos($exception->getApiErrorCode(), "resource_not_found") !== false) {
                 throw CustomerNotFound::notFound($this);
             }
             throw $exception;
