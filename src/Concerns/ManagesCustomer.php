@@ -84,7 +84,7 @@ trait ManagesCustomer
 
             return $response->customer();
         } catch (InvalidRequestException $exception) {
-            if (strpos($exception->getApiErrorCode(), "resource_not_found") !== false) {
+            if (strpos($exception->getApiErrorCode(), 'resource_not_found') !== false) {
                 throw CustomerNotFound::notFound($this);
             }
             throw $exception;
@@ -105,7 +105,7 @@ trait ManagesCustomer
 
             return $response->customer();
         } catch (InvalidRequestException $exception) {
-            if (strpos($exception->getApiErrorCode(), "resource_not_found") !== false) {
+            if (strpos($exception->getApiErrorCode(), 'resource_not_found') !== false) {
                 throw CustomerNotFound::notFound($this);
             }
             throw $exception;
