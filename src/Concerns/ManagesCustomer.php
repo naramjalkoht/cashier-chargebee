@@ -26,6 +26,18 @@ trait ManagesCustomer
     }
 
     /**
+     * Determine if the customer has a Chargebee customer ID and throw an exception if not.
+     *
+     * @throws \Laravel\CashierChargebee\Exceptions\CustomerNotFound
+     */
+    protected function assertCustomerExists()
+    {
+        if (! $this->hasChargebeeId()) {
+            throw CustomerNotFound::notFound($this);
+        }
+    }
+
+    /**
      * Create a Chargebee customer for the given model.
      *
      * @throws \Laravel\CashierChargebee\Exceptions\CustomerAlreadyCreated
@@ -65,16 +77,35 @@ trait ManagesCustomer
      */
     public function asChargebeeCustomer(): Customer
     {
-        if (! $this->hasChargebeeId()) {
-            throw CustomerNotFound::notFound($this);
-        }
+        $this->assertCustomerExists();
 
         try {
             $response = Customer::retrieve($this->chargebeeId());
 
             return $response->customer();
         } catch (InvalidRequestException $exception) {
-            if (strpos($exception->getMessage(), "Sorry, we couldn't find that resource") !== false) {
+            if (strpos($exception->getApiErrorCode(), 'resource_not_found') !== false) {
+                throw CustomerNotFound::notFound($this);
+            }
+            throw $exception;
+        }
+    }
+
+    /**
+     * Update Chargebee customer information for the model.
+     */
+    public function updateChargebeeCustomer(array $options = []): Customer
+    {
+        $this->assertCustomerExists();
+
+        try {
+            Customer::update($this->chargebeeId(), $options);
+            // We need to make a separate API call to update billing info.
+            $response = Customer::updateBillingInfo($this->chargebeeId(), $options);
+
+            return $response->customer();
+        } catch (InvalidRequestException $exception) {
+            if (strpos($exception->getApiErrorCode(), 'resource_not_found') !== false) {
                 throw CustomerNotFound::notFound($this);
             }
             throw $exception;

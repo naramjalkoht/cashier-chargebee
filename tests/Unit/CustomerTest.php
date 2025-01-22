@@ -37,4 +37,23 @@ class CustomerTest extends TestCase
 
         $user->asChargebeeCustomer();
     }
+
+    public function test_update_chargebee_customer_with_no_chargebee_id(): void
+    {
+        $user = new User();
+
+        $this->expectException(CustomerNotFound::class);
+
+        $user->updateChargebeeCustomer();
+    }
+
+    public function test_update_chargebee_customer_with_invalid_chargebee_id(): void
+    {
+        $user = new User();
+        $user->chargebee_id = 'foo';
+
+        $this->expectException(CustomerNotFound::class);
+
+        $user->updateChargebeeCustomer();
+    }
 }
