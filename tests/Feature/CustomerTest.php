@@ -2,7 +2,6 @@
 
 namespace Laravel\CashierChargebee\Tests\Feature;
 
-use ChargeBee\ChargeBee\Models\Customer;
 use Illuminate\Support\Str;
 use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
@@ -63,15 +62,67 @@ class CustomerTest extends FeatureTestCase
         $this->assertSame($customer->metaData['info'], 'This is a test customer.');
     }
 
-    public function test_it_can_fetch_customer_by_chargebee_id(): void
+    public function test_retrieving_chargebee_customer_with_valid_chargebee_id(): void
     {
         $user = $this->createCustomer();
-        $customer = $user->createAsChargebeeCustomer();
+        $user->createAsChargebeeCustomer();
 
-        $response = Customer::retrieve($customer->id);
+        $customer = $user->asChargebeeCustomer();
 
-        $this->assertNotNull($response);
-        $this->assertSame($customer->id, $response->customer()->id);
+        $this->assertSame($user->chargebeeId(), $customer->id);
+    }
+
+    public function test_update_chargebee_customer_with_valid_chargebee_id(): void
+    {
+        $user = $this->createCustomer();
+
+        $createOptions = [
+            'firstName' => 'Test',
+            'lastName' => 'User',
+            'billingAddress' => [
+                'firstName' => 'Test',
+                'lastName' => 'User',
+                'line1' => '221B Baker Street',
+                'city' => 'London',
+                'state' => 'England',
+                'country' => 'GB',
+            ],
+            'metaData' => json_encode([
+                'info' => 'This is a test customer.',
+            ]),
+        ];
+
+        $user->createAsChargebeeCustomer($createOptions);
+
+        $updateOptions = [
+            'firstName' => 'UpdateTest',
+            'phone' => '123456789',
+            'billingAddress' => [
+                'firstName' => 'UpdateTest',
+                'lastName' => 'User',
+                'line1' => '221B Baker Street',
+                'city' => 'London',
+                'state' => 'England',
+                'zip' => 'NW1 6XE',
+                'country' => 'GB',
+            ],
+        ];
+
+        $customer = $user->updateChargebeeCustomer($updateOptions);
+
+        $this->assertSame($customer->firstName, 'UpdateTest');
+        $this->assertSame($customer->lastName, 'User');
+        $this->assertSame($customer->phone, '123456789');
+
+        $this->assertSame($customer->billingAddress->firstName, 'UpdateTest');
+        $this->assertSame($customer->billingAddress->lastName, 'User');
+        $this->assertSame($customer->billingAddress->line1, '221B Baker Street');
+        $this->assertSame($customer->billingAddress->city, 'London');
+        $this->assertSame($customer->billingAddress->state, 'England');
+        $this->assertSame($customer->billingAddress->zip, 'NW1 6XE');
+        $this->assertSame($customer->billingAddress->country, 'GB');
+
+        $this->assertSame($customer->metaData['info'], 'This is a test customer.');
     }
 
     public function test_with_tax_ip_address(): void

@@ -2,8 +2,10 @@
 
 namespace Laravel\CashierChargebee\Concerns;
 
+use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\Customer;
 use Laravel\CashierChargebee\Exceptions\CustomerAlreadyCreated;
+use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
 
 trait ManagesCustomer
 {
@@ -21,6 +23,18 @@ trait ManagesCustomer
     public function hasChargebeeId(): bool
     {
         return ! is_null($this->chargebee_id);
+    }
+
+    /**
+     * Determine if the customer has a Chargebee customer ID and throw an exception if not.
+     *
+     * @throws \Laravel\CashierChargebee\Exceptions\CustomerNotFound
+     */
+    protected function assertCustomerExists()
+    {
+        if (! $this->hasChargebeeId()) {
+            throw CustomerNotFound::notFound($this);
+        }
     }
 
     /**
@@ -54,6 +68,48 @@ trait ManagesCustomer
         $this->save();
 
         return $customer;
+    }
+
+    /**
+     * Get the Chargebee customer for the model.
+     *
+     * @todo Add retrieving subscription info.
+     */
+    public function asChargebeeCustomer(): Customer
+    {
+        $this->assertCustomerExists();
+
+        try {
+            $response = Customer::retrieve($this->chargebeeId());
+
+            return $response->customer();
+        } catch (InvalidRequestException $exception) {
+            if (strpos($exception->getApiErrorCode(), 'resource_not_found') !== false) {
+                throw CustomerNotFound::notFound($this);
+            }
+            throw $exception;
+        }
+    }
+
+    /**
+     * Update Chargebee customer information for the model.
+     */
+    public function updateChargebeeCustomer(array $options = []): Customer
+    {
+        $this->assertCustomerExists();
+
+        try {
+            Customer::update($this->chargebeeId(), $options);
+            // We need to make a separate API call to update billing info.
+            $response = Customer::updateBillingInfo($this->chargebeeId(), $options);
+
+            return $response->customer();
+        } catch (InvalidRequestException $exception) {
+            if (strpos($exception->getApiErrorCode(), 'resource_not_found') !== false) {
+                throw CustomerNotFound::notFound($this);
+            }
+            throw $exception;
+        }
     }
 
     /**
