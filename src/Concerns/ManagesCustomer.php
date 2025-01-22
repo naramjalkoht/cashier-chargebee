@@ -101,7 +101,7 @@ trait ManagesCustomer
         try {
             // We need to make 2 separate API calls to update customer and billing info.
             $response = Customer::update($this->chargebeeId(), $options);
-            
+
             if (! empty($options['billingAddress'])) {
                 // Parameter billingAddress is required for the second call.
                 $response = Customer::updateBillingInfo($this->chargebeeId(), $options);
