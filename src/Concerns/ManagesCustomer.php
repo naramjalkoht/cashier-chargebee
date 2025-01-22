@@ -117,6 +117,58 @@ trait ManagesCustomer
     }
 
     /**
+     * Get the Chargebee customer instance for the current user or create one.
+     */
+    public function createOrGetChargebeeCustomer(array $options = []): Customer
+    {
+        if ($this->hasChargebeeId()) {
+            return $this->asChargebeeCustomer();
+        }
+
+        return $this->createAsChargebeeCustomer($options);
+    }
+
+    /**
+     * Update the Chargebee customer information for the current user or create one.
+     */
+    public function updateOrCreateChargebeeCustomer(array $options = []): Customer
+    {
+        if ($this->hasChargebeeId()) {
+            return $this->updateChargebeeCustomer($options);
+        }
+
+        return $this->createAsChargebeeCustomer($options);
+    }
+
+    /**
+     * Sync the customer's information to Chargebee.
+     */
+    public function syncChargebeeCustomerDetails(): Customer
+    {
+        return $this->updateChargebeeCustomer([
+            'firstName' => $this->chargebeeFirstName(),
+            'lastName' => $this->chargebeeLastName(),
+            'email' => $this->chargebeeEmail(),
+            'phone' => $this->chargebeePhone(),
+            'billingAddress' => $this->chargebeeBillingAddress(),
+            'locale' => $this->chargebeeLocale(),
+            'metaData' => $this->chargebeeMetaData(),
+        ]);
+    }
+
+    /**
+     * Sync the customer's information to Chargebee for the current user or create one.
+     */
+    public function syncOrCreateChargebeeCustomer(array $options = []): Customer
+    {
+        if ($this->hasChargebeeId()) {
+            return $this->syncChargebeeCustomerDetails();
+        }
+
+        return $this->createAsChargebeeCustomer($options);
+    }
+
+    /**
      * Get the default first name.
      */
     public function chargebeeFirstName(): string|null
