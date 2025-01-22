@@ -157,9 +157,17 @@ public function boot(): void
 
 You can retrieve a customer by their Chargebee ID using the `Cashier::findBillable` method. This method will return an instance of the billable model:
 
-    use Laravel\CashierChargebee\Cashier;
+```php
+use Laravel\CashierChargebee\Cashier;
 
-    $user = Cashier::findBillable($chargebeeId);
+$user = Cashier::findBillable($chargebeeId);
+```
+
+You may use the `asChargebeeCustomer` method if you want to return the Chargebee customer object for a billable model:
+
+```php
+$chargebeeCustomer = $user->asChargebeeCustomer();
+```
 
 <a name="creating-customers"></a>
 ### Creating Customers

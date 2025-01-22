@@ -2,7 +2,6 @@
 
 namespace Laravel\CashierChargebee\Tests\Feature;
 
-use ChargeBee\ChargeBee\Models\Customer;
 use Illuminate\Support\Str;
 use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
@@ -63,15 +62,14 @@ class CustomerTest extends FeatureTestCase
         $this->assertSame($customer->metaData['info'], 'This is a test customer.');
     }
 
-    public function test_it_can_fetch_customer_by_chargebee_id(): void
+    public function test_retrieving_chargebee_customer_with_valid_chargebee_id(): void
     {
         $user = $this->createCustomer();
-        $customer = $user->createAsChargebeeCustomer();
+        $user->createAsChargebeeCustomer();
 
-        $response = Customer::retrieve($customer->id);
+        $customer = $user->asChargebeeCustomer();
 
-        $this->assertNotNull($response);
-        $this->assertSame($customer->id, $response->customer()->id);
+        $this->assertSame($user->chargebeeId(), $customer->id);
     }
 
     public function test_with_tax_ip_address(): void
