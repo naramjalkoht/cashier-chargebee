@@ -149,7 +149,7 @@ class CustomerTest extends FeatureTestCase
         $this->assertSame($customer->firstName, 'UpdateTest');
         $this->assertSame($customer->lastName, 'User');
         $this->assertSame($customer->phone, '123456789');
-        
+
         $this->assertSame($customer->billingAddress->country, 'US');
         $this->assertSame($customer->billingAddress->firstName, 'Test');
         $this->assertSame($customer->billingAddress->lastName, 'User');
