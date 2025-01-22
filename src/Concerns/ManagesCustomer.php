@@ -99,9 +99,13 @@ trait ManagesCustomer
         $this->assertCustomerExists();
 
         try {
-            Customer::update($this->chargebeeId(), $options);
-            // We need to make a separate API call to update billing info.
-            $response = Customer::updateBillingInfo($this->chargebeeId(), $options);
+            // We need to make 2 separate API calls to update customer and billing info.
+            $response = Customer::update($this->chargebeeId(), $options);
+            
+            if (! empty($options['billingAddress'])) {
+                // Parameter billingAddress is required for the second call.
+                $response = Customer::updateBillingInfo($this->chargebeeId(), $options);
+            }
 
             return $response->customer();
         } catch (InvalidRequestException $exception) {
