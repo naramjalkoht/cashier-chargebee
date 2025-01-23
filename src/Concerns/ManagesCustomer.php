@@ -4,6 +4,7 @@ namespace Laravel\CashierChargebee\Concerns;
 
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\Customer;
+use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Exceptions\CustomerAlreadyCreated;
 use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
 
@@ -224,5 +225,21 @@ trait ManagesCustomer
     public function chargebeeMetaData(): string|null
     {
         return $this->chargebee_metadata ?? null;
+    }
+
+     /**
+     * Get the Chargebee supported currency used by the customer.
+     */
+    public function preferredCurrency(): string
+    {
+        return config('cashier.currency');
+    }
+
+    /**
+     * Format the given amount into a displayable currency.
+     */
+    protected function formatAmount(int $amount): string
+    {
+        return Cashier::formatAmount($amount, $this->preferredCurrency());
     }
 }
