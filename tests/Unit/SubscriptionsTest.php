@@ -7,8 +7,6 @@ use Laravel\CashierChargebee\Tests\Feature\FeatureTestCase;
 
 class SubscriptionsTest extends FeatureTestCase
 {
-
-
     public function test_subscription_changes_can_be_prorated()
     {
         $subscription = new Subscription();
@@ -24,5 +22,4 @@ class SubscriptionsTest extends FeatureTestCase
 
         $this->assertEquals(false, $subscription->prorateBehavior());
     }
-
 }
