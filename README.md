@@ -12,6 +12,7 @@
     - [Retrieving Customers](#retrieving-customers)
     - [Creating Customers](#creating-customers)
     - [Updating Customers](#updating-customers)
+    - [Syncing Customers](#syncing-customers)
     - [Billing Portal](#billing-portal)
 - [Handling Chargebee Webhooks](#handling-chargebee-webhooks)
     - [Configuring Webhooks in Chargebee](#configuring-webhooks-in-chargebee)
@@ -182,7 +183,21 @@ Occasionally, you may wish to create a Chargebee customer without beginning a su
 $chargebeeCustomer = $user->createAsChargebeeCustomer();
 ```
 
-Once the customer has been created in Chargebee, you may begin a subscription at a later date. You may provide an optional `$options` array to pass in any additional [customer creation parameters that are supported by the Chargebee API](https://apidocs.eu.chargebee.com/docs/api/customers#create_a_customer):
+Once the customer has been created in Chargebee, you may begin a subscription at a later date.
+
+This method uses helper methods like `chargebeeFirstName`, `chargebeeLastName`, `chargebeeEmail`, `chargebeePhone`, `chargebeeBillingAddress`, `chargebeeLocale`, and `chargebeeMetaData` to populate default values for the customer. You can override these methods in your model to customize which fields are used. For example:
+
+```php
+/**
+ * Get the default first name.
+ */
+public function chargebeeFirstName(): string|null
+{
+    return $this->custom_first_name;
+}
+```
+
+You may provide an optional `$options` array to pass in any additional [customer creation parameters that are supported by the Chargebee API](https://apidocs.eu.chargebee.com/docs/api/customers#create_a_customer):
 
 ```php
 $chargebeeCustomer = $user->createAsChargebeeCustomer($options);
@@ -190,13 +205,19 @@ $chargebeeCustomer = $user->createAsChargebeeCustomer($options);
 
 If you attempt to create a Chargebee customer for a model that already has a `chargebee_id` (indicating that the customer already exists in Chargebee), the method will throw a `CustomerAlreadyCreated` exception.
 
+You can also use the `createOrGetChargebeeCustomer` method to retrieve an existing Chargebee customer or create a new one if it does not exist:
+
+```php
+$chargebeeCustomer = $user->createOrGetChargebeeCustomer($options);
+```
+
 <a name="updating-customers"></a>
 ### Updating Customers
 
-Occasionally, you may wish to update the Chargebee customer directly with additional information. You may accomplish this using the `updateChargebeeCustomer` method. This method accepts an array of [customer update](https://apidocs.chargebee.com/docs/api/customers?lang=php#update_a_customer) and [billing information update](https://apidocs.chargebee.com/docs/api/customers#update_billing_info_for_a_customer) parameters supported by the Chargebee API:
+Occasionally, you may wish to update the Chargebee customer directly with additional information. You may accomplish this using the `updateChargebeeCustomer` method. This method accepts an array of [customer](https://apidocs.chargebee.com/docs/api/customers?lang=php#update_a_customer) and [billing information](https://apidocs.chargebee.com/docs/api/customers#update_billing_info_for_a_customer) update parameters supported by the Chargebee API:
 
 ```php
-$updateOptions = [
+$options = [
     'firstName' => 'John',
     'lastName' => 'Doe',
     'phone' => '123456789',
@@ -211,10 +232,52 @@ $updateOptions = [
     ],
 ];
 
-$customer = $user->updateChargebeeCustomer($updateOptions);
+$customer = $user->updateChargebeeCustomer($options);
+```
+
+> [!NOTE]
+> The `billingAddress` key is required for the `updateChargebeeCustomer` method and it must contain a non-empty array of address details (e.g., `line1`, `city`, `zip`, etc.). You can provide it directly in the `options` input array or override the `chargebeeBillingAddress()` method in your model to provide default values. For example:
+
+```php
+/**
+ * Provide a default billing address.
+ */
+public function chargebeeBillingAddress(): array
+{
+    return [
+        'line1' => $this->address_line_1,
+        'city' => $this->address_city,
+        'state' => $this->address_state,
+        'zip' => $this->address_zip,
+        'country' => $this->address_country,
+    ];
+}
 ```
 
 If `chargebee_id` on your model is missing or invalid, the method will throw a `CustomerNotFound` exception.
+
+You can also use the `updateOrCreateChargebeeCustomer` method to update an existing Chargebee customer or create a new one if it does not exist:
+
+```php
+$chargebeeCustomer = $user->updateOrCreateChargebeeCustomer($options);
+```
+
+<a name="syncing-customers"></a>
+### Syncing Customers
+
+To sync the customer's information to Chargebee, you can use the `syncChargebeeCustomerDetails` method. This method will update the Chargebee customer with the latest information from your model:
+
+```php
+$customer = $user->syncChargebeeCustomerDetails();
+```
+
+This method uses helper methods like `chargebeeFirstName`, `chargebeeLastName`, `chargebeeEmail`, `chargebeePhone`, `chargebeeBillingAddress`, `chargebeeLocale`, and `chargebeeMetaData` to determine the values to sync. You can override these methods in your model to customize the sync process.
+
+If you want to sync the customer's information or create a new Chargebee customer if one does not exist, you can use the `syncOrCreateChargebeeCustomer` method:
+
+```php
+$customer = $user->syncOrCreateChargebeeCustomer($options);
+```
 
 <a name="billing-portal"></a>
 ### Billing Portal
