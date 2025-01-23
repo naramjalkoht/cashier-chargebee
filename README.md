@@ -216,7 +216,7 @@ $chargebeeCustomer = $user->createOrGetChargebeeCustomer($options);
 Occasionally, you may wish to update the Chargebee customer directly with additional information. You may accomplish this using the `updateChargebeeCustomer` method. This method accepts an array of [customer](https://apidocs.chargebee.com/docs/api/customers?lang=php#update_a_customer) and [billing information](https://apidocs.chargebee.com/docs/api/customers#update_billing_info_for_a_customer) update parameters supported by the Chargebee API:
 
 ```php
-$updateOptions = [
+$options = [
     'firstName' => 'John',
     'lastName' => 'Doe',
     'phone' => '123456789',
@@ -231,11 +231,27 @@ $updateOptions = [
     ],
 ];
 
-$customer = $user->updateChargebeeCustomer($updateOptions);
+$customer = $user->updateChargebeeCustomer($options);
 ```
 
 > [!NOTE]
-> To update billing information, the `billingAddress` key must be present in the options array and contain a non-empty array of address details (e.g., `line1`, `city`, `zip`, etc.). Otherwise, the method will skip updating the billing information.
+> The `billingAddress` key is required for the `updateChargebeeCustomer` method and it must contain a non-empty array of address details (e.g., `line1`, `city`, `zip`, etc.). You can provide it directly in the `options` input array or override the `chargebeeBillingAddress()` method in your model to provide default values. For example:
+
+```php
+/**
+ * Provide a default billing address.
+ */
+public function chargebeeBillingAddress(): array
+{
+    return [
+        'line1' => $this->address_line_1,
+        'city' => $this->address_city,
+        'state' => $this->address_state,
+        'zip' => $this->address_zip,
+        'country' => $this->address_country,
+    ];
+}
+```
 
 If `chargebee_id` on your model is missing or invalid, the method will throw a `CustomerNotFound` exception.
 
