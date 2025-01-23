@@ -60,23 +60,23 @@ class CustomerTest extends TestCase
     public function test_preferred_currency(): void
     {
         $user = new User();
-        
+
         $this->assertSame($user->preferredCurrency(), config('cashier.currency'));
     }
 
     public function test_format_amount(): void
     {
         config(['cashier.currency' => 'EUR']);
-        
+
         $user = new User();
-        
+
         $reflectedMethod = new \ReflectionMethod(
             User::class,
             'formatAmount'
         );
 
         $result = $reflectedMethod->invoke($user, 1000);
-        
+
         $this->assertStringContainsString('10.00', $result);
         $this->assertStringContainsString('€', $result);
     }

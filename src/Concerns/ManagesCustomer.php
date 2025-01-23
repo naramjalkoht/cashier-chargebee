@@ -227,7 +227,7 @@ trait ManagesCustomer
         return $this->chargebee_metadata ?? null;
     }
 
-     /**
+    /**
      * Get the Chargebee supported currency used by the customer.
      */
     public function preferredCurrency(): string
