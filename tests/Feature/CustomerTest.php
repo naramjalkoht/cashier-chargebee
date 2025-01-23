@@ -251,7 +251,7 @@ class CustomerTest extends FeatureTestCase
     {
         $user = $this->createCustomer('testuser');
         $user->createAsChargebeeCustomer();
-        
+
         $url = $user->billingPortalUrl('https://example.com');
 
         $this->assertMatchesRegularExpression(
