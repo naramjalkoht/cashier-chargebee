@@ -16,10 +16,10 @@ trait ManagesPaymentMethods
         }
 
         $defaultOptions = [
-            'amount'        => 0,
-            'currency_code' => !empty($options['currency_code'])
+            'amount' => 0,
+            'currency_code' => ! empty($options['currency_code'])
                 ? $options['currency_code']
-                : config('cashier.currency')
+                : config('cashier.currency'),
         ];
 
         $paymentIntent = PaymentIntent::create(array_merge($options, $defaultOptions));

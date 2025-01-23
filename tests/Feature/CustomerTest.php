@@ -25,20 +25,20 @@ class CustomerTest extends FeatureTestCase
         $user = $this->createCustomer();
 
         $options = [
-            'firstName'      => 'Test',
-            'lastName'       => 'User',
-            'phone'          => '123456789',
+            'firstName' => 'Test',
+            'lastName' => 'User',
+            'phone' => '123456789',
             'billingAddress' => [
                 'firstName' => 'Test',
-                'lastName'  => 'User',
-                'line1'     => 'PO Box 9999',
-                'city'      => 'Walnut',
-                'state'     => 'California',
-                'zip'       => '91789',
-                'country'   => 'US',
+                'lastName' => 'User',
+                'line1' => 'PO Box 9999',
+                'city' => 'Walnut',
+                'state' => 'California',
+                'zip' => '91789',
+                'country' => 'US',
             ],
-            'locale'         => 'fr-FR',
-            'metaData'       => json_encode([
+            'locale' => 'fr-FR',
+            'metaData' => json_encode([
                 'info' => 'This is a test customer.',
             ]),
         ];
@@ -79,17 +79,17 @@ class CustomerTest extends FeatureTestCase
         $user = $this->createCustomer();
 
         $createOptions = [
-            'firstName'      => 'Test',
-            'lastName'       => 'User',
+            'firstName' => 'Test',
+            'lastName' => 'User',
             'billingAddress' => [
                 'firstName' => 'Test',
-                'lastName'  => 'User',
-                'line1'     => '221B Baker Street',
-                'city'      => 'London',
-                'state'     => 'England',
-                'country'   => 'GB',
+                'lastName' => 'User',
+                'line1' => '221B Baker Street',
+                'city' => 'London',
+                'state' => 'England',
+                'country' => 'GB',
             ],
-            'metaData'       => json_encode([
+            'metaData' => json_encode([
                 'info' => 'This is a test customer.',
             ]),
         ];
@@ -97,16 +97,16 @@ class CustomerTest extends FeatureTestCase
         $user->createAsChargebeeCustomer($createOptions);
 
         $updateOptions = [
-            'firstName'      => 'UpdateTest',
-            'phone'          => '123456789',
+            'firstName' => 'UpdateTest',
+            'phone' => '123456789',
             'billingAddress' => [
                 'firstName' => 'UpdateTest',
-                'lastName'  => 'User',
-                'line1'     => '221B Baker Street',
-                'city'      => 'London',
-                'state'     => 'England',
-                'zip'       => 'NW1 6XE',
-                'country'   => 'GB',
+                'lastName' => 'User',
+                'line1' => '221B Baker Street',
+                'city' => 'London',
+                'state' => 'England',
+                'zip' => 'NW1 6XE',
+                'country' => 'GB',
             ],
         ];
 
@@ -287,7 +287,7 @@ class CustomerTest extends FeatureTestCase
         $this->assertEquals($user->estimationBillingAddress, $testAddress);
 
         $testAddress = [
-            'country'     => $country,
+            'country' => $country,
             'postal_code' => $postalCode,
         ];
         $user->withTaxAddress($country, $postalCode);
@@ -300,9 +300,9 @@ class CustomerTest extends FeatureTestCase
         $this->assertEquals($user->estimationBillingAddress, $testAddress);
 
         $testAddress = [
-            'country'     => $country,
+            'country' => $country,
             'postal_code' => $postalCode,
-            'state'       => $state,
+            'state' => $state,
         ];
 
         $user->withTaxAddress($country, $postalCode, $state);
