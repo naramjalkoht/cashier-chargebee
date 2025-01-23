@@ -10,5 +10,4 @@ class Subscription extends Model
 {
     use Prorates;
     use AllowsCoupons;
-
 }
