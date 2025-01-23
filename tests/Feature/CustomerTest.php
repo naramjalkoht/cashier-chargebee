@@ -2,6 +2,8 @@
 
 namespace Laravel\CashierChargebee\Tests\Feature;
 
+use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
+use ChargeBee\ChargeBee\Models\PaymentIntent;
 use Illuminate\Support\Str;
 use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
@@ -23,20 +25,20 @@ class CustomerTest extends FeatureTestCase
         $user = $this->createCustomer();
 
         $options = [
-            'firstName' => 'Test',
-            'lastName' => 'User',
-            'phone' => '123456789',
+            'firstName'      => 'Test',
+            'lastName'       => 'User',
+            'phone'          => '123456789',
             'billingAddress' => [
                 'firstName' => 'Test',
-                'lastName' => 'User',
-                'line1' => 'PO Box 9999',
-                'city' => 'Walnut',
-                'state' => 'California',
-                'zip' => '91789',
-                'country' => 'US',
+                'lastName'  => 'User',
+                'line1'     => 'PO Box 9999',
+                'city'      => 'Walnut',
+                'state'     => 'California',
+                'zip'       => '91789',
+                'country'   => 'US',
             ],
-            'locale' => 'fr-FR',
-            'metaData' => json_encode([
+            'locale'         => 'fr-FR',
+            'metaData'       => json_encode([
                 'info' => 'This is a test customer.',
             ]),
         ];
@@ -77,17 +79,17 @@ class CustomerTest extends FeatureTestCase
         $user = $this->createCustomer();
 
         $createOptions = [
-            'firstName' => 'Test',
-            'lastName' => 'User',
+            'firstName'      => 'Test',
+            'lastName'       => 'User',
             'billingAddress' => [
                 'firstName' => 'Test',
-                'lastName' => 'User',
-                'line1' => '221B Baker Street',
-                'city' => 'London',
-                'state' => 'England',
-                'country' => 'GB',
+                'lastName'  => 'User',
+                'line1'     => '221B Baker Street',
+                'city'      => 'London',
+                'state'     => 'England',
+                'country'   => 'GB',
             ],
-            'metaData' => json_encode([
+            'metaData'       => json_encode([
                 'info' => 'This is a test customer.',
             ]),
         ];
@@ -95,16 +97,16 @@ class CustomerTest extends FeatureTestCase
         $user->createAsChargebeeCustomer($createOptions);
 
         $updateOptions = [
-            'firstName' => 'UpdateTest',
-            'phone' => '123456789',
+            'firstName'      => 'UpdateTest',
+            'phone'          => '123456789',
             'billingAddress' => [
                 'firstName' => 'UpdateTest',
-                'lastName' => 'User',
-                'line1' => '221B Baker Street',
-                'city' => 'London',
-                'state' => 'England',
-                'zip' => 'NW1 6XE',
-                'country' => 'GB',
+                'lastName'  => 'User',
+                'line1'     => '221B Baker Street',
+                'city'      => 'London',
+                'state'     => 'England',
+                'zip'       => 'NW1 6XE',
+                'country'   => 'GB',
             ],
         ];
 
@@ -163,7 +165,7 @@ class CustomerTest extends FeatureTestCase
         $this->assertEquals($user->estimationBillingAddress, $testAddress);
 
         $testAddress = [
-            'country' => $country,
+            'country'     => $country,
             'postal_code' => $postalCode,
         ];
         $user->withTaxAddress($country, $postalCode);
@@ -176,9 +178,9 @@ class CustomerTest extends FeatureTestCase
         $this->assertEquals($user->estimationBillingAddress, $testAddress);
 
         $testAddress = [
-            'country' => $country,
+            'country'     => $country,
             'postal_code' => $postalCode,
-            'state' => $state,
+            'state'       => $state,
         ];
 
         $user->withTaxAddress($country, $postalCode, $state);
@@ -228,5 +230,67 @@ class CustomerTest extends FeatureTestCase
         $user->collectTaxIds();
 
         $this->assertSame(true, $user->collectTaxIds);
+    }
+
+    public function test_can_create_setup_intent(): void
+    {
+        $currency = 'EUR';
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+
+        $paymentIntent = $this->createSetupIntent($user, $currency);
+
+        $this->assertNotNull($paymentIntent);
+        $this->assertSame($user->chargebee_id, $paymentIntent->customerId);
+        $this->assertSame(0, $paymentIntent->amount);
+        $this->assertSame($currency, $paymentIntent->currencyCode);
+    }
+
+    public function test_cannot_create_setup_intent(): void
+    {
+        $currency = Str::random(3);
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+
+        $this->expectException(InvalidRequestException::class);
+        $paymentIntent = $this->createSetupIntent($user, $currency);
+
+        $this->assertNull($paymentIntent);
+    }
+
+    public function test_find_setup_intent(): void
+    {
+        $currency = 'EUR';
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+
+        $paymentIntent = $this->createSetupIntent($user, $currency);
+
+        $this->assertNotNull($paymentIntent);
+        $this->assertSame($user->chargebee_id, $paymentIntent->customerId);
+        $this->assertSame(0, $paymentIntent->amount);
+        $this->assertSame($currency, $paymentIntent->currencyCode);
+
+        $findPaymentIntent = $user->findSetupIntent($paymentIntent->id);
+
+        $this->assertNotNull($findPaymentIntent);
+        $this->assertSame($user->chargebee_id, $findPaymentIntent->customerId);
+        $this->assertSame(0, $findPaymentIntent->amount);
+        $this->assertSame($currency, $findPaymentIntent->currencyCode);
+    }
+
+    public function test_cannot_find_setup_intent(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+        $this->expectException(InvalidRequestException::class);
+        $findPaymentIntent = $user->findSetupIntent(Str::random());
+
+        $this->assertNull($findPaymentIntent);
+    }
+
+    private function createSetupIntent(User $user, string $currencyCode): ?PaymentIntent
+    {
+        return $user->createSetupIntent(['currency_code' => $currencyCode]);
     }
 }
