@@ -11,4 +11,20 @@ class User extends Model
     use Billable, Notifiable;
 
     protected $guarded = [];
+
+    /**
+     * Get the default billing address.
+     */
+    public function chargebeeBillingAddress(): array
+    {
+        return [
+            'firstName' => 'Test',
+            'lastName' => 'User',
+            'line1' => 'PO Box 9999',
+            'city' => 'Walnut',
+            'state' => 'California',
+            'zip' => '91789',
+            'country' => 'US',
+        ];
+    }
 }
