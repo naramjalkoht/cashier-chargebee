@@ -3,9 +3,15 @@
 namespace Laravel\CashierChargebee\Tests\Feature;
 
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
+use ChargeBee\ChargeBee\Exceptions\PaymentException;
+use ChargeBee\ChargeBee\Models\Customer;
 use ChargeBee\ChargeBee\Models\PaymentIntent;
+use ChargeBee\ChargeBee\Models\PaymentSource;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Laravel\CashierChargebee\Cashier;
+use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
 
 class CustomerTest extends FeatureTestCase
@@ -181,7 +187,6 @@ class CustomerTest extends FeatureTestCase
     {
         $user = $this->createCustomer('testuser');
         $user->createAsChargebeeCustomer();
-
         $user->first_name = 'TestSync';
         $user->last_name = 'User';
         $user->email = 'testsyncuser@cashier-chargebee.com';
@@ -247,6 +252,33 @@ class CustomerTest extends FeatureTestCase
         $this->assertSame($customer->id, $user->chargebeeId());
         $this->assertSame($customer->firstName, 'TestSynced');
         $this->assertSame($customer->lastName, 'User');
+    }
+
+    public function test_billing_portal_url(): void
+    {
+        $user = $this->createCustomer('testuser');
+        $user->createAsChargebeeCustomer();
+
+        $url = $user->billingPortalUrl('https://example.com');
+
+        $this->assertMatchesRegularExpression(
+            '/^https:\/\/[a-z0-9\-]+\.chargebee\.com\/portal\/v2\/authenticate\?token=[a-zA-Z0-9\-_]+$/',
+            $url
+        );
+    }
+
+    public function test_redirect_to_billing_portal(): void
+    {
+        $user = $this->createCustomer('testuser');
+        $user->createAsChargebeeCustomer();
+
+        $response = $user->redirectToBillingPortal('https://example.com');
+
+        $this->assertInstanceOf(RedirectResponse::class, $response);
+        $this->assertMatchesRegularExpression(
+            '/^https:\/\/[a-z0-9\-]+\.chargebee\.com\/portal\/v2\/authenticate\?token=[a-zA-Z0-9\-_]+$/',
+            $response->getTargetUrl()
+        );
     }
 
     public function test_with_tax_ip_address(): void
@@ -414,5 +446,97 @@ class CustomerTest extends FeatureTestCase
     private function createSetupIntent(User $user, string $currencyCode): ?PaymentIntent
     {
         return $user->createSetupIntent(['currency_code' => $currencyCode]);
+    }
+
+    public function test_get_customer_payment_methods(): void
+    {
+        $user = $this->createCustomer();
+        $paymentMethods = $user->paymentMethods();
+        $this->assertInstanceOf(Collection::class, $paymentMethods);
+        $this->assertTrue($paymentMethods->isEmpty());
+
+        $user->createAsChargebeeCustomer();
+        $paymentMethods = $user->paymentMethods();
+
+        $this->assertNotNull($paymentMethods);
+        $this->assertInstanceOf(Collection::class, $paymentMethods);
+    }
+
+    public function test_can_add_payment_method(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+        $paymentMethod = $user->addPaymentMethod(
+            '4111 1111 1111 1111',
+            '123',
+            date('Y', strtotime('+ 1 year')),
+            date('m', strtotime('+ 1 year')),
+            true
+        );
+
+        $this->assertNotNull($paymentMethod);
+        $this->assertInstanceOf(PaymentSource::class, $paymentMethod);
+        $this->assertSame($user->chargebeeId(), $paymentMethod->customerId);
+
+        $customer = $user->asChargebeeCustomer();
+        $this->assertSame($customer->primaryPaymentSourceId, $paymentMethod->id);
+
+    }
+
+    public function test_non_chargebee_customer_cannot_add_payment_method(): void
+    {
+        $user = $this->createCustomer();
+        $this->expectException(CustomerNotFound::class);
+        $user->addPaymentMethod(
+            '4111 1111 1111 1111',
+            '123',
+            date('Y', strtotime('+ 1 year')),
+            date('m', strtotime('+ 1 year')),
+        );
+    }
+
+    public function test_chargebee_customer_cannot_add_payment_method(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+
+        $this->expectException(PaymentException::class);
+        $user->addPaymentMethod(
+            '4111 1111 1111 1111',
+            '123',
+            date('Y', strtotime('+ 1 year')),
+            13,
+        );
+    }
+
+    public function test_non_chargebee_customer_cannot_delete_payment_method(): void
+    {
+        $user = $this->createCustomer();
+        $this->expectException(CustomerNotFound::class);
+        $user->deletePaymentMethod(Str::random());
+    }
+
+    public function test_chargebee_customer_can_delete_payment_method(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+        $paymentMethod = $user->addPaymentMethod(
+            '4111 1111 1111 1111',
+            '123',
+            date('Y', strtotime('+ 1 year')),
+            date('m', strtotime('+ 1 year')),
+            true
+        );
+
+        $result = $user->deletePaymentMethod($paymentMethod->id);
+        $this->assertInstanceOf(Customer::class, $result);
+    }
+
+    public function test_chargebee_customer_cannot_delete_payment_method(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+        $this->expectException(InvalidRequestException::class);
+        $user->deletePaymentMethod(Str::random());
     }
 }

@@ -13,6 +13,7 @@
     - [Creating Customers](#creating-customers)
     - [Updating Customers](#updating-customers)
     - [Syncing Customers](#syncing-customers)
+    - [Billing Portal](#billing-portal)
 - [Handling Chargebee Webhooks](#handling-chargebee-webhooks)
     - [Configuring Webhooks in Chargebee](#configuring-webhooks-in-chargebee)
     - [Route Configuration](#route-configuration)
@@ -21,6 +22,9 @@
 - [Manage Payment Methods](#manage-payment-methods)
     - [Create SetupIntent](#payment-methods-create-setupintent)
     - [Find SetupIntent](#payment-methods-find-setupintent)
+    - [Retrieving Payment Methods](#payment-methods-list)
+    - [Create Payment Method](#payment-methods-create)
+    - [Delete Payment Method](#payment-methods-delete)
 
 <a name="installation"></a>
 ## Installation
@@ -281,6 +285,35 @@ If you want to sync the customer's information or create a new Chargebee custome
 $customer = $user->syncOrCreateChargebeeCustomer($options);
 ```
 
+<a name="billing-portal"></a>
+### Billing Portal
+
+Chargebee offers [an easy way to set up a billing portal](https://www.chargebee.com/docs/2.0/self-serve-portal.html) so that your customer can manage their subscription, payment methods, and view their billing history. You can redirect your users to the billing portal by invoking the `redirectToBillingPortal` method on the billable model from a controller or route:
+
+```php
+use Illuminate\Http\Request;
+
+Route::get('/billing-portal', function (Request $request) {
+    return $request->user()->redirectToBillingPortal();
+});
+```
+
+By default, when the user is finished managing their subscription, they will return to the `home` route of your application upon logout from the portal UI. You may provide a custom URL that the user should return to by passing the URL as an argument to the `redirectToBillingPortal` method:
+
+```php
+use Illuminate\Http\Request;
+
+Route::get('/billing-portal', function (Request $request) {
+    return $request->user()->redirectToBillingPortal(route('billing'));
+});
+```
+
+If you would like to generate the URL to the billing portal without generating an HTTP redirect response, you may invoke the `billingPortalUrl` method:
+
+```php
+$url = $request->user()->billingPortalUrl(route('billing'));
+```
+
 <a name="handling-chargebee-webhooks"></a>
 ## Handling Chargebee Webhooks
 
@@ -345,13 +378,14 @@ class HandleWebhookReceived
     }
 }
 ```
+
 <a name="manage-payment-methods"></a>
 ## Manage Payment Methods
 
 **Please remember to enable 3DS in Chargebee settings for your account to be able to use PaymentIntents**
 
 <a name="payment-methods-create-setupintent"></a>
-## Create SetupIntent
+### Create SetupIntent
 
 You can create SetupIntent (PaymentIntent with amount hardcoded to 0). This will create new payment source.
 
@@ -389,7 +423,7 @@ $paymentIntent = $user->createSetupIntent(['currency_code' => $currencyCode]);
 ```
 
 <a name="payment-methods-find-setupintent"></a>
-## Find SetupIntent
+### Find SetupIntent
 
 Retrieves the PaymentIntent resource.
 
@@ -401,3 +435,71 @@ $paymentIntent = $user->findSetupIntent($id);
 ```
 
 You can find more information about PaymentIntent API [here](https://apidocs.eu.chargebee.com/docs/api/payment_intents#create_a_payment_intent?target=_blank)
+
+<a name="payment-methods-list"></a>
+### Get Payment Methods
+
+Cashier allows you to pull list of all payment methods available to customer. This list is a Laravel Collection of PaymentSources for selected customer.
+
+**When customer is not defined, empty Laravel Collection is returned instead.**
+
+You may provide an optional `$type` string and `$parameters` array to pass in any additional [filters that are supported by Chargebee API](https://apidocs.chargebee.com/docs/api/payment_sources?lang=curl#list_payment_sources)
+
+#### Examples:
+
+##### All available payment methods
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+$paymentMethods = $user->paymentMethods();
+```
+
+##### Only card available payment methods
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+$paymentMethods = $user->paymentMethods('card');
+```
+<a name="payment-methods-create"></a>
+### Create Payment Method
+
+If you want to add new payment method to customer, you can invoke `addPaymentMethod` method. This method allows you to pass credit card information.
+
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+$paymentMethod = $user->addPaymentMethod('4111 1111 1111 1111', '123', '11', '2039')
+```
+
+In addition to be able to create new payment method, It allows you to mark newly created payment method as `default` for the customer when `$replaceDefault` param is set to `true`
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+$paymentMethod = $user->addPaymentMethod('4111 1111 1111 1111', '123', '11', '2039', true)
+```
+
+If `chargebee_id` on your model is missing or invalid, the method will throw a `CustomerNotFound` exception.
+
+When payload sent to Chargebee API is invalid `PaymentException` will be thrown.
+
+<a name="payment-methods-delete"></a>
+### Delete Payment Methods
+
+If you want to delete one of the customer's payment methods, you should use `deletePaymentMethod`. It takes `$id` string param of the payment method.
+
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+$paymentMethod = $user->deletePaymentMethod('string_payment_source_id')
+```
+
+If `chargebee_id` on your model is missing or invalid, the method will throw a `CustomerNotFound` exception.
+
+When payload sent to Chargebee API is invalid `InvalidRequestException` will be thrown.
+
+
