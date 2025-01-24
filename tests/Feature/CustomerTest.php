@@ -480,7 +480,6 @@ class CustomerTest extends FeatureTestCase
 
         $customer = $user->asChargebeeCustomer();
         $this->assertSame($customer->primaryPaymentSourceId, $paymentMethod->id);
-
     }
 
     public function test_non_chargebee_customer_cannot_add_payment_method(): void

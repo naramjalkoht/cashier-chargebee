@@ -65,6 +65,7 @@ trait ManagesPaymentMethods
 
     /**
      * Add a payment method to the customer.
+     *
      * @throws CustomerNotFound
      * @throws PaymentException
      */
@@ -74,8 +75,7 @@ trait ManagesPaymentMethods
         string $cardExpiryYear,
         string $cardExpiryMonth,
         bool $replaceDefault = false
-    ): ?PaymentSource
-    {
+    ): ?PaymentSource {
         $this->assertCustomerExists();
 
         $params = [
@@ -84,9 +84,9 @@ trait ManagesPaymentMethods
             'card' => [
                 'number' => $cardNumber,
                 'cvv' => $cardCVV,
-                'expiry_month' => (int)$cardExpiryMonth,
-                'expiry_year' => (int)$cardExpiryYear,
-            ]
+                'expiry_month' => (int) $cardExpiryMonth,
+                'expiry_year' => (int) $cardExpiryYear,
+            ],
         ];
 
         $paymentSource = PaymentSource::createCard($params)?->paymentSource();
@@ -96,7 +96,7 @@ trait ManagesPaymentMethods
                 $this->chargebeeId(),
                 [
                     'payment_source_id' => $paymentSource->id,
-                    'role' => 'PRIMARY'
+                    'role' => 'PRIMARY',
                 ]
             );
         }
@@ -106,6 +106,7 @@ trait ManagesPaymentMethods
 
     /**
      * Delete a payment method to the customer.
+     *
      * @throws CustomerNotFound
      * @throws InvalidRequestException
      */
