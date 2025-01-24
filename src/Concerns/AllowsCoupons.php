@@ -32,7 +32,7 @@ trait AllowsCoupons
     protected function checkoutDiscounts()
     {
         if (count($this->couponIds)) {
-            return [['coupon_ids' => $this->couponIds]];
+            return $this->couponIds;
         }
     }
 }

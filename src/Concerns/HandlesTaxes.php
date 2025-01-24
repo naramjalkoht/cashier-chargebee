@@ -9,7 +9,7 @@ trait HandlesTaxes
     /**
      * The IP address of the customer used to determine the tax location.
      */
-    public ?string $customerIpAddress;
+    public $customerIpAddress;
 
     /**
      * The pre-collected billing address used to estimate tax rates when performing "one-off" charges.
