@@ -13,6 +13,7 @@
     - [Creating Customers](#creating-customers)
     - [Updating Customers](#updating-customers)
     - [Syncing Customers](#syncing-customers)
+    - [Billing Portal](#billing-portal)
 - [Handling Chargebee Webhooks](#handling-chargebee-webhooks)
     - [Configuring Webhooks in Chargebee](#configuring-webhooks-in-chargebee)
     - [Route Configuration](#route-configuration)
@@ -279,6 +280,35 @@ If you want to sync the customer's information or create a new Chargebee custome
 
 ```php
 $customer = $user->syncOrCreateChargebeeCustomer($options);
+```
+
+<a name="billing-portal"></a>
+### Billing Portal
+
+Chargebee offers [an easy way to set up a billing portal](https://www.chargebee.com/docs/2.0/self-serve-portal.html) so that your customer can manage their subscription, payment methods, and view their billing history. You can redirect your users to the billing portal by invoking the `redirectToBillingPortal` method on the billable model from a controller or route:
+
+```php
+use Illuminate\Http\Request;
+
+Route::get('/billing-portal', function (Request $request) {
+    return $request->user()->redirectToBillingPortal();
+});
+```
+
+By default, when the user is finished managing their subscription, they will return to the `home` route of your application upon logout from the portal UI. You may provide a custom URL that the user should return to by passing the URL as an argument to the `redirectToBillingPortal` method:
+
+```php
+use Illuminate\Http\Request;
+
+Route::get('/billing-portal', function (Request $request) {
+    return $request->user()->redirectToBillingPortal(route('billing'));
+});
+```
+
+If you would like to generate the URL to the billing portal without generating an HTTP redirect response, you may invoke the `billingPortalUrl` method:
+
+```php
+$url = $request->user()->billingPortalUrl(route('billing'));
 ```
 
 <a name="handling-chargebee-webhooks"></a>
