@@ -351,4 +351,24 @@ class CustomerTest extends FeatureTestCase
 
         $this->assertSame(true, $user->collectTaxIds);
     }
+
+    public function test_is_not_tax_exempt(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+        
+        $this->assertTrue($user->isNotTaxExempt());
+        $this->assertFalse($user->isTaxExempt());
+    }
+
+    public function test_is_tax_exempt(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer([
+            'taxability' => 'exempt',
+        ]);
+
+        $this->assertTrue($user->isTaxExempt());
+        $this->assertFalse($user->isNotTaxExempt());
+    }
 }

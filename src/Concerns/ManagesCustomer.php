@@ -225,4 +225,20 @@ trait ManagesCustomer
     {
         return $this->chargebee_metadata ?? null;
     }
+
+    /**
+     * Determine if the customer is not exempted from taxes.
+     */
+    public function isNotTaxExempt(): bool
+    {
+        return $this->asChargebeeCustomer()->taxability === 'taxable';
+    }
+
+    /**
+     * Determine if the customer is exempted from taxes.
+     */
+    public function isTaxExempt(): bool
+    {
+        return $this->asChargebeeCustomer()->taxability === 'exempt';
+    }
 }
