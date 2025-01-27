@@ -4,6 +4,9 @@ namespace Laravel\CashierChargebee\Concerns;
 
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\Customer;
+use ChargeBee\ChargeBee\Models\PortalSession;
+use Illuminate\Http\RedirectResponse;
+use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Exceptions\CustomerAlreadyCreated;
 use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
 
@@ -227,12 +230,61 @@ trait ManagesCustomer
     }
 
     /**
-     * Get the Stripe supported currency used by the customer.
-     *
-     * @return string
+     * Determine if the customer is not exempted from taxes.
      */
-    public function preferredCurrency()
+    public function isNotTaxExempt(): bool
+    {
+        return $this->asChargebeeCustomer()->taxability === 'taxable';
+    }
+
+    /**
+     * Determine if the customer is exempted from taxes.
+     */
+    public function isTaxExempt(): bool
+    {
+        return $this->asChargebeeCustomer()->taxability === 'exempt';
+    }
+
+    /**
+     * Get the Chargebee supported currency used by the customer.
+     */
+    public function preferredCurrency(): string
     {
         return config('cashier.currency');
+    }
+
+    /**
+     * Format the given amount into a displayable currency.
+     */
+    protected function formatAmount(int $amount): string
+    {
+        return Cashier::formatAmount($amount, $this->preferredCurrency());
+    }
+
+    /*
+     * Get the Chargebee billing portal session for this customer.
+     */
+    public function billingPortalUrl($returnUrl = null, array $options = []): string
+    {
+        $this->assertCustomerExists();
+
+        $response = PortalSession::create(array_merge([
+            'redirect_url' => $returnUrl ?? route('home'),
+            'customer' => [
+                'id' => $this->chargebeeId(),
+            ],
+        ], $options));
+
+        return $response->portalSession()->accessUrl;
+    }
+
+    /**
+     * Generate a redirect response to the customer's Chargebee billing portal session.
+     */
+    public function redirectToBillingPortal($returnUrl = null, array $options = []): RedirectResponse
+    {
+        return new RedirectResponse(
+            $this->billingPortalUrl($returnUrl, $options)
+        );
     }
 }
