@@ -9,8 +9,6 @@ trait PerformsCharges
 {
     use AllowsCoupons;
 
-
-
     /**
      * Begin a new checkout session for existing prices.
      *
@@ -37,19 +35,18 @@ trait PerformsCharges
      */
     public function checkoutCharge($amount, $name, $quantity = 1, array $sessionOptions = [], array $customerOptions = [], array $productData = [])
     {
-
         $charges = Arr::get($sessionOptions, 'charges', []);
 
         $charges[] = [
             array_merge($productData, [
                 'amount' => $amount,
-                'description' => Arr::get($productData, 'description', $name) ?? $name
-            ])
+                'description' => Arr::get($productData, 'description', $name) ?? $name,
+            ]),
         ];
 
         return $this->checkout([], array_merge($sessionOptions, [
             'currencyCode' => strtoupper($this->preferredCurrency()),
-            'charges' => $charges
+            'charges' => $charges,
         ]), $customerOptions);
     }
 }

@@ -5,6 +5,7 @@ namespace Laravel\CashierChargebee;
 use Illuminate\Support\Collection;
 use Laravel\CashierChargebee\Concerns\AllowsCoupons;
 use Laravel\CashierChargebee\Concerns\HandlesTaxes;
+
 class CheckoutBuilder
 {
     use AllowsCoupons;
@@ -81,7 +82,7 @@ class CheckoutBuilder
                         $item['quantity'] = $item['quantity'] ?? 1;
 
                         return $item;
-                    })->values()->all()
+                    })->values()->all(),
                 ]);
                 break;
         }

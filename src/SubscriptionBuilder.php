@@ -97,7 +97,7 @@ class SubscriptionBuilder
 
         $quantity = $price['quantity'] ?? $quantity;
 
-        if (!is_null($quantity)) {
+        if (! is_null($quantity)) {
             $options['quantity'] = $quantity;
         }
 
@@ -136,7 +136,7 @@ class SubscriptionBuilder
             throw new Exception('At least one price is required when starting subscriptions.');
         }
 
-        if (!$this->skipTrial && $this->trialExpires) {
+        if (! $this->skipTrial && $this->trialExpires) {
             $minimumTrialPeriod = Carbon::now()->addHours(48)->addSeconds(10);
 
             $trialEnd = $this->trialExpires->gt($minimumTrialPeriod) ? $this->trialExpires : $minimumTrialPeriod;
@@ -173,6 +173,4 @@ class SubscriptionBuilder
             return $taxRates;
         }
     }
-
-
 }

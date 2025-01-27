@@ -75,20 +75,19 @@ class Checkout implements Arrayable, Jsonable, JsonSerializable, Responsable
         ], $sessionOptions);
 
         if ($owner) {
-            $data['customer']["id"] = $owner->createOrGetChargebeeCustomer($customerOptions)->id;
+            $data['customer']['id'] = $owner->createOrGetChargebeeCustomer($customerOptions)->id;
         }
 
-        $data['redirectUrl'] = $sessionOptions['success_url'] ?? route('home') . '?checkout=success';
-        $data['cancelUrl'] = $sessionOptions['cancel_url'] ?? route('home') . '?checkout=cancelled';
+        $data['redirectUrl'] = $sessionOptions['success_url'] ?? route('home').'?checkout=success';
+        $data['cancelUrl'] = $sessionOptions['cancel_url'] ?? route('home').'?checkout=cancelled';
         $data['currencyCode'] = $sessionOptions['currency_code'] ?? $owner ? $owner->preferredCurrency() : '';
 
         if ($data['mode'] == Session::MODE_SUBSCRIPTION) {
             $result = HostedPage::checkoutNewForItems($data);
-        } else if ($data['mode'] == Session::MODE_SETUP) {
+        } elseif ($data['mode'] == Session::MODE_SETUP) {
             $result = HostedPage::managePaymentSources($data);
         } else {
             $result = HostedPage::checkoutOneTimeForItems($data);
-
         }
 
         return new static($owner, new Session(
