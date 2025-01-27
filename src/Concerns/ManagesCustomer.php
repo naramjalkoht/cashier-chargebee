@@ -6,6 +6,7 @@ use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\Customer;
 use ChargeBee\ChargeBee\Models\PortalSession;
 use Illuminate\Http\RedirectResponse;
+use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Exceptions\CustomerAlreadyCreated;
 use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
 
@@ -229,6 +230,22 @@ trait ManagesCustomer
     }
 
     /**
+     * Get the Chargebee supported currency used by the customer.
+     */
+    public function preferredCurrency(): string
+    {
+        return config('cashier.currency');
+    }
+
+    /**
+     * Format the given amount into a displayable currency.
+     */
+    protected function formatAmount(int $amount): string
+    {
+        return Cashier::formatAmount($amount, $this->preferredCurrency());
+    }
+
+    /*
      * Get the Chargebee billing portal session for this customer.
      */
     public function billingPortalUrl($returnUrl = null, array $options = []): string
