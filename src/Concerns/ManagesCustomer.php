@@ -4,10 +4,10 @@ namespace Laravel\CashierChargebee\Concerns;
 
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\Customer;
-use ChargeBee\ChargeBee\Models\PromotionalCredit;
-use Illuminate\Support\Collection;
 use ChargeBee\ChargeBee\Models\PortalSession;
+use ChargeBee\ChargeBee\Models\PromotionalCredit;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Exceptions\CustomerAlreadyCreated;
 use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
@@ -264,8 +264,8 @@ trait ManagesCustomer
     }
 
     /**
-    * Get the raw total balance of the customer.
-    */
+     * Get the raw total balance of the customer.
+     */
     public function rawBalance(): int
     {
         if (! $this->hasChargebeeId()) {
@@ -273,7 +273,7 @@ trait ManagesCustomer
         }
 
         $customer = $this->asChargebeeCustomer();
-        
+
         return $customer->promotionalCredits;
     }
 
@@ -349,7 +349,7 @@ trait ManagesCustomer
 
         return $promotionalCredits;
     }
-    
+
     /*
      * Get the Chargebee billing portal session for this customer.
      */
