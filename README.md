@@ -15,6 +15,7 @@
     - [Syncing Customers](#syncing-customers)
     - [Tax exemption](#tax-exemption)
     - [Billing Portal](#billing-portal)
+    - [Balances](#balances)
 - [Handling Chargebee Webhooks](#handling-chargebee-webhooks)
     - [Configuring Webhooks in Chargebee](#configuring-webhooks-in-chargebee)
     - [Route Configuration](#route-configuration)
@@ -298,6 +299,8 @@ $user = User::find(1);
 
 $user->isTaxExempt();
 $user->isNotTaxExempt();
+```
+
 <a name="billing-portal"></a>
 ### Billing Portal
 
@@ -326,6 +329,75 @@ If you would like to generate the URL to the billing portal without generating a
 ```php
 $url = $request->user()->billingPortalUrl(route('billing'));
 ```
+
+<a name="balances"></a>
+### Balances
+
+Chargebee allows you to credit or debit a customer's "balance". Later, this balance will be credited or debited on new invoices. To check the customer's total balance in a formatted string representation of their currency, you may use the `balance` method:
+
+```php
+$balance = $user->balance();
+```
+
+If you need the raw, unformatted total balance (e.g., for calculations), you can use the `rawBalance` method:
+
+```php
+$rawBalance = $user->rawBalance();
+```
+
+To credit a customer's balance, you may use the `creditBalance method`. You can provide the amount to be credited and an optional description:
+
+```php
+$user->creditBalance(500, 'Add promotional credits.');
+```
+
+Similarly, to debit a customer's balance, use the `debitBalance` method. You can specify the amount to be debited and an optional description:
+
+```php
+$user->debitBalance(300, 'Deduct promotional credits.');
+```
+
+Both `creditBalance` and `debitBalance` methods accept an optional `options` array. This array allows you to include additional parameters supported by Chargebee's [Promotional Credits API](https://apidocs.eu.chargebee.com/docs/api/promotional_credits). For example, you can describe why promotional credits were provided in a `reference` parameter:
+
+```php
+$user->creditBalance(500, 'Add promotional credits.', [
+    'reference' => 'referral_bonus_2023',
+]);
+```
+
+The `applyBalance` method will automatically determine whether to credit or debit the customer's balance based on the sign of the amount:
+
+```php
+$user->applyBalance(500, 'Add credits.'); // Credits 500
+$user->applyBalance(-300, 'Deduct credits.'); // Debits 300
+```
+
+Like the `creditBalance` and `debitBalance` methods, `applyBalance` also accepts an `options` array for additional API parameters:
+
+```php
+$user->applyBalance(1000, 'Promotional credits applied.', [
+    'reference' => 'promo123',
+]);
+```
+
+> [!NOTE]
+> The `amount` parameter in `creditBalance`, `debitBalance`, and `applyBalance` is specified in the smallest currency unit (e.g., cents for USD or euro cents for EUR). For example, passing `500` with a currency of EUR will represent 5 euros.
+
+To retrieve the transaction history for a customer's balance, use the balanceTransactions method:
+
+```php
+$transactions = $user->balanceTransactions();
+```
+
+This method allows you to specify a `limit` (default is 10) and an `options` array for additional filtering. For example, to retrieve 20 transactions filtered by a specific type:
+
+```php
+$transactions = $user->balanceTransactions(20, [
+    'type[is]' => 'increment',
+]);
+```
+
+The returned transactions are a collection of promotional credit objects, which can be iterated over or manipulated as needed.
 
 <a name="handling-chargebee-webhooks"></a>
 ## Handling Chargebee Webhooks
