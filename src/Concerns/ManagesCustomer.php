@@ -24,7 +24,7 @@ trait ManagesCustomer
      */
     public function hasChargebeeId(): bool
     {
-        return !is_null($this->chargebee_id);
+        return ! is_null($this->chargebee_id);
     }
 
     /**
@@ -34,7 +34,7 @@ trait ManagesCustomer
      */
     protected function assertCustomerExists()
     {
-        if (!$this->hasChargebeeId()) {
+        if (! $this->hasChargebeeId()) {
             throw CustomerNotFound::notFound($this);
         }
     }
@@ -244,7 +244,7 @@ trait ManagesCustomer
         return $this->asChargebeeCustomer()->taxability === 'exempt';
     }
 
-    /** 
+    /**
      * Get the Chargebee billing portal session for this customer.
      */
     public function billingPortalUrl($returnUrl = null, array $options = []): string
