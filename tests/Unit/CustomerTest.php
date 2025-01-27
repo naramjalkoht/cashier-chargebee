@@ -56,4 +56,13 @@ class CustomerTest extends TestCase
 
         $user->updateChargebeeCustomer();
     }
+
+    public function test_billing_portal_url_with_no_chargeebee_id(): void
+    {
+        $user = new User();
+
+        $this->expectException(CustomerNotFound::class);
+
+        $user->billingPortalUrl('https://example.com');
+    }
 }
