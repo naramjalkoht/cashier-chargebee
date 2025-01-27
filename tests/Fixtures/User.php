@@ -27,4 +27,9 @@ class User extends Model
             'country' => 'US',
         ];
     }
+
+    public function preferredCurrency()
+    {
+        return config('cashier.currency');
+    }
 }

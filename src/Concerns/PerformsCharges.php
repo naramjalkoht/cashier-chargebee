@@ -2,6 +2,7 @@
 
 namespace Laravel\CashierChargebee\Concerns;
 
+use Illuminate\Support\Arr;
 use Laravel\CashierChargebee\Checkout;
 
 trait PerformsCharges
@@ -36,17 +37,19 @@ trait PerformsCharges
      */
     public function checkoutCharge($amount, $name, $quantity = 1, array $sessionOptions = [], array $customerOptions = [], array $productData = [])
     {
-        return $this->checkout([
-            [
-                'price_data' => [
-                    'currency' => $this->preferredCurrency(),
-                    'product_data' => array_merge($productData, [
-                        'name' => $name,
-                    ]),
-                    'unit_amount' => $amount,
-                ],
-                'quantity' => $quantity,
-            ]
-        ], $sessionOptions, $customerOptions);
+
+        $charges = Arr::get($sessionOptions, 'charges', []);
+
+        $charges[] = [
+            array_merge($productData, [
+                'amount' => $amount,
+                'description' => Arr::get($productData, 'description', $name) ?? $name
+            ])
+        ];
+
+        return $this->checkout([], array_merge($sessionOptions, [
+            'currencyCode' => strtoupper($this->preferredCurrency()),
+            'charges' => $charges
+        ]), $customerOptions);
     }
 }

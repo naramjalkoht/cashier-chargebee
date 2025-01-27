@@ -22,7 +22,7 @@ trait ManagesCustomer
      */
     public function hasChargebeeId(): bool
     {
-        return ! is_null($this->chargebee_id);
+        return !is_null($this->chargebee_id);
     }
 
     /**
@@ -32,7 +32,7 @@ trait ManagesCustomer
      */
     protected function assertCustomerExists()
     {
-        if (! $this->hasChargebeeId()) {
+        if (!$this->hasChargebeeId()) {
             throw CustomerNotFound::notFound($this);
         }
     }
@@ -224,5 +224,15 @@ trait ManagesCustomer
     public function chargebeeMetaData(): string|null
     {
         return $this->chargebee_metadata ?? null;
+    }
+
+    /**
+     * Get the Stripe supported currency used by the customer.
+     *
+     * @return string
+     */
+    public function preferredCurrency()
+    {
+        return config('cashier.currency');
     }
 }

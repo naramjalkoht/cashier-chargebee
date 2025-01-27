@@ -2,6 +2,7 @@
 
 namespace Laravel\CashierChargebee;
 
+use ChargeBee\ChargeBee\Models\HostedPage;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Contracts\Support\Responsable;
@@ -74,38 +75,25 @@ class Checkout implements Arrayable, Jsonable, JsonSerializable, Responsable
         ], $sessionOptions);
 
         if ($owner) {
-            $data['customer'] = $owner->createOrGetChargebeeCustomer($customerOptions)->id;
+            $data['customer']["id"] = $owner->createOrGetChargebeeCustomer($customerOptions)->id;
         }
 
-        // Make sure to collect address and name when Tax ID collection is enabled...
-        if (isset($data['customer']) && ($data['tax_id_collection']['enabled'] ?? false)) {
-            $data['customer_update']['address'] = 'auto';
-            $data['customer_update']['name'] = 'auto';
-        }
+        $data['redirectUrl'] = $sessionOptions['success_url'] ?? route('home') . '?checkout=success';
+        $data['cancelUrl'] = $sessionOptions['cancel_url'] ?? route('home') . '?checkout=cancelled';
+        $data['currencyCode'] = $sessionOptions['currency_code'] ?? $owner ? $owner->preferredCurrency() : '';
 
-        if ($data['mode'] === Session::MODE_PAYMENT && ($data['invoice_creation']['enabled'] ?? false)) {
-            $data['invoice_creation']['invoice_data']['metadata']['is_on_session_checkout'] = true;
-        } elseif ($data['mode'] === Session::MODE_SUBSCRIPTION) {
-            $data['subscription_data']['metadata']['is_on_session_checkout'] = true;
-        }
-
-        // Remove success and cancel URLs if "ui_mode" is "embedded"...
-        if (isset($data['ui_mode']) && $data['ui_mode'] === 'embedded') {
-            $data['return_url'] = $sessionOptions['return_url'] ?? route('home');
-
-            // Remove return URL for embedded UI mode when no redirection is desired on completion...
-            if (isset($data['redirect_on_completion']) && $data['redirect_on_completion'] === 'never') {
-                unset($data['return_url']);
-            }
+        if ($data['mode'] == Session::MODE_SUBSCRIPTION) {
+            $result = HostedPage::checkoutNewForItems($data);
         } else {
-            $data['success_url'] = $sessionOptions['success_url'] ?? route('home') . '?checkout=success';
-            $data['cancel_url'] = $sessionOptions['cancel_url'] ?? route('home') . '?checkout=cancelled';
+            $result = HostedPage::checkoutOneTimeForItems($data);
+
         }
 
-        dd($data);
-        // $session = $chargebee->checkout->sessions->create($data);
-
-        return new static($owner, $session);
+        dd($result->hostedPage());
+        return new static($owner, new Session(
+            $result->hostedPage()->getValues(),
+            $data['mode']
+        ));
     }
 
     /**
