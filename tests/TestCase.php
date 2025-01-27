@@ -2,13 +2,13 @@
 
 namespace Laravel\CashierChargebee\Tests;
 
+use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
 use Orchestra\Testbench\Concerns\WithWorkbench;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
-use Illuminate\Contracts\Config\Repository;
 
 abstract class TestCase extends OrchestraTestCase
 {
@@ -18,7 +18,7 @@ abstract class TestCase extends OrchestraTestCase
     {
         $apiKey = config('cashier.api_key');
 
-        if ($apiKey && !Str::startsWith($apiKey, 'test')) {
+        if ($apiKey && ! Str::startsWith($apiKey, 'test')) {
             throw new InvalidArgumentException('Tests may not be run with a production Chargebee key.');
         }
 

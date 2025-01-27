@@ -6,7 +6,6 @@ use ChargeBee\ChargeBee\Models\Coupon;
 use ChargeBee\ChargeBee\Models\Item;
 use ChargeBee\ChargeBee\Models\ItemFamily;
 use ChargeBee\ChargeBee\Models\ItemPrice;
-use Illuminate\Support\Facades\Http;
 use Laravel\CashierChargebee\Checkout;
 use Laravel\CashierChargebee\Session;
 
@@ -17,7 +16,7 @@ class CheckoutTest extends FeatureTestCase
      */
     protected function defineRoutes($router): void
     {
-        $router->get('/home', fn() => 'Hello World!')->name('home');
+        $router->get('/home', fn () => 'Hello World!')->name('home');
     }
 
     public function test_customers_can_start_a_product_checkout_session()
@@ -44,9 +43,8 @@ class CheckoutTest extends FeatureTestCase
 
         $shirtPrice = $this->createItemPrice('T-shirt', 1500);
 
-
-        $id = 'coupon_' . now()->timestamp;
-        $coupon = (Coupon::createForItems([
+        $id = 'coupon_'.now()->timestamp;
+        $coupon = Coupon::createForItems([
             'id' => $id,
             'name' => $id,
             'discountType' => 'fixed_amount',
@@ -54,7 +52,7 @@ class CheckoutTest extends FeatureTestCase
             'durationType' => 'one_time',
             'applyOn' => 'invoice_amount',
             'currencyCode' => config('cashier.currency'),
-        ]))->coupon();
+        ])->coupon();
 
         $checkout = $user->withCoupons([$coupon->id])
             ->checkout($shirtPrice->id, [
@@ -84,7 +82,7 @@ class CheckoutTest extends FeatureTestCase
         $user = $this->createCustomer('can_save_payment_details');
 
         $checkout = $user->checkout([], [
-            'mode' => Session::MODE_SETUP
+            'mode' => Session::MODE_SETUP,
         ]);
 
         $this->assertInstanceOf(Checkout::class, $checkout);
@@ -106,8 +104,8 @@ class CheckoutTest extends FeatureTestCase
         $this->assertInstanceOf(Checkout::class, $checkout);
         $this->assertSame('checkout_new', $checkout->type);
 
-        $id = 'coupon_' . now()->timestamp;
-        $coupon = (Coupon::createForItems([
+        $id = 'coupon_'.now()->timestamp;
+        $coupon = Coupon::createForItems([
             'id' => $id,
             'name' => $id,
             'discountType' => 'fixed_amount',
@@ -115,7 +113,7 @@ class CheckoutTest extends FeatureTestCase
             'durationType' => 'one_time',
             'applyOn' => 'invoice_amount',
             'currencyCode' => config('cashier.currency'),
-        ]))->coupon();
+        ])->coupon();
 
         $checkout = $user->newSubscription('default', $price->id)
             ->withCoupons([$coupon->id])
@@ -140,7 +138,6 @@ class CheckoutTest extends FeatureTestCase
         $this->assertInstanceOf(Checkout::class, $checkout);
     }
 
-
     protected function createSubscription($price, $amount)
     {
         $ts = now()->timestamp;
@@ -154,7 +151,7 @@ class CheckoutTest extends FeatureTestCase
             'id' => "$price-$ts",
             'name' => "$price-$ts",
             'type' => 'plan',
-            'itemFamilyId' => $itemFamily->itemFamily()->id
+            'itemFamilyId' => $itemFamily->itemFamily()->id,
         ]);
 
         $itemPrice = ItemPrice::create([
@@ -166,12 +163,11 @@ class CheckoutTest extends FeatureTestCase
             'itemFamilyId' => $itemFamily->itemFamily()->id,
             'currencyCode' => config('cashier.currency'),
             'period' => 1,
-            'periodUnit' => 'year'
+            'periodUnit' => 'year',
         ]);
 
         return $itemPrice->itemPrice();
     }
-
 
     protected function createItemPrice($price, $amount)
     {
@@ -186,7 +182,7 @@ class CheckoutTest extends FeatureTestCase
             'id' => "$price-$ts",
             'name' => "$price-$ts",
             'type' => 'charge',
-            'itemFamilyId' => $itemFamily->itemFamily()->id
+            'itemFamilyId' => $itemFamily->itemFamily()->id,
         ]);
 
         $itemPrice = ItemPrice::create([
@@ -196,9 +192,8 @@ class CheckoutTest extends FeatureTestCase
             'pricingModel' => 'per_unit',
             'itemId' => $item->item()->id,
             'itemFamilyId' => $itemFamily->itemFamily()->id,
-            'currencyCode' => config('cashier.currency')
+            'currencyCode' => config('cashier.currency'),
         ]);
-
 
         return $itemPrice->itemPrice();
     }
