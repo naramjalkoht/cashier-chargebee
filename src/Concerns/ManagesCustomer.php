@@ -4,9 +4,9 @@ namespace Laravel\CashierChargebee\Concerns;
 
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\Customer;
-use Laravel\CashierChargebee\Cashier;
 use ChargeBee\ChargeBee\Models\PortalSession;
 use Illuminate\Http\RedirectResponse;
+use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Exceptions\CustomerAlreadyCreated;
 use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
 
@@ -244,7 +244,7 @@ trait ManagesCustomer
     {
         return Cashier::formatAmount($amount, $this->preferredCurrency());
     }
-    
+
     /*
      * Get the Chargebee billing portal session for this customer.
      */
