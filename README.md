@@ -13,6 +13,7 @@
     - [Creating Customers](#creating-customers)
     - [Updating Customers](#updating-customers)
     - [Syncing Customers](#syncing-customers)
+    - [Tax exemption](#tax-exemption)
     - [Billing Portal](#billing-portal)
 - [Handling Chargebee Webhooks](#handling-chargebee-webhooks)
     - [Configuring Webhooks in Chargebee](#configuring-webhooks-in-chargebee)
@@ -279,6 +280,18 @@ If you want to sync the customer's information or create a new Chargebee custome
 $customer = $user->syncOrCreateChargebeeCustomer($options);
 ```
 
+<a name="tax-exemption"></a>
+### Tax Exemption
+
+Cashier offers the `isNotTaxExempt` and `isTaxExempt` methods to determine if the customer is tax exempt. These methods will call the Chargebee API to determine a customer's taxability status:
+
+```php
+use App\Models\User;
+
+$user = User::find(1);
+
+$user->isTaxExempt();
+$user->isNotTaxExempt();
 <a name="billing-portal"></a>
 ### Billing Portal
 
