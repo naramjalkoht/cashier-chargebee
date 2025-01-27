@@ -11,7 +11,7 @@ class CheckoutBuilder
     use HandlesTaxes;
 
     /**
-     * The Stripe model instance.
+     * The Chargebee model instance.
      *
      * @var \Illuminate\Database\Eloquent\Model|null
      */

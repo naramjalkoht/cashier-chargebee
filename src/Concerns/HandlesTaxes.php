@@ -17,7 +17,7 @@ trait HandlesTaxes
     public array $estimationBillingAddress = [];
 
     /**
-     * Indicates if Tax IDs should be collected during a Stripe Checkout session.
+     * Indicates if Tax IDs should be collected during a Chargebee Checkout session.
      */
     public bool $collectTaxIds = false;
 
@@ -46,7 +46,7 @@ trait HandlesTaxes
     }
 
     /**
-     * Get the payload for Stripe automatic tax calculation.
+     * Get the payload for Chargebee automatic tax calculation.
      */
     protected function automaticTaxPayload(): ?array
     {
@@ -66,7 +66,7 @@ trait HandlesTaxes
     }
 
     /**
-     * Indicate that Tax IDs should be collected during a Stripe Checkout session.
+     * Indicate that Tax IDs should be collected during a Chargebee Checkout session.
      */
     public function collectTaxIds(): self
     {

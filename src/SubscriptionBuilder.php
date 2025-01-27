@@ -111,7 +111,7 @@ class SubscriptionBuilder
     }
 
     /**
-     * Get the price tax rates for the Stripe payload.
+     * Get the price tax rates for the Chargebee payload.
      *
      * @param  string  $price
      * @return array|null
@@ -163,7 +163,7 @@ class SubscriptionBuilder
     }
 
     /**
-     * Get the tax rates for the Stripe payload.
+     * Get the tax rates for the Chargebee payload.
      *
      * @return array|null
      */
