@@ -4,6 +4,7 @@ namespace Laravel\CashierChargebee\Tests\Feature;
 
 use ChargeBee\ChargeBee\Models\PromotionalCredit;
 use Illuminate\Support\Collection;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
@@ -181,7 +182,6 @@ class CustomerTest extends FeatureTestCase
     {
         $user = $this->createCustomer('testuser');
         $user->createAsChargebeeCustomer();
-
         $user->first_name = 'TestSync';
         $user->last_name = 'User';
         $user->email = 'testsyncuser@cashier-chargebee.com';
@@ -247,6 +247,33 @@ class CustomerTest extends FeatureTestCase
         $this->assertSame($customer->id, $user->chargebeeId());
         $this->assertSame($customer->firstName, 'TestSynced');
         $this->assertSame($customer->lastName, 'User');
+    }
+
+    public function test_billing_portal_url(): void
+    {
+        $user = $this->createCustomer('testuser');
+        $user->createAsChargebeeCustomer();
+
+        $url = $user->billingPortalUrl('https://example.com');
+
+        $this->assertMatchesRegularExpression(
+            '/^https:\/\/[a-z0-9\-]+\.chargebee\.com\/portal\/v2\/authenticate\?token=[a-zA-Z0-9\-_]+$/',
+            $url
+        );
+    }
+
+    public function test_redirect_to_billing_portal(): void
+    {
+        $user = $this->createCustomer('testuser');
+        $user->createAsChargebeeCustomer();
+
+        $response = $user->redirectToBillingPortal('https://example.com');
+
+        $this->assertInstanceOf(RedirectResponse::class, $response);
+        $this->assertMatchesRegularExpression(
+            '/^https:\/\/[a-z0-9\-]+\.chargebee\.com\/portal\/v2\/authenticate\?token=[a-zA-Z0-9\-_]+$/',
+            $response->getTargetUrl()
+        );
     }
 
     public function test_with_tax_ip_address(): void
