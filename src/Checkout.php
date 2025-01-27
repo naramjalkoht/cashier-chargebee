@@ -84,12 +84,13 @@ class Checkout implements Arrayable, Jsonable, JsonSerializable, Responsable
 
         if ($data['mode'] == Session::MODE_SUBSCRIPTION) {
             $result = HostedPage::checkoutNewForItems($data);
+        } else if ($data['mode'] == Session::MODE_SETUP) {
+            $result = HostedPage::managePaymentSources($data);
         } else {
             $result = HostedPage::checkoutOneTimeForItems($data);
 
         }
 
-        dd($result->hostedPage());
         return new static($owner, new Session(
             $result->hostedPage()->getValues(),
             $data['mode']

@@ -6,7 +6,9 @@ use ChargeBee\ChargeBee\Models\Coupon;
 use ChargeBee\ChargeBee\Models\Item;
 use ChargeBee\ChargeBee\Models\ItemFamily;
 use ChargeBee\ChargeBee\Models\ItemPrice;
+use Illuminate\Support\Facades\Http;
 use Laravel\CashierChargebee\Checkout;
+use Laravel\CashierChargebee\Session;
 
 class CheckoutTest extends FeatureTestCase
 {
@@ -18,60 +20,76 @@ class CheckoutTest extends FeatureTestCase
         $router->get('/home', fn() => 'Hello World!')->name('home');
     }
 
-    // public function test_customers_can_start_a_product_checkout_session()
-    // {
-    //     $user = $this->createCustomer('can_start_a_product_checkout_session');
+    public function test_customers_can_start_a_product_checkout_session()
+    {
+        $user = $this->createCustomer('can_start_a_product_checkout_session');
 
-    //     $shirtPrice = $this->createItemPrice('T-shirt', 1500);
-    //     $carPrice = $this->createItemPrice('Car', 30000);
+        $shirtPrice = $this->createItemPrice('T-shirt', 1500);
+        $carPrice = $this->createItemPrice('Car', 30000);
 
-    //     $items = [$shirtPrice->id => 5, $carPrice->id];
+        $items = [$shirtPrice->id => 5, $carPrice->id];
 
-    //     $checkout = $user->checkout($items, [
-    //         'success_url' => 'http://example.com',
-    //         'cancel_url' => 'http://example.com',
-    //     ]);
+        $checkout = $user->checkout($items, [
+            'success_url' => 'http://example.com',
+            'cancel_url' => 'http://example.com',
+        ]);
 
-    //     $this->assertInstanceOf(Checkout::class, $checkout);
-    // }
+        $this->assertInstanceOf(Checkout::class, $checkout);
+        $this->assertSame('checkout_one_time', $checkout->type);
+    }
 
-    // public function test_customers_can_start_a_product_checkout_session_with_a_coupon_applied()
-    // {
-    //     $user = $this->createCustomer('can_start_checkout_session_with_coupon');
+    public function test_customers_can_start_a_product_checkout_session_with_a_coupon_applied()
+    {
+        $user = $this->createCustomer('can_start_checkout_session_with_coupon');
 
-    //     $shirtPrice = $this->createItemPrice('T-shirt', 1500);
+        $shirtPrice = $this->createItemPrice('T-shirt', 1500);
 
 
-    //     $id = 'coupon_' . now()->timestamp;
-    //     $coupon = (Coupon::createForItems([
-    //         'id' => $id,
-    //         'name' => $id,
-    //         'discountType' => 'fixed_amount',
-    //         'discountAmount' => 500,
-    //         'durationType' => 'one_time',
-    //         'applyOn' => 'invoice_amount'
-    //     ]))->coupon();
+        $id = 'coupon_' . now()->timestamp;
+        $coupon = (Coupon::createForItems([
+            'id' => $id,
+            'name' => $id,
+            'discountType' => 'fixed_amount',
+            'discountAmount' => 500,
+            'durationType' => 'one_time',
+            'applyOn' => 'invoice_amount',
+            'currencyCode' => config('cashier.currency'),
+        ]))->coupon();
 
-    //     $checkout = $user->withCoupons([$coupon->id])
-    //         ->checkout($shirtPrice->id, [
-    //             'success_url' => 'http://example.com',
-    //             'cancel_url' => 'http://example.com',
-    //         ]);
+        $checkout = $user->withCoupons([$coupon->id])
+            ->checkout($shirtPrice->id, [
+                'success_url' => 'http://example.com',
+                'cancel_url' => 'http://example.com',
+            ]);
 
-    //     $this->assertInstanceOf(Checkout::class, $checkout);
-    // }
+        $this->assertInstanceOf(Checkout::class, $checkout);
+        $this->assertSame('checkout_one_time', $checkout->type);
+    }
 
-    // public function test_customers_can_start_a_one_off_charge_checkout_session()
-    // {
-    //     $user = $this->createCustomer('can_start_one_off_checkout_session');
+    public function test_customers_can_start_a_one_off_charge_checkout_session()
+    {
+        $user = $this->createCustomer('can_start_one_off_checkout_session');
 
-    //     $checkout = $user->checkoutCharge(1200, 'T-shirt', 1, [
-    //         'success_url' => 'http://example.com',
-    //         'cancel_url' => 'http://example.com',
-    //     ]);
+        $checkout = $user->checkoutCharge(1200, 'T-shirt', 1, [
+            'success_url' => 'http://example.com',
+            'cancel_url' => 'http://example.com',
+        ]);
 
-    //     $this->assertInstanceOf(Checkout::class, $checkout);
-    // }
+        $this->assertInstanceOf(Checkout::class, $checkout);
+        $this->assertSame('checkout_one_time', $checkout->type);
+    }
+
+    public function test_customers_can_save_payment_details()
+    {
+        $user = $this->createCustomer('can_save_payment_details');
+
+        $checkout = $user->checkout([], [
+            'mode' => Session::MODE_SETUP
+        ]);
+
+        $this->assertInstanceOf(Checkout::class, $checkout);
+        $this->assertSame('manage_payment_sources', $checkout->type);
+    }
 
     public function test_customers_can_start_a_subscription_checkout_session()
     {
@@ -86,8 +104,7 @@ class CheckoutTest extends FeatureTestCase
             ]);
 
         $this->assertInstanceOf(Checkout::class, $checkout);
-        $this->assertTrue($checkout->allow_promotion_codes);
-        $this->assertSame(1815, $checkout->amount_total);
+        $this->assertSame('checkout_new', $checkout->type);
 
         $id = 'coupon_' . now()->timestamp;
         $coupon = (Coupon::createForItems([
@@ -97,8 +114,7 @@ class CheckoutTest extends FeatureTestCase
             'discountAmount' => 500,
             'durationType' => 'one_time',
             'applyOn' => 'invoice_amount',
-            'period' => 3,
-            'periodUnit' => 'month'
+            'currencyCode' => config('cashier.currency'),
         ]))->coupon();
 
         $checkout = $user->newSubscription('default', $price->id)
@@ -109,21 +125,20 @@ class CheckoutTest extends FeatureTestCase
             ]);
 
         $this->assertInstanceOf(Checkout::class, $checkout);
-        $this->assertNull($checkout->allow_promotion_codes);
-        $this->assertSame(1210, $checkout->amount_total);
+        $this->assertSame('checkout_new', $checkout->type);
     }
 
-    // public function test_guest_customers_can_start_a_checkout_session()
-    // {
-    //     $shirtPrice = $this->createItemPrice('T-shirt', 1500);
+    public function test_guest_customers_can_start_a_checkout_session()
+    {
+        $shirtPrice = $this->createItemPrice('T-shirt', 1500);
 
-    //     $checkout = Checkout::guest()->create($shirtPrice->id, [
-    //         'success_url' => 'http://example.com',
-    //         'cancel_url' => 'http://example.com',
-    //     ]);
+        $checkout = Checkout::guest()->create($shirtPrice->id, [
+            'success_url' => 'http://example.com',
+            'cancel_url' => 'http://example.com',
+        ]);
 
-    //     $this->assertInstanceOf(Checkout::class, $checkout);
-    // }
+        $this->assertInstanceOf(Checkout::class, $checkout);
+    }
 
 
     protected function createSubscription($price, $amount)
@@ -149,7 +164,7 @@ class CheckoutTest extends FeatureTestCase
             'pricingModel' => 'per_unit',
             'itemId' => $item->item()->id,
             'itemFamilyId' => $itemFamily->itemFamily()->id,
-            'currencyCode' => '',
+            'currencyCode' => config('cashier.currency'),
             'period' => 1,
             'periodUnit' => 'year'
         ]);
@@ -180,7 +195,8 @@ class CheckoutTest extends FeatureTestCase
             'price' => $amount,
             'pricingModel' => 'per_unit',
             'itemId' => $item->item()->id,
-            'itemFamilyId' => $itemFamily->itemFamily()->id
+            'itemFamilyId' => $itemFamily->itemFamily()->id,
+            'currencyCode' => config('cashier.currency')
         ]);
 
 
