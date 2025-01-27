@@ -3,8 +3,8 @@
 namespace Laravel\CashierChargebee\Tests\Feature;
 
 use ChargeBee\ChargeBee\Models\PromotionalCredit;
-use Illuminate\Support\Collection;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
@@ -404,7 +404,7 @@ class CustomerTest extends FeatureTestCase
     public function test_customer_balance(): void
     {
         config(['cashier.currency' => 'EUR']);
-        
+
         $user = $this->createCustomer();
 
         $this->assertSame(0, $user->rawBalance());
@@ -418,7 +418,7 @@ class CustomerTest extends FeatureTestCase
         $transactions = $user->balanceTransactions();
         $this->assertInstanceOf(Collection::class, $transactions);
         $this->assertCount(0, $transactions);
-        
+
         $this->assertSame(0, $user->rawBalance());
         $this->assertSame('€0.00', $user->balance());
 
