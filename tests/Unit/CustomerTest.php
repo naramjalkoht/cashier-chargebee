@@ -80,7 +80,7 @@ class CustomerTest extends TestCase
         $this->assertStringContainsString('10.00', $result);
         $this->assertStringContainsString('€', $result);
     }
-    
+
     public function test_billing_portal_url_with_no_chargeebee_id(): void
     {
         $user = new User();
