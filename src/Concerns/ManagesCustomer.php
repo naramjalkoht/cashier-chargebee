@@ -4,6 +4,8 @@ namespace Laravel\CashierChargebee\Concerns;
 
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\Customer;
+use ChargeBee\ChargeBee\Models\PortalSession;
+use Illuminate\Http\RedirectResponse;
 use Laravel\CashierChargebee\Exceptions\CustomerAlreadyCreated;
 use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
 
@@ -22,7 +24,7 @@ trait ManagesCustomer
      */
     public function hasChargebeeId(): bool
     {
-        return ! is_null($this->chargebee_id);
+        return !is_null($this->chargebee_id);
     }
 
     /**
@@ -32,7 +34,7 @@ trait ManagesCustomer
      */
     protected function assertCustomerExists()
     {
-        if (! $this->hasChargebeeId()) {
+        if (!$this->hasChargebeeId()) {
             throw CustomerNotFound::notFound($this);
         }
     }
@@ -240,5 +242,32 @@ trait ManagesCustomer
     public function isTaxExempt(): bool
     {
         return $this->asChargebeeCustomer()->taxability === 'exempt';
+    }
+
+    /** 
+     * Get the Chargebee billing portal session for this customer.
+     */
+    public function billingPortalUrl($returnUrl = null, array $options = []): string
+    {
+        $this->assertCustomerExists();
+
+        $response = PortalSession::create(array_merge([
+            'redirect_url' => $returnUrl ?? route('home'),
+            'customer' => [
+                'id' => $this->chargebeeId(),
+            ],
+        ], $options));
+
+        return $response->portalSession()->accessUrl;
+    }
+
+    /**
+     * Generate a redirect response to the customer's Chargebee billing portal session.
+     */
+    public function redirectToBillingPortal($returnUrl = null, array $options = []): RedirectResponse
+    {
+        return new RedirectResponse(
+            $this->billingPortalUrl($returnUrl, $options)
+        );
     }
 }
