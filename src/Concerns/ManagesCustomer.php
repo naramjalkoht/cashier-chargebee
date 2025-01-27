@@ -5,7 +5,9 @@ namespace Laravel\CashierChargebee\Concerns;
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\Customer;
 use ChargeBee\ChargeBee\Models\PortalSession;
+use ChargeBee\ChargeBee\Models\PromotionalCredit;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Exceptions\CustomerAlreadyCreated;
 use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
@@ -259,6 +261,93 @@ trait ManagesCustomer
     protected function formatAmount(int $amount): string
     {
         return Cashier::formatAmount($amount, $this->preferredCurrency());
+    }
+
+    /**
+     * Get the raw total balance of the customer.
+     */
+    public function rawBalance(): int
+    {
+        if (! $this->hasChargebeeId()) {
+            return 0;
+        }
+
+        $customer = $this->asChargebeeCustomer();
+
+        return $customer->promotionalCredits;
+    }
+
+    /**
+     * Get the total balance of the customer.
+     */
+    public function balance(): string
+    {
+        return $this->formatAmount($this->rawBalance());
+    }
+
+    /**
+     * Credit a customer's balance.
+     */
+    public function creditBalance(int $amount, string $description = 'Add promotional credits.', array $options = []): PromotionalCredit
+    {
+        $result = PromotionalCredit::add(array_merge([
+            'customerId' => $this->chargebeeId(),
+            'amount' => $amount,
+            'description' => $description,
+            'currency_code' => $this->preferredCurrency(),
+        ], $options));
+
+        return $result->promotionalCredit();
+    }
+
+    /**
+     * Debit a customer's balance.
+     */
+    public function debitBalance(int $amount, string $description = 'Deduct promotional credits.', array $options = []): PromotionalCredit
+    {
+        $result = PromotionalCredit::deduct(array_merge([
+            'customerId' => $this->chargebeeId(),
+            'amount' => $amount,
+            'description' => $description,
+            'currency_code' => $this->preferredCurrency(),
+        ], $options));
+
+        return $result->promotionalCredit();
+    }
+
+    /**
+     * Apply a new amount to the customer's balance.
+     */
+    public function applyBalance(int $amount, string $description = 'Apply balance.', array $options = []): PromotionalCredit
+    {
+        $this->assertCustomerExists();
+
+        if ($amount < 0) {
+            return $this->debitBalance(abs($amount), $description, $options);
+        } else {
+            return $this->creditBalance($amount, $description, $options);
+        }
+    }
+
+    /**
+     * Return a customer's balance transactions.
+     */
+    public function balanceTransactions(int $limit = 10, array $options = []): Collection
+    {
+        if (! $this->hasChargebeeId()) {
+            return new Collection();
+        }
+
+        $all = PromotionalCredit::all(array_merge([
+            'limit' => $limit,
+            'customerId[is]' => $this->chargebeeId(),
+        ], $options));
+
+        $promotionalCredits = collect($all)->map(function ($entry) {
+            return $entry->promotionalCredit();
+        });
+
+        return $promotionalCredits;
     }
 
     /*
