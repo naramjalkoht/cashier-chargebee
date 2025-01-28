@@ -125,6 +125,57 @@ class WebhookTest extends FeatureTestCase
             ->assertStatus(200);
     }
 
+    public function test_handle_customer_changed(): void
+    {
+        $this->withValidCredentials();
+        $user = $this->createCustomer('test_handle_customer_changed');
+        $user->createAsChargebeeCustomer();
+
+        $updateOptions = [
+            'email' => 'testcustomerchanged@cashier-chargebee.com'
+        ];
+
+        $customer = $user->updateChargebeeCustomer($updateOptions);
+        $this->assertSame('testcustomerchanged@cashier-chargebee.com', $customer->email);
+
+        $payload = [
+            'event_type' => 'customer_changed',
+            'content' => [
+                'customer' => ['id' => $user->chargebeeId()],
+            ],
+        ];
+
+        $this->postJson($this->webhookUrl, $payload)
+            ->assertStatus(200);
+        
+        $user->refresh();
+        
+        $this->assertSame('testcustomerchanged@cashier-chargebee.com', $user->email);
+    }
+
+    public function test_customer_change_logs_no_matching_user_found(): void
+    {
+        $this->withValidCredentials();
+
+        Log::swap(\Mockery::mock(\Illuminate\Log\LogManager::class)->shouldIgnoreMissing());
+
+        Log::shouldReceive('info')
+            ->once()
+            ->with('Customer update attempted, but no matching user found.', [
+                'customer_id' => 'non_existent_customer_id',
+            ]);
+
+        $payload = [
+            'event_type' => 'customer_changed',
+            'content' => [
+                'customer' => ['id' => 'non_existent_customer_id'],
+            ],
+        ];
+
+        $this->postJson($this->webhookUrl, $payload)
+            ->assertStatus(200);
+    }
+
     protected function withValidCredentials(): void
     {
         $username = config('cashier.webhook.username');

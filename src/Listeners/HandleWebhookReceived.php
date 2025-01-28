@@ -62,4 +62,25 @@ class HandleWebhookReceived
             ]);
         }
     }
+
+    /**
+     * Handle the customer_changed event.
+     * 
+     * @todo Synchronise payment details if applicable.
+     */
+    protected function handleCustomerChanged(array $payload): void
+    {
+        if ($user = Cashier::findBillable($payload['content']['customer']['id'])) {
+            $user->updateCustomerFromChargebee();
+
+            Log::info('Customer updated successfully.', [
+                'customer_id' => $payload['content']['customer']['id'],
+                'user_id' => $user->id,
+            ]);
+        } else {
+            Log::info('Customer update attempted, but no matching user found.', [
+                'customer_id' => $payload['content']['customer']['id'],
+            ]);
+        }
+    }
 }

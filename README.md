@@ -437,9 +437,37 @@ Cashier will automatically verify these credentials for incoming webhook request
 <a name="handling-webhook-events"></a>
 ### Handling Webhook Events
 
-Cashier emits a `WebhookReceived` event for every incoming webhook, allowing you to handle these events in your application. By default, Cashier includes a listener that handles the `customer_deleted` event. This listener ensures that when a customer is deleted in Chargebee, their corresponding record in your application is updated accordingly.
+Cashier emits a `WebhookReceived` event for every incoming webhook, allowing you to handle these events in your application. By default, Cashier includes a `HandleWebhookReceived` listener that handles the `customer_deleted` and `customer_updated` events.
 
-If you need to modify the default behavior for the `customer_deleted` event or handle additional Chargebee events, you can provide your own listener. The listener class is configurable via the `cashier` configuration file:
+The `customer_deleted` event ensures that when a customer is deleted in Chargebee, their corresponding record in your application is updated accordingly by removing their Chargebee ID.
+
+The `customer_updated` event uses the `updateCustomerFromChargebee` method on your billable model to synchronize customer information. By default, this method maps Chargebee data to common fields such as `email` and `phone`. However, to ensure the correct mapping for your application, **you should override this method in your billable model**. This allows you to define how Chargebee customer attributes should be mapped to your model's columns. Additionally, you can include more data beyond the default fields, as Chargebee provides a wide range of customer attributes. For a full list, see the [Chargebee API documentation](https://apidocs.eu.chargebee.com/docs/api/customers?prod_cat_ver=2&lang=php#customer_attributes). Here’s an example implementation:
+
+```php
+/**
+ * Update customer with data from Chargebee.
+ */
+public function updateCustomerFromChargebee(): void
+{
+    $customer = $this->asChargebeeCustomer();
+
+    $chargebeeData = [
+        'name' => $customer->firstName.' '.$customer->lastName,
+        'email' => $customer->email,
+        'phone' => $customer->phone,
+        'billing_first_name' => $customer->billingAddress->firstName ?? null,
+        'billing_last_name' => $customer->billingAddress->lastName ?? null,
+        'billing_line1' => $customer->billingAddress->line1 ?? null,
+        'billing_city' => $customer->billingAddress->city ?? null,
+        'billing_address_state' => $customer->billingAddress->state ?? null,
+        'billing_address_country' => $customer->billingAddress->country ?? null,
+    ];
+
+    $this->update($chargebeeData);
+}
+```
+
+If you need to modify the default behavior for the `customer_deleted` or `customer_updated` events, or handle additional Chargebee events, you can provide your own listener. The listener class is configurable via the `cashier` configuration file:
 
 ```init
 'webhook_listener' => \Laravel\CashierChargebee\Listeners\HandleWebhookReceived::class,
