@@ -16,8 +16,9 @@ class HandleWebhookReceived
     {
         $eventType = $event->payload['event_type'] ?? null;
 
-        if (!$eventType) {
+        if (! $eventType) {
             Log::warning('WebhookReceived: Missing event_type in payload.', $event->payload);
+
             return;
         }
 
@@ -35,7 +36,7 @@ class HandleWebhookReceived
      */
     protected function getHandlerMethod(string $eventType): string
     {
-        return 'handle' . Str::studly(str_replace('_', '', $eventType));
+        return 'handle'.Str::studly(str_replace('_', '', $eventType));
     }
 
     /**

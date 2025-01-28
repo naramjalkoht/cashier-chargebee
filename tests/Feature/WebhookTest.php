@@ -91,7 +91,7 @@ class WebhookTest extends FeatureTestCase
 
         Log::shouldReceive('info')
             ->once()
-            ->with("WebhookReceived: No handler found for event_type: unknown_event", \Mockery::any());
+            ->with('WebhookReceived: No handler found for event_type: unknown_event', \Mockery::any());
 
         $payload = [
             'event_type' => 'unknown_event',
