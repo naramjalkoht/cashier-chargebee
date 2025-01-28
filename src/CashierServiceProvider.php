@@ -2,8 +2,11 @@
 
 namespace Laravel\CashierChargebee;
 
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Laravel\CashierChargebee\Events\WebhookReceived;
+use Laravel\CashierChargebee\Listeners\HandleWebhookReceived;
 
 class CashierServiceProvider extends ServiceProvider
 {
@@ -16,6 +19,11 @@ class CashierServiceProvider extends ServiceProvider
         $this->registerResources();
         $this->registerPublishing();
         Cashier::configureEnvironment();
+
+        Event::listen(
+            WebhookReceived::class,
+            config('cashier.webhook_listener', HandleWebhookReceived::class)
+        );
     }
 
     /**

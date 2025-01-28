@@ -437,23 +437,10 @@ Cashier will automatically verify these credentials for incoming webhook request
 <a name="handling-webhook-events"></a>
 ### Handling Webhook Events
 
-Cashier emits a `WebhookReceived` event for every incoming webhook, allowing you to handle these events in your application. To handle webhook events, you can create a dedicated event listener class:
+Cashier emits a `WebhookReceived` event for every incoming webhook, allowing you to handle these events in your application. By default, Cashier includes a listener that handles the `customer_deleted` event. This listener ensures that when a customer is deleted in Chargebee, their corresponding record in your application is updated accordingly.
 
-```php
-namespace App\Listeners;
+If you need to modify the default behavior for the `customer_deleted` event or handle additional Chargebee events, you can provide your own listener. The listener class is configurable via the `cashier` configuration file:
 
-use Laravel\CashierChargebee\Events\WebhookReceived;
-
-class HandleWebhookReceived
-{
-    /**
-     * Handle the event.
-     */
-    public function handle(WebhookReceived $event): void
-    {
-        $payload = $event->payload;
-
-        // Handle the webhook payload
-    }
-}
+```init
+'webhook_listener' => \Laravel\CashierChargebee\Listeners\HandleWebhookReceived::class,
 ```
