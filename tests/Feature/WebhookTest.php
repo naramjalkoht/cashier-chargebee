@@ -83,7 +83,7 @@ class WebhookTest extends FeatureTestCase
         $this->assertNull($user->pm_last_four);
     }
 
-    public function test_no_handler_found_logs_info_message()
+    public function test_no_handler_found_logs_info_message(): void
     {
         $this->withValidCredentials();
 
@@ -102,7 +102,7 @@ class WebhookTest extends FeatureTestCase
             ->assertStatus(200);
     }
 
-    public function test_customer_deletion_logs_no_matching_user_found()
+    public function test_customer_deletion_logs_no_matching_user_found(): void
     {
         $this->withValidCredentials();
 
