@@ -23,8 +23,8 @@ trait ManagesPaymentMethods
         }
 
         $defaultOptions = [
-            'amount'        => 0,
-            'currency_code' => !empty($options['currency_code'])
+            'amount' => 0,
+            'currency_code' => ! empty($options['currency_code'])
                 ? $options['currency_code']
                 : config('cashier.currency'),
         ];
@@ -57,7 +57,7 @@ trait ManagesPaymentMethods
      */
     public function paymentMethods(?string $type = null, array $parameters = []): ?Collection
     {
-        if (!$this->hasChargebeeId()) {
+        if (! $this->hasChargebeeId()) {
             return new Collection();
         }
 
@@ -82,7 +82,7 @@ trait ManagesPaymentMethods
     {
         $this->assertCustomerExists();
 
-        if($setAsDefault) {
+        if ($setAsDefault) {
             $this->setDefaultPaymentMethod($paymentSource);
         }
 
@@ -107,7 +107,7 @@ trait ManagesPaymentMethods
 
         if (! empty($customer->primaryPaymentSourceId) && $paymentSource->id === $customer->primaryPaymentSourceId) {
             $this->forceFill([
-                'pm_type'      => null,
+                'pm_type' => null,
                 'pm_last_four' => null,
             ])->save();
         }
@@ -165,7 +165,7 @@ trait ManagesPaymentMethods
             )->save();
         } else {
             $this->forceFill([
-                'pm_type'      => null,
+                'pm_type' => null,
                 'pm_last_four' => null,
             ])->save();
         }
@@ -174,7 +174,7 @@ trait ManagesPaymentMethods
     }
 
     /**
-     * Set Default PaymentMethod
+     * Set Default PaymentMethod.
      *
      * @throws InvalidPaymentMethod
      * @throws InvalidRequestException
@@ -191,7 +191,7 @@ trait ManagesPaymentMethods
                 $this->chargebeeId(),
                 [
                     'payment_source_id' => $paymentSource->id,
-                    'role' => 'PRIMARY'
+                    'role' => 'PRIMARY',
                 ]
             );
 
@@ -225,6 +225,7 @@ trait ManagesPaymentMethods
     public function findPaymentMethod(PaymentSource|string $paymentSource): ?PaymentMethod
     {
         $paymentSource = $this->resolveChargebeePaymentMethod($paymentSource);
+
         return $paymentSource
             ? new PaymentMethod($this, $paymentSource)
             : null;

@@ -6,10 +6,8 @@ use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\PaymentIntent;
 use ChargeBee\ChargeBee\Models\PaymentSource;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
-use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Exceptions\InvalidPaymentMethod;
 use Laravel\CashierChargebee\PaymentMethod;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
@@ -120,9 +118,9 @@ class CustomerPaymentMethodsTest extends FeatureTestCase
         $this->assertDatabaseHas(
             'users',
             [
-                'id'           => $user->id,
-                'pm_type'      => $addedPaymentMethod->card->brand,
-                'pm_last_four' => $addedPaymentMethod->card->last4
+                'id' => $user->id,
+                'pm_type' => $addedPaymentMethod->card->brand,
+                'pm_last_four' => $addedPaymentMethod->card->last4,
             ]
         );
     }
@@ -165,7 +163,7 @@ class CustomerPaymentMethodsTest extends FeatureTestCase
         $user->createAsChargebeeCustomer();
         $paymentSource = $this->createCard($user);
         $user->deletePaymentMethod($paymentSource);
-        $this->assertNull($user->paymentMethods()->filter(fn(PaymentSource $listPaymentMethod) => $listPaymentMethod->id === $paymentSource->id)->first());
+        $this->assertNull($user->paymentMethods()->filter(fn (PaymentSource $listPaymentMethod) => $listPaymentMethod->id === $paymentSource->id)->first());
 
         $paymentSource = $this->createCard($user);
         $addedPaymentMethod = $user->addPaymentMethod($paymentSource, true);
@@ -173,9 +171,9 @@ class CustomerPaymentMethodsTest extends FeatureTestCase
         $this->assertDatabaseHas(
             'users',
             [
-                'id'           => $user->id,
-                'pm_type'      => $addedPaymentMethod->card->brand,
-                'pm_last_four' => $addedPaymentMethod->card->last4
+                'id' => $user->id,
+                'pm_type' => $addedPaymentMethod->card->brand,
+                'pm_last_four' => $addedPaymentMethod->card->last4,
             ]
         );
 
@@ -183,13 +181,13 @@ class CustomerPaymentMethodsTest extends FeatureTestCase
         $this->assertDatabaseHas(
             'users',
             [
-                'id'           => $user->id,
-                'pm_type'      => null,
-                'pm_last_four' => null
+                'id' => $user->id,
+                'pm_type' => null,
+                'pm_last_four' => null,
             ]
         );
 
-        $this->assertNull($user->paymentMethods()->filter(fn(PaymentSource $listPaymentMethod) => $listPaymentMethod->id === $addedPaymentMethod->id)->first());
+        $this->assertNull($user->paymentMethods()->filter(fn (PaymentSource $listPaymentMethod) => $listPaymentMethod->id === $addedPaymentMethod->id)->first());
     }
 
     public function test_chargebee_customer_can_delete_payment_methods_of_specific_type(): void
@@ -198,7 +196,7 @@ class CustomerPaymentMethodsTest extends FeatureTestCase
         $user->createAsChargebeeCustomer();
         $paymentSource = $this->createCard($user);
         $user->deletePaymentMethods($paymentSource->type);
-        $this->assertNull($user->paymentMethods()->filter(fn(PaymentSource $listPaymentMethod) => $listPaymentMethod->type === $paymentSource->type)->first());
+        $this->assertNull($user->paymentMethods()->filter(fn (PaymentSource $listPaymentMethod) => $listPaymentMethod->type === $paymentSource->type)->first());
     }
 
     public function test_chargebee_customer_cannot_delete_payment_method(): void
@@ -251,7 +249,7 @@ class CustomerPaymentMethodsTest extends FeatureTestCase
         $this->assertInstanceOf(PaymentSource::class, $resolvedPaymentSource);
         $this->assertSame($paymentSource, $resolvedPaymentSource);
 
-        $resolvedPaymentSource = $reflectedMethod->invokeArgs($user, [ $paymentSource->id]);
+        $resolvedPaymentSource = $reflectedMethod->invokeArgs($user, [$paymentSource->id]);
         $this->assertInstanceOf(PaymentSource::class, $resolvedPaymentSource);
         $this->assertSame($paymentSource->id, $resolvedPaymentSource->id);
     }
@@ -267,9 +265,9 @@ class CustomerPaymentMethodsTest extends FeatureTestCase
         $this->assertDatabaseHas(
             'users',
             [
-                'id'           => $user->id,
-                'pm_type'      => $addedPaymentMethod->card->brand,
-                'pm_last_four' => $addedPaymentMethod->card->last4
+                'id' => $user->id,
+                'pm_type' => $addedPaymentMethod->card->brand,
+                'pm_last_four' => $addedPaymentMethod->card->last4,
             ]
         );
 
@@ -279,25 +277,24 @@ class CustomerPaymentMethodsTest extends FeatureTestCase
         $this->assertDatabaseHas(
             'users',
             [
-                'id'           => $user->id,
-                'pm_type'      => null,
-                'pm_last_four' => null
+                'id' => $user->id,
+                'pm_type' => null,
+                'pm_last_four' => null,
             ]
         );
-
     }
 
     private function createCard(Model $user): ?PaymentSource
     {
         return PaymentSource::createCard([
-                'customer_id' => $user->chargebeeId(),
-                'card'        => [
-                    'number'       => '4111 1111 1111 1111',
-                    'cvv'          => '123',
-                    'expiry_year'  => date('Y', strtotime('+ 1 year')),
-                    'expiry_month' => date('m', strtotime('+ 1 year')),
-                ],
-            ]
+            'customer_id' => $user->chargebeeId(),
+            'card' => [
+                'number' => '4111 1111 1111 1111',
+                'cvv' => '123',
+                'expiry_year' => date('Y', strtotime('+ 1 year')),
+                'expiry_month' => date('m', strtotime('+ 1 year')),
+            ],
+        ]
         )->paymentSource();
     }
 }
