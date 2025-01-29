@@ -4,11 +4,11 @@ namespace Laravel\CashierChargebee\Tests\Feature;
 
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\PaymentIntent;
+use ChargeBee\ChargeBee\Models\PaymentSource;
 use ChargeBee\ChargeBee\Models\PromotionalCredit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
-use ChargeBee\ChargeBee\Models\PaymentSource;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Exceptions\InvalidPaymentMethod;
