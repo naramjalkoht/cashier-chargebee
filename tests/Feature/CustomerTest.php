@@ -2,6 +2,8 @@
 
 namespace Laravel\CashierChargebee\Tests\Feature;
 
+use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
+use ChargeBee\ChargeBee\Models\PaymentIntent;
 use ChargeBee\ChargeBee\Models\PromotionalCredit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
@@ -436,5 +438,67 @@ class CustomerTest extends FeatureTestCase
 
         $this->assertInstanceOf(PromotionalCredit::class, $transaction);
         $this->assertSame(200, $transaction->amount);
+    }
+
+    public function test_can_create_setup_intent(): void
+    {
+        $currency = config('cashier.currency');
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+
+        $paymentIntent = $this->createSetupIntent($user, $currency);
+
+        $this->assertNotNull($paymentIntent);
+        $this->assertSame($user->chargebee_id, $paymentIntent->customerId);
+        $this->assertSame(0, $paymentIntent->amount);
+        $this->assertSame($currency, strtolower($paymentIntent->currencyCode));
+    }
+
+    public function test_cannot_create_setup_intent(): void
+    {
+        $currency = Str::random(3);
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+
+        $this->expectException(InvalidRequestException::class);
+        $paymentIntent = $this->createSetupIntent($user, $currency);
+
+        $this->assertNull($paymentIntent);
+    }
+
+    public function test_find_setup_intent(): void
+    {
+        $currency = config('cashier.currency');
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+
+        $paymentIntent = $this->createSetupIntent($user, $currency);
+
+        $this->assertNotNull($paymentIntent);
+        $this->assertSame($user->chargebee_id, $paymentIntent->customerId);
+        $this->assertSame(0, $paymentIntent->amount);
+        $this->assertSame($currency, strtolower($paymentIntent->currencyCode));
+
+        $findPaymentIntent = $user->findSetupIntent($paymentIntent->id);
+
+        $this->assertNotNull($findPaymentIntent);
+        $this->assertSame($user->chargebee_id, $findPaymentIntent->customerId);
+        $this->assertSame(0, $findPaymentIntent->amount);
+        $this->assertSame($currency, strtolower($paymentIntent->currencyCode));
+    }
+
+    public function test_cannot_find_setup_intent(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+        $this->expectException(InvalidRequestException::class);
+        $findPaymentIntent = $user->findSetupIntent(Str::random());
+
+        $this->assertNull($findPaymentIntent);
+    }
+
+    private function createSetupIntent(User $user, string $currencyCode): ?PaymentIntent
+    {
+        return $user->createSetupIntent(['currency_code' => $currencyCode]);
     }
 }

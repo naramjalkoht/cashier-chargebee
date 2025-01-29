@@ -21,6 +21,9 @@
     - [Route Configuration](#route-configuration)
     - [Configuring Basic Authentication](#configuring-basic-authentication)
     - [Handling Webhook Events](#handling-webhook-events)
+- [Manage Payment Methods](#manage-payment-methods)
+    - [Create SetupIntent](#payment-methods-create-setupintent)
+    - [Find SetupIntent](#payment-methods-find-setupintent)
 
 <a name="installation"></a>
 ## Installation
@@ -457,3 +460,59 @@ class HandleWebhookReceived
     }
 }
 ```
+<a name="manage-payment-methods"></a>
+## Manage Payment Methods
+
+**Please remember to enable 3DS in Chargebee settings for your account to be able to use PaymentIntents**
+
+<a name="payment-methods-create-setupintent"></a>
+## Create SetupIntent
+
+You can create SetupIntent (PaymentIntent with amount hardcoded to 0). This will create new payment source.
+
+**Available options**
+  * currency_code 
+    * required
+    * default set to Cashier config option
+  * gateway_account_id
+    * optional, string, max chars=50
+    * The gateway account used for performing the 3DS flow.
+  * reference_id 
+    * optional, string, max chars=200
+    * Reference for payment method at gateway. Only applicable when the PaymentIntent is created for cards stored in the gateway.
+  * payment_method_type
+    * optional, enumerated string, 
+    * default=card
+    * possible values
+      * card
+      * ideal
+      * sofort
+      * bancontact
+  * success_url
+    * optional, string, max chars=250
+    * The URL the customer will be directed to once 3DS verification is successful.
+  * failure_url
+    * optional, string, max chars=250
+    * The URL the customer will be directed to when 3DS verification fails.
+
+```php
+$currency = 'EUR';
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+$paymentIntent = $user->createSetupIntent(['currency_code' => $currencyCode]);
+```
+
+<a name="payment-methods-find-setupintent"></a>
+## Find SetupIntent
+
+Retrieves the PaymentIntent resource.
+
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+$paymentIntent = $user->findSetupIntent($id);
+```
+
+You can find more information about PaymentIntent API [here](https://apidocs.eu.chargebee.com/docs/api/payment_intents#create_a_payment_intent?target=_blank)
