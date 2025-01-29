@@ -4,10 +4,11 @@ namespace Laravel\CashierChargebee\Tests\Feature;
 
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\PaymentIntent;
-use ChargeBee\ChargeBee\Models\PaymentSource;
-use Illuminate\Database\Eloquent\Model;
+use ChargeBee\ChargeBee\Models\PromotionalCredit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
+use ChargeBee\ChargeBee\Models\PaymentSource;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Exceptions\InvalidPaymentMethod;
@@ -384,6 +385,63 @@ class CustomerTest extends FeatureTestCase
         $user->collectTaxIds();
 
         $this->assertSame(true, $user->collectTaxIds);
+    }
+
+    public function test_is_not_tax_exempt(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+
+        $this->assertTrue($user->isNotTaxExempt());
+        $this->assertFalse($user->isTaxExempt());
+    }
+
+    public function test_is_tax_exempt(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer([
+            'taxability' => 'exempt',
+        ]);
+
+        $this->assertTrue($user->isTaxExempt());
+        $this->assertFalse($user->isNotTaxExempt());
+    }
+
+    public function test_customer_balance(): void
+    {
+        config(['cashier.currency' => 'EUR']);
+
+        $user = $this->createCustomer();
+
+        $this->assertSame(0, $user->rawBalance());
+
+        $transactions = $user->balanceTransactions();
+        $this->assertInstanceOf(Collection::class, $transactions);
+        $this->assertCount(0, $transactions);
+
+        $user->createAsChargebeeCustomer();
+
+        $transactions = $user->balanceTransactions();
+        $this->assertInstanceOf(Collection::class, $transactions);
+        $this->assertCount(0, $transactions);
+
+        $this->assertSame(0, $user->rawBalance());
+        $this->assertSame('€0.00', $user->balance());
+
+        $user->applyBalance(500, 'Add credits.');
+
+        $this->assertSame(500, $user->rawBalance());
+        $this->assertSame('€5.00', $user->balance());
+
+        $user->applyBalance(-200);
+
+        $this->assertSame(300, $user->rawBalance());
+        $this->assertSame('€3.00', $user->balance());
+
+        $transaction = $user->balanceTransactions()->first();
+
+        $this->assertInstanceOf(PromotionalCredit::class, $transaction);
+        $this->assertSame(200, $transaction->amount);
     }
 
     public function test_can_create_setup_intent(): void
