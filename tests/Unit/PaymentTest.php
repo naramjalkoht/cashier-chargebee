@@ -4,10 +4,7 @@ namespace Laravel\CashierChargebee\Tests\Unit;
 
 use ChargeBee\ChargeBee\Models\PaymentIntent;
 use Laravel\CashierChargebee\Payment;
-use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Tests\TestCase;
-use Illuminate\Database\Eloquent\Model;
-use Mockery;
 
 class PaymentTest extends TestCase
 {

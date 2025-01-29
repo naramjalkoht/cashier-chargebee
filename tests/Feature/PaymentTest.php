@@ -25,7 +25,7 @@ class PaymentTest extends FeatureTestCase
         $user->createAsChargebeeCustomer();
 
         $payment = $user->createPayment(1000, [
-            'currencyCode' => 'EUR'
+            'currencyCode' => 'EUR',
         ]);
 
         $this->assertInstanceOf(Payment::class, $payment);
