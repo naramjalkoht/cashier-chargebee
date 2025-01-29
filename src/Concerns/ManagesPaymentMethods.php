@@ -64,7 +64,7 @@ trait ManagesPaymentMethods
         $parameters = array_merge(['limit' => 24], $parameters);
 
         $paymentSources = PaymentSource::all(
-            array_filter(['customer' => $this->chargebeeId(), 'type[is]' => $type]) + $parameters
+            array_filter(['customer_id[is]' => $this->chargebeeId(), 'type[is]' => $type]) + $parameters
         );
 
         return Collection::make($paymentSources)->map(function ($paymentSource) {
@@ -113,6 +113,19 @@ trait ManagesPaymentMethods
         }
 
         PaymentSource::delete($paymentSource->id);
+    }
+
+    /**
+     * Delete a payment method to the customer.
+     *
+     * @throws CustomerNotFound
+     * @throws InvalidRequestException
+     */
+    public function deletePaymentMethods(string $type): void
+    {
+        $this->paymentMethods($type)->each(function (PaymentSource $paymentSource) {
+            $this->deletePaymentMethod($paymentSource);
+        });
     }
 
     /**
