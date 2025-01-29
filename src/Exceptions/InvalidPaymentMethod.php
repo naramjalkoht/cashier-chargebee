@@ -2,9 +2,9 @@
 
 namespace Laravel\CashierChargebee\Exceptions;
 
+use ChargeBee\ChargeBee\Models\PaymentSource;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
-use ChargeBee\ChargeBee\Models\PaymentSource;
 
 class InvalidPaymentMethod extends Exception
 {

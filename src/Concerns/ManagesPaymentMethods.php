@@ -3,7 +3,6 @@
 namespace Laravel\CashierChargebee\Concerns;
 
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
-use ChargeBee\ChargeBee\Exceptions\PaymentException;
 use ChargeBee\ChargeBee\Models\Customer;
 use ChargeBee\ChargeBee\Models\PaymentIntent;
 use ChargeBee\ChargeBee\Models\PaymentSource;
@@ -102,5 +101,4 @@ trait ManagesPaymentMethods
 
         PaymentSource::delete($paymentMethod->id);
     }
-
 }

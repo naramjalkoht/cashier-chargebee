@@ -3,20 +3,16 @@
 namespace Laravel\CashierChargebee;
 
 use ChargeBee\ChargeBee\Models\PaymentSource;
-use Illuminate\Contracts\Support\Arrayable;
-use Illuminate\Contracts\Support\Jsonable;
-use JsonSerializable;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\CashierChargebee\Exceptions\InvalidPaymentMethod;
 use LogicException;
 
 class PaymentMethod
 {
-
     /**
      * @throws InvalidPaymentMethod
      */
-    public function __construct( protected Model $owner, protected PaymentSource $paymentMethod)
+    public function __construct(protected Model $owner, protected PaymentSource $paymentMethod)
     {
         if (is_null($paymentMethod->customerId)) {
             throw new LogicException('The payment method is not attached to a customer.');
