@@ -24,6 +24,9 @@
 - [Manage Payment Methods](#manage-payment-methods)
     - [Create SetupIntent](#payment-methods-create-setupintent)
     - [Find SetupIntent](#payment-methods-find-setupintent)
+    - [Retrieving Payment Methods](#payment-methods-list)
+    - [Create Payment Method](#payment-methods-create)
+    - [Delete Payment Method](#payment-methods-delete)
 
 <a name="installation"></a>
 ## Installation
@@ -460,13 +463,14 @@ class HandleWebhookReceived
     }
 }
 ```
+
 <a name="manage-payment-methods"></a>
 ## Manage Payment Methods
 
 **Please remember to enable 3DS in Chargebee settings for your account to be able to use PaymentIntents**
 
 <a name="payment-methods-create-setupintent"></a>
-## Create SetupIntent
+### Create SetupIntent
 
 You can create SetupIntent (PaymentIntent with amount hardcoded to 0). This will create new payment source.
 
@@ -504,7 +508,7 @@ $paymentIntent = $user->createSetupIntent(['currency_code' => $currencyCode]);
 ```
 
 <a name="payment-methods-find-setupintent"></a>
-## Find SetupIntent
+### Find SetupIntent
 
 Retrieves the PaymentIntent resource.
 
@@ -516,3 +520,63 @@ $paymentIntent = $user->findSetupIntent($id);
 ```
 
 You can find more information about PaymentIntent API [here](https://apidocs.eu.chargebee.com/docs/api/payment_intents#create_a_payment_intent?target=_blank)
+
+<a name="payment-methods-list"></a>
+### Get Payment Methods
+
+Cashier allows you to pull list of all payment methods available to customer. This list is a Laravel Collection of PaymentSources for selected customer.
+
+**When customer is not defined, empty Laravel Collection is returned instead.**
+
+You may provide an optional `$type` string and `$parameters` array to pass in any additional [filters that are supported by Chargebee API](https://apidocs.chargebee.com/docs/api/payment_sources?lang=curl#list_payment_sources)
+
+#### Examples:
+
+##### All available payment methods
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+$paymentMethods = $user->paymentMethods();
+```
+
+##### Only card available payment methods
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+$paymentMethods = $user->paymentMethods('card');
+```
+<a name="payment-methods-create"></a>
+### Create Payment Method
+
+If you want to add new payment method to customer, you can invoke `addPaymentMethod` method. This method allows you to pass Chargebee PaymentSource instance.
+
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+$paymentMethod = $user->addPaymentMethod(`$chargeBeePaymentSource`)
+```
+
+If `chargebee_id` on your model is missing or invalid, the method will throw a `CustomerNotFound` exception.
+
+When payload sent to Chargebee API is invalid `PaymentException` will be thrown.
+
+<a name="payment-methods-delete"></a>
+### Delete Payment Methods
+
+If you want to delete one of the customer's payment methods, you should use `deletePaymentMethod`. It takes `$id` string param of the payment method.
+
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+$paymentMethod = $user->deletePaymentMethod(`$chargeBeePaymentSource`)
+```
+
+If `chargebee_id` on your model is missing or invalid, the method will throw a `CustomerNotFound` exception.
+
+When payload sent to Chargebee API is invalid `InvalidRequestException` will be thrown.
+
+

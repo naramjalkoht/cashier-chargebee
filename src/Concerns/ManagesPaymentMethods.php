@@ -2,7 +2,14 @@
 
 namespace Laravel\CashierChargebee\Concerns;
 
+use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
+use ChargeBee\ChargeBee\Models\Customer;
 use ChargeBee\ChargeBee\Models\PaymentIntent;
+use ChargeBee\ChargeBee\Models\PaymentSource;
+use Illuminate\Support\Collection;
+use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
+use Laravel\CashierChargebee\Exceptions\InvalidPaymentMethod;
+use Laravel\CashierChargebee\PaymentMethod;
 
 trait ManagesPaymentMethods
 {
@@ -35,5 +42,63 @@ trait ManagesPaymentMethods
         $paymentIntent = PaymentIntent::retrieve($id);
 
         return$paymentIntent?->paymentIntent();
+    }
+
+    /**
+     * Determines if the customer currently has at least one payment method of an optional type.
+     */
+    public function hasPaymentMethod(?string $type = null): bool
+    {
+        return $this->paymentMethods($type)->isNotEmpty();
+    }
+
+    /**
+     * Get a collection of the customer's payment methods of an optional type.
+     */
+    public function paymentMethods(?string $type = null, array $parameters = []): ?Collection
+    {
+        if (! $this->hasChargebeeId()) {
+            return new Collection();
+        }
+
+        $parameters = array_merge(['limit' => 24], $parameters);
+
+        $paymentSources = PaymentSource::all(
+            array_filter(['customer' => $this->chargebeeId(), 'type[is]' => $type]) + $parameters
+        );
+
+        return Collection::make($paymentSources)->map(function ($paymentSource) {
+            return $paymentSource->paymentSource();
+        });
+    }
+
+    /**
+     * Add a payment method to the customer.
+     *
+     * @throws InvalidPaymentMethod
+     * @throws CustomerNotFound
+     */
+    public function addPaymentMethod(PaymentSource $paymentSource): PaymentMethod
+    {
+        $this->assertCustomerExists();
+
+        return new PaymentMethod($this, $paymentSource);
+    }
+
+    /**
+     * Delete a payment method to the customer.
+     *
+     * @throws CustomerNotFound
+     * @throws InvalidRequestException
+     */
+    public function deletePaymentMethod(PaymentSource $paymentSource): void
+    {
+        $this->assertCustomerExists();
+
+        if ($this->chargebeeId() !== $paymentSource->customerId) {
+            throw InvalidPaymentMethod::invalidOwner($paymentSource, $this);
+        }
+
+        PaymentSource::delete($paymentSource->id);
     }
 }

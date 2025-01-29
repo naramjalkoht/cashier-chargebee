@@ -7,9 +7,13 @@ use ChargeBee\ChargeBee\Models\PaymentIntent;
 use ChargeBee\ChargeBee\Models\PromotionalCredit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
+use ChargeBee\ChargeBee\Models\PaymentSource;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Laravel\CashierChargebee\Cashier;
+use Laravel\CashierChargebee\Exceptions\InvalidPaymentMethod;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
+use LogicException;
 
 class CustomerTest extends FeatureTestCase
 {
@@ -500,5 +504,119 @@ class CustomerTest extends FeatureTestCase
     private function createSetupIntent(User $user, string $currencyCode): ?PaymentIntent
     {
         return $user->createSetupIntent(['currency_code' => $currencyCode]);
+    }
+
+    public function test_get_customer_payment_methods(): void
+    {
+        $user = $this->createCustomer();
+        $paymentMethods = $user->paymentMethods();
+        $this->assertInstanceOf(Collection::class, $paymentMethods);
+        $this->assertTrue($paymentMethods->isEmpty());
+
+        $user->createAsChargebeeCustomer();
+        $paymentMethods = $user->paymentMethods();
+
+        $this->assertNotNull($paymentMethods);
+        $this->assertInstanceOf(Collection::class, $paymentMethods);
+    }
+
+    private function createCard(Model $user): ?PaymentSource
+    {
+        return PaymentSource::createCard([
+            'customer_id' => $user->chargebeeId(),
+            'card' => [
+                'number' => '4111 1111 1111 1111',
+                'cvv' => '123',
+                'expiry_year' => date('Y', strtotime('+ 1 year')),
+                'expiry_month' => date('m', strtotime('+ 1 year')),
+            ],
+        ]
+        )->paymentSource();
+    }
+
+    public function test_can_add_payment_method(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+        $paymentMethod = $this->createCard($user);
+        $addedPaymentMethod = $user->addPaymentMethod($paymentMethod);
+
+        $this->assertNotNull($paymentMethod);
+        $this->assertInstanceOf(PaymentSource::class, $paymentMethod);
+        $this->assertInstanceOf(PaymentSource::class, $addedPaymentMethod->asChargebeePaymentMethod());
+        $this->assertSame($user->chargebeeId(), $paymentMethod->customerId);
+        $this->assertInstanceOf(PaymentSource::class, $paymentMethod);
+
+        $this->assertSame($user->chargebeeId(), $addedPaymentMethod->owner()->chargebeeId());
+        $this->assertSame($paymentMethod->customerId, $addedPaymentMethod->owner()->chargebeeId());
+    }
+
+    public function test_non_chargebee_customer_cannot_add_payment_method(): void
+    {
+        $user = $this->createCustomer();
+        $this->expectException(InvalidRequestException::class);
+        $paymentMethod = $this->createCard($user);
+        $user->addPaymentMethod($paymentMethod);
+    }
+
+    public function test_chargebee_customer_cannot_add_payment_method_wrong_customer_id(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+
+        $user2 = $this->createCustomer(Str::random());
+        $user2->createAsChargebeeCustomer();
+
+        $paymentMethod = $this->createCard($user);
+        $this->expectException(InvalidPaymentMethod::class);
+        $user2->addPaymentMethod($paymentMethod);
+    }
+
+    public function test_chargebee_customer_cannot_add_payment_method_empty_customer_id(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+
+        $paymentMethod = $this->createCard($user);
+        $this->expectException(LogicException::class);
+        $paymentMethod->customerId = null;
+        $user->addPaymentMethod($paymentMethod);
+    }
+
+    public function test_chargebee_customer_can_delete_payment_method(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+        $user->deletePaymentMethod($paymentSource);
+        $this->assertNull($user->paymentMethods()->filter(fn (PaymentSource $listPaymentMethod) => $listPaymentMethod->id === $paymentSource->id)->first());
+
+        $paymentSource = $this->createCard($user);
+        $paymentMethod = $user->addPaymentMethod($paymentSource);
+
+        $paymentMethod->delete();
+        $this->assertNull($user->paymentMethods()->filter(fn (PaymentSource $listPaymentMethod) => $listPaymentMethod->id === $paymentMethod->id)->first());
+    }
+
+    public function test_chargebee_customer_cannot_delete_payment_method(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+
+        $paymentMethod = $this->createCard($user);
+
+        $user2 = $this->createCustomer(Str::random());
+        $user2->createAsChargebeeCustomer();
+
+        $this->expectException(InvalidPaymentMethod::class);
+        $user2->deletePaymentMethod($paymentMethod);
+    }
+
+    public function test_chargebee_customer_has_payment_method(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+        $this->createCard($user);
+        $this->assertTrue($user->hasPaymentMethod('card'));
     }
 }
