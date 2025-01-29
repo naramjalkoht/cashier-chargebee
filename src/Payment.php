@@ -64,7 +64,7 @@ class Payment implements Arrayable, Jsonable, JsonSerializable
 
     /**
      * Convert the object to its JSON representation.
-     * 
+     *
      * @param  int  $options
      * @return string
      */
