@@ -465,21 +465,13 @@ $paymentMethods = $user->paymentMethods('card');
 <a name="payment-methods-create"></a>
 ### Create Payment Method
 
-If you want to add new payment method to customer, you can invoke `addPaymentMethod` method. This method allows you to pass credit card information.
+If you want to add new payment method to customer, you can invoke `addPaymentMethod` method. This method allows you to pass Chargebee PaymentSource instance.
 
 ```php
 $user = $this->createCustomer();
 $user->createAsChargebeeCustomer();
 
-$paymentMethod = $user->addPaymentMethod('4111 1111 1111 1111', '123', '11', '2039')
-```
-
-In addition to be able to create new payment method, It allows you to mark newly created payment method as `default` for the customer when `$replaceDefault` param is set to `true`
-```php
-$user = $this->createCustomer();
-$user->createAsChargebeeCustomer();
-
-$paymentMethod = $user->addPaymentMethod('4111 1111 1111 1111', '123', '11', '2039', true)
+$paymentMethod = $user->addPaymentMethod(`$chargeBeePaymentSource`)
 ```
 
 If `chargebee_id` on your model is missing or invalid, the method will throw a `CustomerNotFound` exception.
@@ -495,7 +487,7 @@ If you want to delete one of the customer's payment methods, you should use `del
 $user = $this->createCustomer();
 $user->createAsChargebeeCustomer();
 
-$paymentMethod = $user->deletePaymentMethod('string_payment_source_id')
+$paymentMethod = $user->deletePaymentMethod(`$chargeBeePaymentSource`)
 ```
 
 If `chargebee_id` on your model is missing or invalid, the method will throw a `CustomerNotFound` exception.

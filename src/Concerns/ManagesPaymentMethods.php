@@ -91,14 +91,14 @@ trait ManagesPaymentMethods
      * @throws CustomerNotFound
      * @throws InvalidRequestException
      */
-    public function deletePaymentMethod(PaymentSource $paymentMethod): void
+    public function deletePaymentMethod(PaymentSource $paymentSource): void
     {
         $this->assertCustomerExists();
 
-        if ($this->chargebeeId() !== $paymentMethod->customerId) {
-            throw InvalidPaymentMethod::invalidOwner($paymentMethod, $this);
+        if ($this->chargebeeId() !== $paymentSource->customerId) {
+            throw InvalidPaymentMethod::invalidOwner($paymentSource, $this);
         }
 
-        PaymentSource::delete($paymentMethod->id);
+        PaymentSource::delete($paymentSource->id);
     }
 }
