@@ -9,6 +9,8 @@ use ChargeBee\ChargeBee\Models\PaymentIntent;
 use ChargeBee\ChargeBee\Models\PaymentSource;
 use Illuminate\Support\Collection;
 use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
+use Laravel\CashierChargebee\Exceptions\InvalidPaymentMethod;
+use Laravel\CashierChargebee\PaymentMethod;
 
 trait ManagesPaymentMethods
 {
@@ -44,6 +46,14 @@ trait ManagesPaymentMethods
     }
 
     /**
+     * Determines if the customer currently has at least one payment method of an optional type.
+     */
+    public function hasPaymentMethod(?string $type = null): bool
+    {
+        return $this->paymentMethods($type)->isNotEmpty();
+    }
+
+    /**
      * Get a collection of the customer's payment methods of an optional type.
      */
     public function paymentMethods(?string $type = null, array $parameters = []): ?Collection
@@ -55,7 +65,7 @@ trait ManagesPaymentMethods
         $parameters = array_merge(['limit' => 24], $parameters);
 
         $paymentSources = PaymentSource::all(
-            array_filter(['customer' => $this->chargebee_id, 'type[is]' => $type]) + $parameters
+            array_filter(['customer' => $this->chargebeeId(), 'type[is]' => $type]) + $parameters
         );
 
         return Collection::make($paymentSources)->map(function ($paymentSource) {
@@ -66,42 +76,14 @@ trait ManagesPaymentMethods
     /**
      * Add a payment method to the customer.
      *
+     * @throws InvalidPaymentMethod
      * @throws CustomerNotFound
-     * @throws PaymentException
      */
-    public function addPaymentMethod(
-        string $cardNumber,
-        string $cardCVV,
-        string $cardExpiryYear,
-        string $cardExpiryMonth,
-        bool $replaceDefault = false
-    ): ?PaymentSource {
+    public function addPaymentMethod(PaymentSource $paymentSource): PaymentMethod
+    {
         $this->assertCustomerExists();
 
-        $params = [
-            'customer_id' => $this->chargebee_id,
-            'replace_primary_payment_source' => $replaceDefault,
-            'card' => [
-                'number' => $cardNumber,
-                'cvv' => $cardCVV,
-                'expiry_month' => (int) $cardExpiryMonth,
-                'expiry_year' => (int) $cardExpiryYear,
-            ],
-        ];
-
-        $paymentSource = PaymentSource::createCard($params)?->paymentSource();
-
-        if ($paymentSource && $replaceDefault) {
-            Customer::assignPaymentRole(
-                $this->chargebeeId(),
-                [
-                    'payment_source_id' => $paymentSource->id,
-                    'role' => 'PRIMARY',
-                ]
-            );
-        }
-
-        return $paymentSource;
+        return new PaymentMethod($this, $paymentSource);
     }
 
     /**
@@ -110,10 +92,15 @@ trait ManagesPaymentMethods
      * @throws CustomerNotFound
      * @throws InvalidRequestException
      */
-    public function deletePaymentMethod(string $id): ?Customer
+    public function deletePaymentMethod(PaymentSource $paymentMethod): void
     {
         $this->assertCustomerExists();
 
-        return PaymentSource::delete($id)->customer();
+        if ($this->chargebeeId() !== $paymentMethod->customerId) {
+            throw InvalidPaymentMethod::invalidOwner($paymentMethod, $this);
+        }
+
+        PaymentSource::delete($paymentMethod->id);
     }
+
 }

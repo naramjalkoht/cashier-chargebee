@@ -3,16 +3,16 @@
 namespace Laravel\CashierChargebee\Tests\Feature;
 
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
-use ChargeBee\ChargeBee\Exceptions\PaymentException;
-use ChargeBee\ChargeBee\Models\Customer;
 use ChargeBee\ChargeBee\Models\PaymentIntent;
 use ChargeBee\ChargeBee\Models\PaymentSource;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Laravel\CashierChargebee\Cashier;
-use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
+use Laravel\CashierChargebee\Exceptions\InvalidPaymentMethod;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
+use LogicException;
 
 class CustomerTest extends FeatureTestCase
 {
@@ -31,20 +31,20 @@ class CustomerTest extends FeatureTestCase
         $user = $this->createCustomer();
 
         $options = [
-            'firstName' => 'Test',
-            'lastName' => 'User',
-            'phone' => '123456789',
+            'firstName'      => 'Test',
+            'lastName'       => 'User',
+            'phone'          => '123456789',
             'billingAddress' => [
                 'firstName' => 'Test',
-                'lastName' => 'User',
-                'line1' => 'PO Box 9999',
-                'city' => 'Walnut',
-                'state' => 'California',
-                'zip' => '91789',
-                'country' => 'US',
+                'lastName'  => 'User',
+                'line1'     => 'PO Box 9999',
+                'city'      => 'Walnut',
+                'state'     => 'California',
+                'zip'       => '91789',
+                'country'   => 'US',
             ],
-            'locale' => 'fr-FR',
-            'metaData' => json_encode([
+            'locale'         => 'fr-FR',
+            'metaData'       => json_encode([
                 'info' => 'This is a test customer.',
             ]),
         ];
@@ -85,17 +85,17 @@ class CustomerTest extends FeatureTestCase
         $user = $this->createCustomer();
 
         $createOptions = [
-            'firstName' => 'Test',
-            'lastName' => 'User',
+            'firstName'      => 'Test',
+            'lastName'       => 'User',
             'billingAddress' => [
                 'firstName' => 'Test',
-                'lastName' => 'User',
-                'line1' => '221B Baker Street',
-                'city' => 'London',
-                'state' => 'England',
-                'country' => 'GB',
+                'lastName'  => 'User',
+                'line1'     => '221B Baker Street',
+                'city'      => 'London',
+                'state'     => 'England',
+                'country'   => 'GB',
             ],
-            'metaData' => json_encode([
+            'metaData'       => json_encode([
                 'info' => 'This is a test customer.',
             ]),
         ];
@@ -103,16 +103,16 @@ class CustomerTest extends FeatureTestCase
         $user->createAsChargebeeCustomer($createOptions);
 
         $updateOptions = [
-            'firstName' => 'UpdateTest',
-            'phone' => '123456789',
+            'firstName'      => 'UpdateTest',
+            'phone'          => '123456789',
             'billingAddress' => [
                 'firstName' => 'UpdateTest',
-                'lastName' => 'User',
-                'line1' => '221B Baker Street',
-                'city' => 'London',
-                'state' => 'England',
-                'zip' => 'NW1 6XE',
-                'country' => 'GB',
+                'lastName'  => 'User',
+                'line1'     => '221B Baker Street',
+                'city'      => 'London',
+                'state'     => 'England',
+                'zip'       => 'NW1 6XE',
+                'country'   => 'GB',
             ],
         ];
 
@@ -139,8 +139,8 @@ class CustomerTest extends FeatureTestCase
 
         $createOptions = [
             'firstName' => 'Test',
-            'lastName' => 'User',
-            'metaData' => json_encode([
+            'lastName'  => 'User',
+            'metaData'  => json_encode([
                 'info' => 'This is a test customer.',
             ]),
         ];
@@ -149,7 +149,7 @@ class CustomerTest extends FeatureTestCase
 
         $updateOptions = [
             'firstName' => 'UpdateTest',
-            'phone' => '123456789',
+            'phone'     => '123456789',
         ];
 
         $customer = $user->updateChargebeeCustomer($updateOptions);
@@ -212,7 +212,7 @@ class CustomerTest extends FeatureTestCase
 
         $customer = $user->updateOrCreateChargebeeCustomer([
             'firstName' => 'Test',
-            'lastName' => 'User',
+            'lastName'  => 'User',
         ]);
 
         $this->assertTrue($user->hasChargebeeId());
@@ -222,7 +222,7 @@ class CustomerTest extends FeatureTestCase
 
         $customer = $user->updateOrCreateChargebeeCustomer([
             'firstName' => 'Updated',
-            'lastName' => 'User',
+            'lastName'  => 'User',
         ]);
 
         $this->assertSame($customer->id, $user->chargebeeId());
@@ -236,7 +236,7 @@ class CustomerTest extends FeatureTestCase
 
         $customer = $user->syncOrCreateChargebeeCustomer([
             'firstName' => 'Test',
-            'lastName' => 'User',
+            'lastName'  => 'User',
         ]);
 
         $this->assertTrue($user->hasChargebeeId());
@@ -319,7 +319,7 @@ class CustomerTest extends FeatureTestCase
         $this->assertEquals($user->estimationBillingAddress, $testAddress);
 
         $testAddress = [
-            'country' => $country,
+            'country'     => $country,
             'postal_code' => $postalCode,
         ];
         $user->withTaxAddress($country, $postalCode);
@@ -332,9 +332,9 @@ class CustomerTest extends FeatureTestCase
         $this->assertEquals($user->estimationBillingAddress, $testAddress);
 
         $testAddress = [
-            'country' => $country,
+            'country'     => $country,
             'postal_code' => $postalCode,
-            'state' => $state,
+            'state'       => $state,
         ];
 
         $user->withTaxAddress($country, $postalCode, $state);
@@ -462,80 +462,104 @@ class CustomerTest extends FeatureTestCase
         $this->assertInstanceOf(Collection::class, $paymentMethods);
     }
 
+    private function createCard(Model $user): ?PaymentSource
+    {
+        return PaymentSource::createCard([
+                'customer_id' => $user->chargebeeId(),
+                'card'        => [
+                    'number'       => '4111 1111 1111 1111',
+                    'cvv'          => '123',
+                    'expiry_year'  => date('Y', strtotime('+ 1 year')),
+                    'expiry_month' => date('m', strtotime('+ 1 year')),
+                ],
+            ]
+        )->paymentSource();
+    }
+
     public function test_can_add_payment_method(): void
     {
         $user = $this->createCustomer();
         $user->createAsChargebeeCustomer();
-        $paymentMethod = $user->addPaymentMethod(
-            '4111 1111 1111 1111',
-            '123',
-            date('Y', strtotime('+ 1 year')),
-            date('m', strtotime('+ 1 year')),
-            true
-        );
+        $paymentMethod = $this->createCard($user);
+        $addedPaymentMethod = $user->addPaymentMethod($paymentMethod);
 
         $this->assertNotNull($paymentMethod);
         $this->assertInstanceOf(PaymentSource::class, $paymentMethod);
+        $this->assertInstanceOf(PaymentSource::class, $addedPaymentMethod->asChargebeePaymentMethod());
         $this->assertSame($user->chargebeeId(), $paymentMethod->customerId);
+        $this->assertInstanceOf(PaymentSource::class, $paymentMethod);
 
-        $customer = $user->asChargebeeCustomer();
-        $this->assertSame($customer->primaryPaymentSourceId, $paymentMethod->id);
+        $this->assertSame($user->chargebeeId(), $addedPaymentMethod->owner()->chargebeeId());
+        $this->assertSame($paymentMethod->customerId, $addedPaymentMethod->owner()->chargebeeId());
     }
 
     public function test_non_chargebee_customer_cannot_add_payment_method(): void
     {
         $user = $this->createCustomer();
-        $this->expectException(CustomerNotFound::class);
-        $user->addPaymentMethod(
-            '4111 1111 1111 1111',
-            '123',
-            date('Y', strtotime('+ 1 year')),
-            date('m', strtotime('+ 1 year')),
-        );
+        $this->expectException(InvalidRequestException::class);
+        $paymentMethod = $this->createCard($user);
+        $user->addPaymentMethod($paymentMethod);
     }
 
-    public function test_chargebee_customer_cannot_add_payment_method(): void
+    public function test_chargebee_customer_cannot_add_payment_method_wrong_customer_id(): void
     {
         $user = $this->createCustomer();
         $user->createAsChargebeeCustomer();
 
-        $this->expectException(PaymentException::class);
-        $user->addPaymentMethod(
-            '4111 1111 1111 1111',
-            '123',
-            date('Y', strtotime('+ 1 year')),
-            13,
-        );
+        $user2 = $this->createCustomer(Str::random());
+        $user2->createAsChargebeeCustomer();
+
+        $paymentMethod = $this->createCard($user);
+        $this->expectException(InvalidPaymentMethod::class);
+        $user2->addPaymentMethod($paymentMethod);
     }
 
-    public function test_non_chargebee_customer_cannot_delete_payment_method(): void
+    public function test_chargebee_customer_cannot_add_payment_method_empty_customer_id(): void
     {
         $user = $this->createCustomer();
-        $this->expectException(CustomerNotFound::class);
-        $user->deletePaymentMethod(Str::random());
+        $user->createAsChargebeeCustomer();
+
+        $paymentMethod = $this->createCard($user);
+        $this->expectException(LogicException::class);
+        $paymentMethod->customerId = null;
+        $user->addPaymentMethod($paymentMethod);
     }
 
     public function test_chargebee_customer_can_delete_payment_method(): void
     {
         $user = $this->createCustomer();
         $user->createAsChargebeeCustomer();
-        $paymentMethod = $user->addPaymentMethod(
-            '4111 1111 1111 1111',
-            '123',
-            date('Y', strtotime('+ 1 year')),
-            date('m', strtotime('+ 1 year')),
-            true
-        );
+        $paymentSource = $this->createCard($user);
+        $user->deletePaymentMethod($paymentSource);
+        $this->assertNull($user->paymentMethods()->filter(fn(PaymentSource $listPaymentMethod) => $listPaymentMethod->id === $paymentSource->id)->first());
 
-        $result = $user->deletePaymentMethod($paymentMethod->id);
-        $this->assertInstanceOf(Customer::class, $result);
+        $paymentSource = $this->createCard($user);
+        $paymentMethod = $user->addPaymentMethod($paymentSource);
+
+        $paymentMethod->delete();
+        $this->assertNull($user->paymentMethods()->filter(fn(PaymentSource $listPaymentMethod) => $listPaymentMethod->id === $paymentMethod->id)->first());
+
     }
 
     public function test_chargebee_customer_cannot_delete_payment_method(): void
     {
         $user = $this->createCustomer();
         $user->createAsChargebeeCustomer();
-        $this->expectException(InvalidRequestException::class);
-        $user->deletePaymentMethod(Str::random());
+
+        $paymentMethod = $this->createCard($user);
+
+        $user2 = $this->createCustomer(Str::random());
+        $user2->createAsChargebeeCustomer();
+
+        $this->expectException(InvalidPaymentMethod::class);
+        $user2->deletePaymentMethod($paymentMethod);
+    }
+
+    public function test_chargebee_customer_has_payment_method(): void
+    {
+        $user = $this->createCustomer();
+        $user->createAsChargebeeCustomer();
+        $this->createCard($user);
+        $this->assertTrue($user->hasPaymentMethod('card'));
     }
 }
