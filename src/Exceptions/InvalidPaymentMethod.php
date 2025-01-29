@@ -6,7 +6,7 @@ use ChargeBee\ChargeBee\Models\PaymentSource;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
 
-class InvalidPaymentMethod extends Exception
+final class InvalidPaymentMethod extends Exception
 {
     /**
      * Create a new InvalidPaymentMethod instance.
