@@ -2,9 +2,9 @@
 
 namespace Laravel\CashierChargebee\Tests\Feature;
 
-use ChargeBee\ChargeBee\Models\PromotionalCredit;
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\PaymentIntent;
+use ChargeBee\ChargeBee\Models\PromotionalCredit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
