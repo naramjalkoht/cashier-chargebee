@@ -356,7 +356,7 @@ class CustomerTest extends FeatureTestCase
 
     public function test_can_create_setup_intent(): void
     {
-        $currency = 'EUR';
+        $currency = config('cashier.currency');
         $user = $this->createCustomer();
         $user->createAsChargebeeCustomer();
 
@@ -365,7 +365,7 @@ class CustomerTest extends FeatureTestCase
         $this->assertNotNull($paymentIntent);
         $this->assertSame($user->chargebee_id, $paymentIntent->customerId);
         $this->assertSame(0, $paymentIntent->amount);
-        $this->assertSame($currency, $paymentIntent->currencyCode);
+        $this->assertSame($currency, strtolower($paymentIntent->currencyCode));
     }
 
     public function test_cannot_create_setup_intent(): void
@@ -382,7 +382,7 @@ class CustomerTest extends FeatureTestCase
 
     public function test_find_setup_intent(): void
     {
-        $currency = 'EUR';
+        $currency = config('cashier.currency');
         $user = $this->createCustomer();
         $user->createAsChargebeeCustomer();
 
@@ -391,14 +391,14 @@ class CustomerTest extends FeatureTestCase
         $this->assertNotNull($paymentIntent);
         $this->assertSame($user->chargebee_id, $paymentIntent->customerId);
         $this->assertSame(0, $paymentIntent->amount);
-        $this->assertSame($currency, $paymentIntent->currencyCode);
+        $this->assertSame($currency, strtolower($paymentIntent->currencyCode));
 
         $findPaymentIntent = $user->findSetupIntent($paymentIntent->id);
 
         $this->assertNotNull($findPaymentIntent);
         $this->assertSame($user->chargebee_id, $findPaymentIntent->customerId);
         $this->assertSame(0, $findPaymentIntent->amount);
-        $this->assertSame($currency, $findPaymentIntent->currencyCode);
+        $this->assertSame($currency, strtolower($paymentIntent->currencyCode));
     }
 
     public function test_cannot_find_setup_intent(): void
