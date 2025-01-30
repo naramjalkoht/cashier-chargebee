@@ -13,7 +13,9 @@
     - [Creating Customers](#creating-customers)
     - [Updating Customers](#updating-customers)
     - [Syncing Customers](#syncing-customers)
+    - [Tax exemption](#tax-exemption)
     - [Billing Portal](#billing-portal)
+    - [Balances](#balances)
 - [Handling Chargebee Webhooks](#handling-chargebee-webhooks)
     - [Configuring Webhooks in Chargebee](#configuring-webhooks-in-chargebee)
     - [Route Configuration](#route-configuration)
@@ -291,6 +293,20 @@ If you want to sync the customer's information or create a new Chargebee custome
 $customer = $user->syncOrCreateChargebeeCustomer($options);
 ```
 
+<a name="tax-exemption"></a>
+### Tax Exemption
+
+Cashier offers the `isNotTaxExempt` and `isTaxExempt` methods to determine if the customer is tax exempt. These methods will call the Chargebee API to determine a customer's taxability status:
+
+```php
+use App\Models\User;
+
+$user = User::find(1);
+
+$user->isTaxExempt();
+$user->isNotTaxExempt();
+```
+
 <a name="billing-portal"></a>
 ### Billing Portal
 
@@ -319,6 +335,75 @@ If you would like to generate the URL to the billing portal without generating a
 ```php
 $url = $request->user()->billingPortalUrl(route('billing'));
 ```
+
+<a name="balances"></a>
+### Balances
+
+Chargebee allows you to credit or debit a customer's "balance". Later, this balance will be credited or debited on new invoices. To check the customer's total balance in a formatted string representation of their currency, you may use the `balance` method:
+
+```php
+$balance = $user->balance();
+```
+
+If you need the raw, unformatted total balance (e.g., for calculations), you can use the `rawBalance` method:
+
+```php
+$rawBalance = $user->rawBalance();
+```
+
+To credit a customer's balance, you may use the `creditBalance method`. You can provide the amount to be credited and an optional description:
+
+```php
+$user->creditBalance(500, 'Add promotional credits.');
+```
+
+Similarly, to debit a customer's balance, use the `debitBalance` method. You can specify the amount to be debited and an optional description:
+
+```php
+$user->debitBalance(300, 'Deduct promotional credits.');
+```
+
+Both `creditBalance` and `debitBalance` methods accept an optional `options` array. This array allows you to include additional parameters supported by Chargebee's [Promotional Credits API](https://apidocs.eu.chargebee.com/docs/api/promotional_credits). For example, you can describe why promotional credits were provided in a `reference` parameter:
+
+```php
+$user->creditBalance(500, 'Add promotional credits.', [
+    'reference' => 'referral_bonus_2023',
+]);
+```
+
+The `applyBalance` method will automatically determine whether to credit or debit the customer's balance based on the sign of the amount:
+
+```php
+$user->applyBalance(500, 'Add credits.'); // Credits 500
+$user->applyBalance(-300, 'Deduct credits.'); // Debits 300
+```
+
+Like the `creditBalance` and `debitBalance` methods, `applyBalance` also accepts an `options` array for additional API parameters:
+
+```php
+$user->applyBalance(1000, 'Promotional credits applied.', [
+    'reference' => 'promo123',
+]);
+```
+
+> [!NOTE]
+> The `amount` parameter in `creditBalance`, `debitBalance`, and `applyBalance` is specified in the smallest currency unit (e.g., cents for USD or euro cents for EUR). For example, passing `500` with a currency of EUR will represent 5 euros.
+
+To retrieve the transaction history for a customer's balance, use the balanceTransactions method:
+
+```php
+$transactions = $user->balanceTransactions();
+```
+
+This method allows you to specify a `limit` (default is 10) and an `options` array for additional filtering. For example, to retrieve 20 transactions filtered by a specific type:
+
+```php
+$transactions = $user->balanceTransactions(20, [
+    'type[is]' => 'increment',
+]);
+```
+
+The returned transactions are a collection of promotional credit objects, which can be iterated over or manipulated as needed.
 
 <a name="handling-chargebee-webhooks"></a>
 ## Handling Chargebee Webhooks
@@ -364,25 +449,12 @@ Cashier will automatically verify these credentials for incoming webhook request
 <a name="handling-webhook-events"></a>
 ### Handling Webhook Events
 
-Cashier emits a `WebhookReceived` event for every incoming webhook, allowing you to handle these events in your application. To handle webhook events, you can create a dedicated event listener class:
+Cashier emits a `WebhookReceived` event for every incoming webhook, allowing you to handle these events in your application. By default, Cashier includes a listener that handles the `customer_deleted` event. This listener ensures that when a customer is deleted in Chargebee, their corresponding record in your application is updated accordingly.
 
-```php
-namespace App\Listeners;
+If you need to modify the default behavior for the `customer_deleted` event or handle additional Chargebee events, you can provide your own listener. The listener class is configurable via the `cashier` configuration file:
 
-use Laravel\CashierChargebee\Events\WebhookReceived;
-
-class HandleWebhookReceived
-{
-    /**
-     * Handle the event.
-     */
-    public function handle(WebhookReceived $event): void
-    {
-        $payload = $event->payload;
-
-        // Handle the webhook payload
-    }
-}
+```init
+'webhook_listener' => \Laravel\CashierChargebee\Listeners\HandleWebhookReceived::class,
 ```
 
 Here's the rephrased version while maintaining the Markdown format:
