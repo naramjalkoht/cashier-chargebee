@@ -53,6 +53,22 @@ class Payment implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
+     * Get the total amount that will be paid.
+     */
+    public function amount(): string
+    {
+        return Cashier::formatAmount($this->rawAmount(), $this->paymentIntent->currencyCode);
+    }
+
+    /**
+     * Get the raw total amount that will be paid.
+     */
+    public function rawAmount(): int
+    {
+        return $this->paymentIntent->amount;
+    }
+
+    /**
      * Get the instance as an array.
      *
      * @return array

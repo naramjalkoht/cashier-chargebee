@@ -491,4 +491,16 @@ The `asChargebeePaymentIntent` method returns the underlying `PaymentIntent` ins
 $paymentIntent = $payment->asChargebeePaymentIntent();
 ```
 
+The `amount` and `rawAmount` methods provide details about the total amount associated with a payment intent. The `amount` method returns the total payment amount in a formatted string, considering the currency of the payment:
+
+```php
+$formattedAmount = $payment->amount();
+```
+
+The `rawAmount` method returns the raw numeric value of the payment amount:
+
+```php
+$rawAmount = $payment->rawAmount();
+```
+
 The `Payment` class also implements Laravel's `Arrayable`, `Jsonable`, and `JsonSerializable` interfaces.

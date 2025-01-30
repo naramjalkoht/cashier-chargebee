@@ -47,4 +47,19 @@ class PaymentTest extends TestCase
 
         $this->assertSame('EUR', $payment->currencyCode);
     }
+
+    public function test_amount(): void
+    {
+        $paymentIntent = new PaymentIntent([
+            'id' => 'id_123', 
+            'currencyCode' => 'EUR',
+            'amount' => 5000
+        ]);
+        $payment = new Payment($paymentIntent);
+        $amount = $payment->amount();
+
+        $this->assertEquals(5000, $payment->rawAmount());
+        $this->assertStringContainsString('50.00', $amount);
+        $this->assertStringContainsString('€', $amount);
+    }
 }
