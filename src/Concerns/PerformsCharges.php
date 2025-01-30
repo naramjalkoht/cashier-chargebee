@@ -2,7 +2,9 @@
 
 namespace Laravel\CashierChargebee\Concerns;
 
+use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\PaymentIntent;
+use Laravel\CashierChargebee\Exceptions\PaymentNotFound;
 use Laravel\CashierChargebee\Payment;
 
 trait PerformsCharges
@@ -27,5 +29,24 @@ trait PerformsCharges
         return new Payment(
             $result->paymentIntent()
         );
+    }
+
+    /**
+     * Find a payment intent by ID.
+     */
+    public function findPayment(string $id): Payment
+    {
+        try {
+            $result = PaymentIntent::retrieve($id);
+
+            return new Payment(
+                $result->paymentIntent()
+            );
+        } catch (InvalidRequestException $exception) {
+            if (strpos($exception->getApiErrorCode(), 'resource_not_found') !== false) {
+                throw PaymentNotFound::notFound($id);
+            }
+            throw $exception;
+        }
     }
 }
