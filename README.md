@@ -20,11 +20,17 @@
     - [Configuring Basic Authentication](#configuring-basic-authentication)
     - [Handling Webhook Events](#handling-webhook-events)
 - [Manage Payment Methods](#manage-payment-methods)
-    - [Create SetupIntent](#payment-methods-create-setupintent)
-    - [Find SetupIntent](#payment-methods-find-setupintent)
-    - [Retrieving Payment Methods](#payment-methods-list)
-    - [Create Payment Method](#payment-methods-create)
-    - [Delete Payment Method](#payment-methods-delete)
+    - [Creating a SetupIntent](#payment-methods-create-setupintent)
+    - [Retrieving a SetupIntent](#payment-methods-find-setupintent)
+    - [Checking for Available Payment Methods](#payment-methods-has)
+    - [Retrieving a Customer's Payment Methods](#payment-methods-list)
+    - [Adding a Payment Method](#payment-methods-add)
+    - [Retrieving a Specific Payment Method](#payment-methods-find)
+    - [Retrieving the Default Payment Method](#payment-methods-default)
+    - [Setting the Default Payment Method](#payment-methods-set-default)
+    - [Synchronizing the Default Payment Method from Chargebee](#payment-methods-sync-default)
+    - [Deleting a Payment Method](#payment-methods-delete)
+    - [Deleting Payment Methods of a Specific Type](#payment-methods-delete-multiple)
 
 <a name="installation"></a>
 ## Installation
@@ -379,119 +385,449 @@ class HandleWebhookReceived
 }
 ```
 
-<a name="manage-payment-methods"></a>
-## Manage Payment Methods
+Here's the rephrased version while maintaining the Markdown format:
 
-**Please remember to enable 3DS in Chargebee settings for your account to be able to use PaymentIntents**
+---
+
+<a name="manage-payment-methods"></a>
+## Managing Payment Methods
+
+**Ensure that 3D Secure (3DS) is enabled in your Chargebee account settings to utilize PaymentIntents.**
 
 <a name="payment-methods-create-setupintent"></a>
-### Create SetupIntent
+### Creating a SetupIntent
 
-You can create SetupIntent (PaymentIntent with amount hardcoded to 0). This will create new payment source.
+The `createSetupIntent` method generates a new `PaymentIntent` with an amount of `0`. This is primarily used to set up payment methods without processing an immediate charge.
 
-**Available options**
-  * currency_code 
-    * required
-    * default set to Cashier config option
-  * gateway_account_id
-    * optional, string, max chars=50
-    * The gateway account used for performing the 3DS flow.
-  * reference_id 
-    * optional, string, max chars=200
-    * Reference for payment method at gateway. Only applicable when the PaymentIntent is created for cards stored in the gateway.
-  * payment_method_type
-    * optional, enumerated string, 
-    * default=card
-    * possible values
-      * card
-      * ideal
-      * sofort
-      * bancontact
-  * success_url
-    * optional, string, max chars=250
-    * The URL the customer will be directed to once 3DS verification is successful.
-  * failure_url
-    * optional, string, max chars=250
-    * The URL the customer will be directed to when 3DS verification fails.
-
+#### Method Signature:
 ```php
-$currency = 'EUR';
+public function createSetupIntent(array $options = []): ?PaymentIntent
+```
+
+#### Parameters:
+- `$options` (*array*, optional) – An associative array of additional parameters for the PaymentIntent.
+
+#### Default Behavior:
+- Ensures the customer exists before proceeding.
+- The `customer_id` is automatically assigned based on the Chargebee ID of the user.
+- The `amount` is fixed at `0`.
+- The `currency_code` is determined from the provided `$options` array or falls back to the default configured in `config('cashier.currency')`.
+
+#### Example Usage:
+```php
 $user = $this->createCustomer();
 $user->createAsChargebeeCustomer();
 
-$paymentIntent = $user->createSetupIntent(['currency_code' => $currencyCode]);
+$setupIntent = $user->createSetupIntent([
+    'currency_code' => 'USD',
+]);
+
+if ($setupIntent) {
+    echo 'SetupIntent created successfully: ' . $setupIntent->id;
+} else {
+    echo 'Failed to create SetupIntent.';
+}
 ```
+
+#### Error Handling:
+- If the `chargebee_id` is missing or invalid, a `CustomerNotFound` exception will be thrown.
+- If the request to Chargebee is invalid, an `InvalidRequestException` may be thrown.
 
 <a name="payment-methods-find-setupintent"></a>
-### Find SetupIntent
+### Retrieving a SetupIntent
 
-Retrieves the PaymentIntent resource.
+The `findSetupIntent` method retrieves an existing `PaymentIntent` from Chargebee using its unique identifier.
 
+#### Method Signature:
+```php
+public function findSetupIntent(string $id): ?PaymentIntent
+```
+
+#### Parameters:
+- `$id` (*string*) – The unique identifier of the PaymentIntent in Chargebee.
+
+#### Example Usage:
 ```php
 $user = $this->createCustomer();
 $user->createAsChargebeeCustomer();
 
-$paymentIntent = $user->findSetupIntent($id);
+$setupIntent = $user->findSetupIntent('pi_123456789');
+
+if ($setupIntent) {
+    echo 'SetupIntent retrieved successfully: ' . $setupIntent->id;
+} else {
+    echo 'SetupIntent not found.';
+}
 ```
 
-You can find more information about PaymentIntent API [here](https://apidocs.eu.chargebee.com/docs/api/payment_intents#create_a_payment_intent?target=_blank)
+#### Error Handling:
+- If the provided PaymentIntent ID is invalid or does not exist, Chargebee may throw an `InvalidRequestException`.
+
+For more details, refer to the [Chargebee PaymentIntent API documentation](https://apidocs.eu.chargebee.com/docs/api/payment_intents#create_a_payment_intent?target=_blank).
+
+<a name="payment-methods-has"></a>
+### Checking for Available Payment Methods
+
+The `hasPaymentMethod` method checks whether a customer has at least one saved payment method. Optionally, you can specify a payment method type to check for a specific kind.
+
+#### Method Signature:
+```php
+public function hasPaymentMethod(?string $type = null): bool
+```
+
+#### Parameters:
+- `$type` (*string*, optional) – Specifies the type of payment method to check (e.g., `'card'`). If `null`, it checks for any payment method.
+
+#### Example Usage:
+
+##### Check if the Customer Has Any Payment Method:
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+if ($user->hasPaymentMethod()) {
+    echo 'The customer has at least one payment method.';
+} else {
+    echo 'No payment method found for the customer.';
+}
+```
+
+##### Check if the Customer Has a Specific Payment Method Type (e.g., Card):
+```php
+if ($user->hasPaymentMethod('card')) {
+    echo 'The customer has a card payment method.';
+} else {
+    echo 'No card payment method found for the customer.';
+}
+```
+
+#### Behavior:
+- Calls the `paymentMethods` method to retrieve a list of payment sources.
+- Returns `true` if at least one payment method is found.
+- Returns `false` if no payment methods exist.
+
+#### Error Handling:
+- If the customer does not exist in Chargebee, it may result in an exception when calling `paymentMethods()`.
 
 <a name="payment-methods-list"></a>
-### Get Payment Methods
+### Retrieving a Customer's Payment Methods
 
-Cashier allows you to pull list of all payment methods available to customer. This list is a Laravel Collection of PaymentSources for selected customer.
+The `paymentMethods` method returns a collection of the customer's saved payment methods. Optionally, you can filter the results by payment method type.
 
-**When customer is not defined, empty Laravel Collection is returned instead.**
+#### Method Signature:
+```php
+public function paymentMethods(?string $type = null, array $parameters = []): ?Collection
+```
 
-You may provide an optional `$type` string and `$parameters` array to pass in any additional [filters that are supported by Chargebee API](https://apidocs.chargebee.com/docs/api/payment_sources?lang=curl#list_payment_sources)
+#### Parameters:
+- `$type` (*string*, optional) – Specifies the type of payment methods to retrieve (e.g., `'card'`). If `null`, all available payment methods are returned.
+- `$parameters` (*array*, optional) – Additional filters for retrieving payment sources (e.g., custom limits or pagination options).
 
-#### Examples:
+#### Default Behavior:
+- If the customer does not have a Chargebee ID, an empty `Collection` is returned.
+- The default limit for retrieved payment sources is set to `24`.
+- The method queries Chargebee for payment methods matching the provided parameters.
 
-##### All available payment methods
+#### Example Usage:
+
+##### Retrieve All Available Payment Methods:
 ```php
 $user = $this->createCustomer();
 $user->createAsChargebeeCustomer();
 
 $paymentMethods = $user->paymentMethods();
+
+if ($paymentMethods->isNotEmpty()) {
+    echo 'The customer has the following payment methods:';
+    foreach ($paymentMethods as $method) {
+        echo $method->id;
+    }
+} else {
+    echo 'No payment methods found for the customer.';
+}
 ```
 
-##### Only card available payment methods
+##### Retrieve Only Card-Based Payment Methods:
+```php
+$cardPaymentMethods = $user->paymentMethods('card');
+
+if ($cardPaymentMethods->isNotEmpty()) {
+    echo 'The customer has card payment methods.';
+} else {
+    echo 'No card payment methods found for the customer.';
+}
+```
+
+##### Retrieve Payment Methods with Additional Parameters (e.g., Custom Limit):
+```php
+$paymentMethods = $user->paymentMethods(null, ['limit' => 10]);
+```
+
+#### Behavior:
+- Retrieves payment methods from Chargebee, filtering by customer ID and optionally by type.
+- Returns a Laravel `Collection` of `PaymentSource` objects.
+- Uses array filtering to remove null parameters before sending the request.
+
+#### Error Handling:
+- If the customer does not exist in Chargebee, the method returns an empty `Collection`.
+- If the Chargebee API request fails or encounters an issue, an exception may be thrown.
+
+<a name="payment-methods-add"></a>
+### Adding a Payment Method
+
+The `addPaymentMethod` method associates a new payment method with a customer in Chargebee. Optionally, the method can also set the newly added payment method as the default.
+
+#### Method Signature:
+```php
+public function addPaymentMethod(PaymentSource $paymentSource, bool $setAsDefault = false): PaymentMethod
+```
+
+#### Parameters:
+- `$paymentSource` (*PaymentSource*) – The payment method to be added to the customer's account.
+- `$setAsDefault` (*bool*, optional) – If set to `true`, the newly added payment method will be assigned as the default. Default value: `false`.
+
+#### Example Usage:
+
+##### Add a Payment Method Without Setting It as Default:
 ```php
 $user = $this->createCustomer();
 $user->createAsChargebeeCustomer();
 
-$paymentMethods = $user->paymentMethods('card');
+$paymentSource = new PaymentSource(/* Payment source details */);
+
+$paymentMethod = $user->addPaymentMethod($paymentSource);
+
+echo 'Payment method added successfully: ' . $paymentMethod->id;
 ```
-<a name="payment-methods-create"></a>
-### Create Payment Method
 
-If you want to add new payment method to customer, you can invoke `addPaymentMethod` method. This method allows you to pass Chargebee PaymentSource instance.
+##### Add a Payment Method and Set It as Default:
+```php
+$paymentMethod = $user->addPaymentMethod($paymentSource, true);
 
+echo 'Payment method added and set as default: ' . $paymentMethod->id;
+```
+
+#### Behavior:
+- Ensures that the customer exists in Chargebee before proceeding.
+- If `$setAsDefault` is `true`, the method calls `setDefaultPaymentMethod` to assign the newly added payment method as the default.
+- Returns a `PaymentMethod` instance linked to the added `PaymentSource`.
+
+#### Error Handling:
+- If the customer does not exist in Chargebee, a `CustomerNotFound` exception will be thrown.
+- If the provided payment method is invalid, an `InvalidPaymentMethod` exception will be thrown.
+- If the request to Chargebee fails due to invalid parameters, an `InvalidRequestException` will be thrown.
+
+<a name="payment-methods-find"></a>
+### Retrieving a Specific Payment Method
+
+To find a specific payment method for a customer, use the `findPaymentMethod` method. This method accepts either a Chargebee `$chargeBeePaymentSource` instance or a payment source ID as a string.
+
+#### Examples:
+
+##### Using a Chargebee Payment Source Instance:
 ```php
 $user = $this->createCustomer();
 $user->createAsChargebeeCustomer();
 
-$paymentMethod = $user->addPaymentMethod(`$chargeBeePaymentSource`)
+$paymentMethod = $user->findPaymentMethod($chargeBeePaymentSource);
 ```
 
-If `chargebee_id` on your model is missing or invalid, the method will throw a `CustomerNotFound` exception.
+##### Using a Payment Source ID:
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
 
-When payload sent to Chargebee API is invalid `PaymentException` will be thrown.
+$paymentMethod = $user->findPaymentMethod('payment_source_id');
+```
+
+**Error Handling:**
+
+- If the chargebee_id is missing or invalid, a CustomerNotFound exception will be thrown.
+- If the specified payment method is not found, a PaymentMethodNotFound exception will be thrown.
+- If the request payload sent to Chargebee is invalid, an InvalidRequestException will be thrown.
+
+<a name="payment-methods-default"></a>
+### Retrieving the Default Payment Method
+
+The `defaultPaymentMethod` method returns the primary payment method associated with the customer. If no default payment method is set, the method returns `null`.
+
+#### Method Signature:
+```php
+public function defaultPaymentMethod(): ?PaymentMethod
+```
+
+#### Example Usage:
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+$defaultPaymentMethod = $user->defaultPaymentMethod();
+
+if ($defaultPaymentMethod) {
+    // The customer has a default payment method
+    echo 'Default Payment Method: ' . $defaultPaymentMethod->id;
+} else {
+    echo 'No default payment method found.';
+}
+```
+
+#### Error Handling:
+- If the `chargebee_id` is missing or invalid, a `CustomerNotFound` exception will be thrown.
+- If the request to Chargebee is invalid, an `InvalidRequestException` will be thrown.
+- If an invalid payment method is encountered, an `InvalidPaymentMethod` exception will be thrown.
+
+<a name="payment-methods-set-default"></a>
+### Setting the Default Payment Method
+
+The `setDefaultPaymentMethod` method allows you to designate a specific payment method as the primary payment source for a customer in Chargebee.
+
+#### Method Signature:
+```php
+public function setDefaultPaymentMethod(PaymentSource|string $paymentSource): ?Customer
+```
+
+#### Parameters:
+- `$paymentSource` (*PaymentSource|string*) – The payment method to be set as the default. This can be either a `PaymentSource` instance or a payment source ID as a string.
+
+#### Example Usage:
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+$paymentSourceId = 'pm_123456789';
+
+try {
+    $user->setDefaultPaymentMethod($paymentSourceId);
+    echo 'Default payment method updated successfully.';
+} catch (Exception $e) {
+    echo 'Error: ' . $e->getMessage();
+}
+```
+
+#### Behavior:
+- The method first verifies that the customer exists in Chargebee.
+- It resolves the payment method using the provided `PaymentSource` instance or payment source ID.
+- If a valid payment source is found, it assigns the `PRIMARY` role to the specified payment source.
+- The payment method details are updated and saved for the customer.
+
+#### Error Handling:
+- If an invalid payment method is provided, an `InvalidPaymentMethod` exception is thrown.
+- If the request to Chargebee is invalid, an `InvalidRequestException` is thrown.
+- If the `chargebee_id` is missing or invalid, a `CustomerNotFound` exception is thrown.
+
+
+
+<a name="payment-methods-sync-default"></a>
+### Synchronizing the Default Payment Method from Chargebee
+
+The `updateDefaultPaymentMethodFromChargebee` method updates the customer's default payment method in the local database by fetching the latest details from Chargebee.
+
+#### Method Signature:
+```php
+public function updateDefaultPaymentMethodFromChargebee(): self
+```
+
+#### Example Usage:
+
+##### Sync the Default Payment Method:
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+try {
+    $user->updateDefaultPaymentMethodFromChargebee();
+    echo 'Default payment method synchronized successfully.';
+} catch (Exception $e) {
+    echo 'Error: ' . $e->getMessage();
+}
+```
+
+#### Behavior:
+- Retrieves the customer's default payment method using the `defaultPaymentMethod` method.
+- If a valid `PaymentMethod` is found, updates the stored payment method details in the database.
+- If no default payment method exists, resets the stored payment method details (`pm_type` and `pm_last_four`) to `null`.
+
+#### Error Handling:
+- If the customer does not exist in Chargebee, a `CustomerNotFound` exception will be thrown.
+- If the retrieved payment method is invalid, an `InvalidPaymentMethod` exception will be thrown.
+- If the request to Chargebee fails due to invalid parameters, an `InvalidRequestException` will be thrown.
 
 <a name="payment-methods-delete"></a>
-### Delete Payment Methods
+### Deleting a Payment Method
 
-If you want to delete one of the customer's payment methods, you should use `deletePaymentMethod`. It takes `$id` string param of the payment method.
+The `deletePaymentMethod` method removes a specified payment method from the customer's Chargebee account.
 
+#### Method Signature:
+```php
+public function deletePaymentMethod(PaymentSource $paymentSource): void
+```
+
+#### Parameters:
+- `$paymentSource` (*PaymentSource*) – The payment method to be deleted.
+
+#### Example Usage:
+
+##### Delete a Specific Payment Method:
 ```php
 $user = $this->createCustomer();
 $user->createAsChargebeeCustomer();
 
-$paymentMethod = $user->deletePaymentMethod(`$chargeBeePaymentSource`)
+$paymentSource = new PaymentSource(/* Payment source details */);
+
+try {
+    $user->deletePaymentMethod($paymentSource);
+    echo 'Payment method deleted successfully.';
+} catch (Exception $e) {
+    echo 'Error: ' . $e->getMessage();
+}
 ```
 
-If `chargebee_id` on your model is missing or invalid, the method will throw a `CustomerNotFound` exception.
+#### Behavior:
+- Ensures the customer exists in Chargebee before proceeding.
+- Validates that the provided `PaymentSource` belongs to the authenticated customer.
+- If the payment method being deleted is the customer's default payment method, it clears the stored payment method details.
+- Calls `PaymentSource::delete($paymentSource->id)` to remove the payment method from Chargebee.
 
-When payload sent to Chargebee API is invalid `InvalidRequestException` will be thrown.
+#### Error Handling:
+- If the customer does not exist in Chargebee, a `CustomerNotFound` exception will be thrown.
+- If the provided payment method does not belong to the customer, an `InvalidPaymentMethod` exception will be thrown.
+- If the request to Chargebee fails due to invalid parameters, an `InvalidRequestException` will be thrown.
+
+
+<a name="payment-methods-delete-multiple"></a>
+### Deleting Payment Methods of a Specific Type
+
+The `deletePaymentMethods` method removes all payment methods of a specified type for the customer.
+
+#### Method Signature:
+```php
+public function deletePaymentMethods(string $type): void
+```
+
+#### Parameters:
+- `$type` (*string*) – The type of payment methods to be deleted (e.g., `'card'`).
+
+#### Example Usage:
+
+##### Delete All Card Payment Methods:
+```php
+$user = $this->createCustomer();
+$user->createAsChargebeeCustomer();
+
+try {
+    $user->deletePaymentMethods('card');
+    echo 'All card payment methods have been deleted successfully.';
+} catch (Exception $e) {
+    echo 'Error: ' . $e->getMessage();
+}
+```
+
+#### Behavior:
+- Retrieves all payment methods of the specified type using the `paymentMethods($type)` method.
+- Iterates through the retrieved payment methods and deletes each one using the `deletePaymentMethod` method.
+
+#### Error Handling:
+- If the customer does not exist in Chargebee, a `CustomerNotFound` exception will be thrown.
+- If the request to Chargebee fails due to invalid parameters, an `InvalidRequestException` will be thrown.
 
 

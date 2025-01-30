@@ -15,14 +15,15 @@ trait ManagesPaymentMethods
 {
     /**
      * Create a new PaymentIntent instance with amount = 0.
+     *
+     * @throws CustomerNotFound
      */
     public function createSetupIntent(array $options = []): ?PaymentIntent
     {
-        if ($this->hasChargebeeId()) {
-            $options['customer_id'] = $this->chargebee_id;
-        }
+        $this->assertCustomerExists();
 
         $defaultOptions = [
+            'customer_id' => $this->chargebeeId(),
             'amount' => 0,
             'currency_code' => ! empty($options['currency_code'])
                 ? $options['currency_code']
@@ -77,6 +78,7 @@ trait ManagesPaymentMethods
      *
      * @throws InvalidPaymentMethod
      * @throws CustomerNotFound
+     * @throws InvalidRequestException
      */
     public function addPaymentMethod(PaymentSource $paymentSource, bool $setAsDefault = false): PaymentMethod
     {
@@ -221,6 +223,7 @@ trait ManagesPaymentMethods
      * Find a PaymentMethod by ID.
      *
      * @throws InvalidPaymentMethod
+     * @throws InvalidRequestException
      */
     public function findPaymentMethod(PaymentSource|string $paymentSource): ?PaymentMethod
     {
