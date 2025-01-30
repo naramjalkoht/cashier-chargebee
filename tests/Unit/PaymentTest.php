@@ -51,9 +51,9 @@ class PaymentTest extends TestCase
     public function test_amount(): void
     {
         $paymentIntent = new PaymentIntent([
-            'id' => 'id_123', 
+            'id' => 'id_123',
             'currencyCode' => 'EUR',
-            'amount' => 5000
+            'amount' => 5000,
         ]);
         $payment = new Payment($paymentIntent);
         $amount = $payment->amount();
