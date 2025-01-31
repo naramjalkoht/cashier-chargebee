@@ -482,15 +482,13 @@ public function updateCustomerFromChargebee(): void
 }
 ```
 
+Additionally, the `customer_updated` event handler calls the `updateDefaultPaymentMethodFromChargebee` method to synchronize the default payment method from Chargebee to your application.
+
 If you need to modify the default behavior for the `customer_deleted` or `customer_updated` events, or handle additional Chargebee events, you can provide your own listener. The listener class is configurable via the `cashier` configuration file:
 
 ```init
 'webhook_listener' => \Laravel\CashierChargebee\Listeners\HandleWebhookReceived::class,
 ```
-
-Here's the rephrased version while maintaining the Markdown format:
-
----
 
 <a name="manage-payment-methods"></a>
 ## Managing Payment Methods
