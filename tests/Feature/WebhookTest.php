@@ -135,7 +135,7 @@ class WebhookTest extends FeatureTestCase
         $paymentSource = $this->createCard($user);
 
         $updateOptions = [
-            'email' => 'testcustomerchanged@cashier-chargebee.com'
+            'email' => 'testcustomerchanged@cashier-chargebee.com',
         ];
 
         $customer = $user->updateChargebeeCustomer($updateOptions);
@@ -150,9 +150,9 @@ class WebhookTest extends FeatureTestCase
 
         $this->postJson($this->webhookUrl, $payload)
             ->assertStatus(200);
-        
+
         $user->refresh();
-        
+
         $this->assertSame('testcustomerchanged@cashier-chargebee.com', $user->email);
         $this->assertSame($paymentSource->card->brand, $user->pm_type);
         $this->assertSame($paymentSource->card->last4, $user->pm_last_four);
