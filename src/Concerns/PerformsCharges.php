@@ -10,6 +10,14 @@ use Laravel\CashierChargebee\Payment;
 trait PerformsCharges
 {
     /**
+     * Create a new PaymentIntent instance.
+     */
+    public function pay(int $amount, array $options = []): Payment
+    {
+        return $this->createPayment($amount, $options);
+    }
+
+    /**
      * Create a new Payment instance with a Chargebee PaymentIntent.
      */
     public function createPayment(int $amount, array $options = []): Payment
