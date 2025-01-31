@@ -2,6 +2,9 @@
 
 namespace Laravel\CashierChargebee\Tests\Feature;
 
+use ChargeBee\ChargeBee\Models\Item;
+use ChargeBee\ChargeBee\Models\ItemFamily;
+use ChargeBee\ChargeBee\Models\ItemPrice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
@@ -14,7 +17,7 @@ abstract class FeatureTestCase extends TestCase
 
     protected function setUp(): void
     {
-        if (! getenv('CHARGEBEE_SITE') || ! getenv('CHARGEBEE_API_KEY')) {
+        if (!getenv('CHARGEBEE_SITE') || !getenv('CHARGEBEE_API_KEY')) {
             $this->markTestSkipped('Chargebee site or API key not set.');
         }
 
@@ -30,5 +33,36 @@ abstract class FeatureTestCase extends TestCase
             'name' => 'Test User',
             'password' => '$2y$10$kJd93qWbF8VX4EPlRxGvBOipmKz6W5Q1yTUapXaR3YUgT76Z.jU.e',
         ], $options));
+    }
+
+    protected function createItemPrice($price, $amount)
+    {
+        $ts = now()->timestamp;
+        $id = strtolower(str_replace(" ", "_", $price)) . "-" . $ts;
+        $itemFamily = ItemFamily::create([
+            'id' => $id,
+            'name' => "$price-$ts",
+        ]);
+
+        $item = Item::create([
+            'id' => $id,
+            'name' => "$price-$ts",
+            'type' => 'charge',
+            'itemFamilyId' => $itemFamily->itemFamily()->id,
+        ]);
+
+        $itemPrice = ItemPrice::create([
+            'id' => $id,
+            'name' => "$price-$ts",
+            'externalName' => $price,
+            'description' => $price,
+            'price' => $amount,
+            'pricingModel' => 'per_unit',
+            'itemId' => $item->item()->id,
+            'itemFamilyId' => $itemFamily->itemFamily()->id,
+            'currencyCode' => config('cashier.currency'),
+        ]);
+
+        return $itemPrice->itemPrice();
     }
 }

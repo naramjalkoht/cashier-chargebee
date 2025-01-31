@@ -16,14 +16,14 @@ class CheckoutTest extends FeatureTestCase
      */
     protected function defineRoutes($router): void
     {
-        $router->get('/home', fn () => 'Hello World!')->name('home');
+        $router->get('/home', fn() => 'Hello World!')->name('home');
     }
 
     public function test_customers_can_start_a_product_checkout_session()
     {
         $user = $this->createCustomer('can_start_a_product_checkout_session');
 
-        $shirtPrice = $this->createItemPrice('T-shirt', 1500);
+        $shirtPrice = $this->createItemPrice('T-shirt', amount: 1500);
         $carPrice = $this->createItemPrice('Car', 30000);
 
         $items = [$shirtPrice->id => 5, $carPrice->id];
@@ -43,7 +43,7 @@ class CheckoutTest extends FeatureTestCase
 
         $shirtPrice = $this->createItemPrice('T-shirt', 1500);
 
-        $id = 'coupon_'.now()->timestamp;
+        $id = 'coupon_' . now()->timestamp;
         $coupon = Coupon::createForItems([
             'id' => $id,
             'name' => $id,
@@ -104,7 +104,7 @@ class CheckoutTest extends FeatureTestCase
         $this->assertInstanceOf(Checkout::class, $checkout);
         $this->assertSame('checkout_new', $checkout->type);
 
-        $id = 'coupon_'.now()->timestamp;
+        $id = 'coupon_' . now()->timestamp;
         $coupon = Coupon::createForItems([
             'id' => $id,
             'name' => $id,
@@ -164,35 +164,6 @@ class CheckoutTest extends FeatureTestCase
             'currencyCode' => config('cashier.currency'),
             'period' => 1,
             'periodUnit' => 'year',
-        ]);
-
-        return $itemPrice->itemPrice();
-    }
-
-    protected function createItemPrice($price, $amount)
-    {
-        $ts = now()->timestamp;
-
-        $itemFamily = ItemFamily::create([
-            'id' => "$price-$ts",
-            'name' => "$price-$ts",
-        ]);
-
-        $item = Item::create([
-            'id' => "$price-$ts",
-            'name' => "$price-$ts",
-            'type' => 'charge',
-            'itemFamilyId' => $itemFamily->itemFamily()->id,
-        ]);
-
-        $itemPrice = ItemPrice::create([
-            'id' => "$price-$ts",
-            'name' => "$price-$ts",
-            'price' => $amount,
-            'pricingModel' => 'per_unit',
-            'itemId' => $item->item()->id,
-            'itemFamilyId' => $itemFamily->itemFamily()->id,
-            'currencyCode' => config('cashier.currency'),
         ]);
 
         return $itemPrice->itemPrice();
