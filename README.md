@@ -33,6 +33,8 @@
     - [Synchronizing the Default Payment Method from Chargebee](#payment-methods-sync-default)
     - [Deleting a Payment Method](#payment-methods-delete)
     - [Deleting Payment Methods of a Specific Type](#payment-methods-delete-multiple)
+- [Single Charges](#single-charges)
+    - [Creating Payment Intents](#creating-payment-intents)
 
 <a name="installation"></a>
 ## Installation
@@ -903,3 +905,47 @@ try {
 - If the request to Chargebee fails due to invalid parameters, an `InvalidRequestException` will be thrown.
 
 
+<a name="single-charges"></a>
+## Single Charges
+
+<a name="creating-payment-intents"></a>
+### Creating Payment Intents
+
+You can create a new Chargebee payment intent by invoking the createPayment method on a billable model instance. This method initializes a Chargebee `PaymentIntent` with a given amount and optional parameters. For example, you may create a payment intent for 50 euros (note that you should use the lowest denomination of your currency, such as euro cents for euros):
+
+```php
+$payment = $user->createPayment(5000, [
+    'currencyCode' => 'EUR',
+]);
+```
+
+For more details on the available options, refer to the [Chargebee Payment Intent API documentation](https://apidocs.chargebee.com/docs/api/payment_intents#create_a_payment_intent).
+
+The resulting payment intent is wrapped in a `Laravel\CashierChargebee\Payment` instance. It provides methods for retrieving related customer information and interacting with the Chargebee payment object.
+
+The `customer` method fetches the associated Billable model if one exists:
+
+```php
+$payment = $user->createPayment(1000);
+$customer = $payment->customer();
+```
+
+The `asChargebeePaymentIntent` method returns the underlying `PaymentIntent` instance:
+
+```php
+$paymentIntent = $payment->asChargebeePaymentIntent();
+```
+
+The `amount` and `rawAmount` methods provide details about the total amount associated with a payment intent. The `amount` method returns the total payment amount in a formatted string, considering the currency of the payment:
+
+```php
+$formattedAmount = $payment->amount();
+```
+
+The `rawAmount` method returns the raw numeric value of the payment amount:
+
+```php
+$rawAmount = $payment->rawAmount();
+```
+
+The `Payment` class also implements Laravel's `Arrayable`, `Jsonable`, and `JsonSerializable` interfaces.
