@@ -62,4 +62,44 @@ class PaymentTest extends TestCase
         $this->assertStringContainsString('50.00', $amount);
         $this->assertStringContainsString('€', $amount);
     }
+
+    public function test_requires_action(): void
+    {
+        $paymentIntent = new PaymentIntent(['status' => 'inited']);
+        $payment = new Payment($paymentIntent);
+
+        $this->assertTrue($payment->requiresAction());
+    }
+
+    public function test_requires_capture(): void
+    {
+        $paymentIntent = new PaymentIntent(['status' => 'authorized']);
+        $payment = new Payment($paymentIntent);
+
+        $this->assertTrue($payment->requiresCapture());
+    }
+
+    public function test_is_canceled(): void
+    {
+        $paymentIntent = new PaymentIntent(['status' => 'expired']);
+        $payment = new Payment($paymentIntent);
+
+        $this->assertTrue($payment->isCanceled());
+    }
+
+    public function test_is_succeeded(): void
+    {
+        $paymentIntent = new PaymentIntent(['status' => 'consumed']);
+        $payment = new Payment($paymentIntent);
+
+        $this->assertTrue($payment->isSucceeded());
+    }
+
+    public function test_is_processing(): void
+    {
+        $paymentIntent = new PaymentIntent(['status' => 'in_progress']);
+        $payment = new Payment($paymentIntent);
+
+        $this->assertTrue($payment->isProcessing());
+    }
 }

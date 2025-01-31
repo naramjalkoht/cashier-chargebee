@@ -35,6 +35,7 @@
     - [Deleting Payment Methods of a Specific Type](#payment-methods-delete-multiple)
 - [Single Charges](#single-charges)
     - [Creating Payment Intents](#creating-payment-intents)
+    - [Payment Status Helpers](#payment-status-helpers)
     - [Finding Payment Intents](#finding-payment-intents)
 
 <a name="installation"></a>
@@ -950,7 +951,49 @@ $rawAmount = $payment->rawAmount();
 ```
 
 The `Payment` class also implements Laravel's `Arrayable`, `Jsonable`, and `JsonSerializable` interfaces.
-The `Payment` class also implements Laravel's `Arrayable`, `Jsonable`, and `JsonSerializable` interfaces.
+
+<a name="payment-status-helpers"></a>
+### Payment Status Helpers
+
+The `Payment` instance provides a set of helper methods to determine the current status of a Chargebee `PaymentIntent`. The `requiresAction` method determines whether the payment requires additional steps, such as 3D Secure authentication:
+
+```php
+if ($payment->requiresAction()) {
+    // Prompt the user to complete additional authentication (e.g., 3D Secure)
+}
+```
+
+The `requiresCapture` method checks whether the payment has been successfully authorized but still requires capture. This is useful for workflows where payment authorization and finalization happen in separate steps:
+
+```php
+if ($payment->requiresCapture()) {
+    // Proceed with capturing the payment
+}
+```
+
+The `isCanceled` method determines whether the `PaymentIntent` has expired due to inaction:
+
+```php
+if ($payment->isCanceled()) {
+    // Handle expired or canceled payment scenario
+}
+```
+
+The `isSucceeded` method returns true if the payment has been finalized and the intent is marked as `consumed`:
+
+```php
+if ($payment->isSucceeded()) {
+    // Proceed with post-payment actions
+}
+```
+
+The `isProcessing` method determines if the payment is still in progress, meaning that additional authentication or user interaction may be required:
+
+```php
+if ($payment->isProcessing()) {
+    // Wait for the payment to complete
+}
+```
 
 <a name="finding-payment-intents"></a>
 ### Finding Payment Intents
