@@ -142,7 +142,7 @@ trait ManagesCustomer
 
         $filteredData = array_filter(
             $chargebeeData,
-            fn($key) => Schema::hasColumn($table, $key),
+            fn ($key) => Schema::hasColumn($table, $key),
             ARRAY_FILTER_USE_KEY
         );
 

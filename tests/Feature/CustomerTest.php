@@ -444,7 +444,7 @@ class CustomerTest extends FeatureTestCase
         $user->createAsChargebeeCustomer();
 
         $updateOptions = [
-            'email' => 'testupdatecustomer@cashier-chargebee.com'
+            'email' => 'testupdatecustomer@cashier-chargebee.com',
         ];
 
         $customer = $user->updateChargebeeCustomer($updateOptions);
