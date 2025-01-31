@@ -35,6 +35,7 @@
     - [Deleting Payment Methods of a Specific Type](#payment-methods-delete-multiple)
 - [Single Charges](#single-charges)
     - [Creating Payment Intents](#creating-payment-intents)
+    - [Finding Payment Intents](#finding-payment-intents)
 
 <a name="installation"></a>
 ## Installation
@@ -949,3 +950,17 @@ $rawAmount = $payment->rawAmount();
 ```
 
 The `Payment` class also implements Laravel's `Arrayable`, `Jsonable`, and `JsonSerializable` interfaces.
+The `Payment` class also implements Laravel's `Arrayable`, `Jsonable`, and `JsonSerializable` interfaces.
+
+<a name="finding-payment-intents"></a>
+### Finding Payment Intents
+
+The `findPayment` method allows you to retrieve an existing Chargebee `PaymentIntent` by its ID. This is useful when you need to check the status of a previously created payment or retrieve details for further processing.
+
+To find a payment intent, call the `findPayment` method with the payment ID:
+
+```php
+$payment = $user->findPayment('id_123456789');
+```
+
+If the payment intent exists, it is returned as a `Laravel\CashierChargebee\Payment` instance. If the payment intent is not found, a `PaymentNotFound` exception is thrown.

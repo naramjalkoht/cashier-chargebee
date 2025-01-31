@@ -3,6 +3,7 @@
 namespace Laravel\CashierChargebee\Tests\Feature;
 
 use ChargeBee\ChargeBee\Models\PaymentIntent;
+use Laravel\CashierChargebee\Exceptions\PaymentNotFound;
 use Laravel\CashierChargebee\Payment;
 
 class PaymentTest extends FeatureTestCase
@@ -55,5 +56,31 @@ class PaymentTest extends FeatureTestCase
         $payment = new Payment($paymentIntent);
 
         $this->assertNull($payment->customer());
+    }
+
+    public function test_find_payment(): void
+    {
+        $user = $this->createCustomer('test_find_payment');
+        $user->createAsChargebeeCustomer();
+
+        $payment = $user->createPayment(1000, [
+            'currencyCode' => 'EUR',
+        ]);
+
+        $retrieved_payment = $user->findPayment($payment->id);
+
+        $this->assertInstanceOf(Payment::class, $retrieved_payment);
+        $this->assertEquals(1000, $retrieved_payment->amount);
+        $this->assertSame($user->chargebee_id, $retrieved_payment->customerId);
+        $this->assertSame('EUR', $retrieved_payment->currencyCode);
+    }
+
+    public function test_find_payment_throws_not_found(): void
+    {
+        $user = $this->createCustomer('test_find_payment_throws_not_found');
+
+        $this->expectException(PaymentNotFound::class);
+
+        $user->findPayment('not_existing_id');
     }
 }
