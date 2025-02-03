@@ -3,6 +3,7 @@
 namespace Laravel\CashierChargebee\Tests\Unit;
 
 use ChargeBee\ChargeBee\Models\PaymentIntent;
+use Laravel\CashierChargebee\Exceptions\IncompletePayment;
 use Laravel\CashierChargebee\Payment;
 use Laravel\CashierChargebee\Tests\TestCase;
 
@@ -101,5 +102,25 @@ class PaymentTest extends TestCase
         $payment = new Payment($paymentIntent);
 
         $this->assertTrue($payment->isProcessing());
+    }
+
+    public function test_validate_throws_exception_when_action_required(): void
+    {
+        $paymentIntent = new PaymentIntent(['status' => 'inited']);
+        $payment = new Payment($paymentIntent);
+
+        $this->expectException(IncompletePayment::class);
+
+        $payment->validate();
+    }
+
+    public function test_validate_does_not_throw_exception_when_no_action_required(): void
+    {
+        $paymentIntent = new PaymentIntent(['status' => 'consumed']);
+        $payment = new Payment($paymentIntent);
+
+        $payment->validate();
+
+        $this->assertTrue(true);
     }
 }

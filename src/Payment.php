@@ -7,6 +7,7 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Database\Eloquent\Model;
 use JsonSerializable;
+use Laravel\CashierChargebee\Exceptions\IncompletePayment;
 
 class Payment implements Arrayable, Jsonable, JsonSerializable
 {
@@ -106,6 +107,18 @@ class Payment implements Arrayable, Jsonable, JsonSerializable
     public function isProcessing(): bool
     {
         return $this->paymentIntent->status === 'in_progress';
+    }
+
+    /**
+     * Validate if the payment intent was successful and throw an exception if not.
+     *
+     * @throws \Laravel\CashierChargebee\Exceptions\IncompletePayment
+     */
+    public function validate(): void
+    {
+        if ($this->requiresAction()) {
+            throw IncompletePayment::requiresAction($this);
+        }
     }
 
     /**

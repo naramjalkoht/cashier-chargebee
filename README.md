@@ -995,6 +995,18 @@ if ($payment->isProcessing()) {
 }
 ```
 
+You can use the `validate` method to check if additional user action, such as 3D Secure authentication, is needed. If so, an `IncompletePayment` exception is thrown:
+
+```php
+try {
+    $payment->validate();
+    // Proceed with payment handling
+} catch (\Laravel\CashierChargebee\Exceptions\IncompletePayment $exception) {
+    // Handle cases where additional action is required (e.g., 3D Secure)
+}
+```
+
+
 <a name="finding-payment-intents"></a>
 ### Finding Payment Intents
 
