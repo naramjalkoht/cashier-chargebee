@@ -73,7 +73,7 @@ final class Cashier
     /**
      * Get the customer instance by its Chargebee ID.
      */
-    public static function findBillable(\Chargebee\ChargeBee\Models\Customer|string|null $chargebeeId): ?Model
+    public static function findBillable(Customer|string|null $chargebeeId): ?Model
     {
         $chargebeeId = $chargebeeId instanceof Customer ? $chargebeeId->id : $chargebeeId;
 
