@@ -939,10 +939,10 @@ try {
 <a name="creating-payment-intents"></a>
 ### Creating Payment Intents
 
-You can create a new Chargebee payment intent by invoking the createPayment method on a billable model instance. This method initializes a Chargebee `PaymentIntent` with a given amount and optional parameters. For example, you may create a payment intent for 50 euros (note that you should use the lowest denomination of your currency, such as euro cents for euros):
+You can create a new Chargebee payment intent by invoking `pay` or `createPayment` methods on a billable model instance. These methods initialize a Chargebee `PaymentIntent` with a given amount and optional parameters. For example, you may create a payment intent for 50 euros (note that you should use the lowest denomination of your currency, such as euro cents for euros):
 
 ```php
-$payment = $user->createPayment(5000, [
+$payment = $user->pay(5000, [
     'currencyCode' => 'EUR',
 ]);
 ```

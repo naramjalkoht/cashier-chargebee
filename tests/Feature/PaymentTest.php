@@ -83,4 +83,31 @@ class PaymentTest extends FeatureTestCase
 
         $user->findPayment('not_existing_id');
     }
+
+    public function test_pay(): void
+    {
+        $user = $this->createCustomer('test_pay');
+        $user->createAsChargebeeCustomer();
+
+        $payment = $user->pay(1000);
+
+        $this->assertInstanceOf(Payment::class, $payment);
+        $this->assertEquals(1000, $payment->amount);
+        $this->assertEquals($user->chargebee_id, $payment->customerId);
+    }
+
+    public function test_pay_with_currency(): void
+    {
+        $user = $this->createCustomer('test_pay_with_currency');
+        $user->createAsChargebeeCustomer();
+
+        $payment = $user->pay(1000, [
+            'currencyCode' => 'EUR',
+        ]);
+
+        $this->assertInstanceOf(Payment::class, $payment);
+        $this->assertEquals(1000, $payment->amount);
+        $this->assertSame($user->chargebee_id, $payment->customerId);
+        $this->assertSame('EUR', $payment->currencyCode);
+    }
 }
