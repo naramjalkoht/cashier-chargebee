@@ -5,7 +5,8 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Laravel\\CashierChargebee\\": "src/"
+            "Laravel\\CashierChargebee\\": "src/",
+            "Laravel\\CashierChargebee\\Database\\Factories\\": "database/factories/"
         }
     },
     "extra": {
@@ -43,7 +44,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Laravel\\CashierChargebee\\Tests\\": "tests/"
+            "Laravel\\CashierChargebee\\Tests\\": "tests/",
+            "Laravel\\CashierChargebee\\Tests\\Fixtures\\": "tests/Fixtures/"
         }
     },
     "minimum-stability": "dev",

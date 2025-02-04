@@ -2,13 +2,15 @@
 
 namespace Laravel\CashierChargebee\Tests\Fixtures;
 
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Model;
 use Illuminate\Notifications\Notifiable;
 use Laravel\CashierChargebee\Billable;
 
 class User extends Model
 {
-    use Billable, Notifiable;
+    use Billable, HasFactory, Notifiable;
 
     protected $guarded = [];
 
@@ -26,5 +28,13 @@ class User extends Model
             'zip' => '91789',
             'country' => 'US',
         ];
+    }
+
+    /**
+     * Create a new factory instance for the model.
+     */
+    protected static function newFactory(): Factory
+    {
+        return UserFactory::new();
     }
 }
