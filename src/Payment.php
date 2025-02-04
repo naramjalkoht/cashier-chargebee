@@ -7,6 +7,7 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Database\Eloquent\Model;
 use JsonSerializable;
+use Laravel\CashierChargebee\Exceptions\IncompletePayment;
 
 class Payment implements Arrayable, Jsonable, JsonSerializable
 {
@@ -66,6 +67,58 @@ class Payment implements Arrayable, Jsonable, JsonSerializable
     public function rawAmount(): int
     {
         return $this->paymentIntent->amount;
+    }
+
+    /**
+     * Determine if the payment needs an extra action like 3D Secure.
+     */
+    public function requiresAction(): bool
+    {
+        return $this->paymentIntent->status === 'inited';
+    }
+
+    /**
+     * Determine if the payment needs to be captured.
+     */
+    public function requiresCapture(): bool
+    {
+        return $this->paymentIntent->status === 'authorized';
+    }
+
+    /**
+     * Determine if the payment was canceled.
+     */
+    public function isCanceled(): bool
+    {
+        return $this->paymentIntent->status === 'expired';
+    }
+
+    /**
+     * Determine if the payment was successful.
+     */
+    public function isSucceeded(): bool
+    {
+        return $this->paymentIntent->status === 'consumed';
+    }
+
+    /**
+     * Determine if the payment is processing.
+     */
+    public function isProcessing(): bool
+    {
+        return $this->paymentIntent->status === 'in_progress';
+    }
+
+    /**
+     * Validate if the payment intent was successful and throw an exception if not.
+     *
+     * @throws \Laravel\CashierChargebee\Exceptions\IncompletePayment
+     */
+    public function validate(): void
+    {
+        if ($this->requiresAction()) {
+            throw IncompletePayment::requiresAction($this);
+        }
     }
 
     /**

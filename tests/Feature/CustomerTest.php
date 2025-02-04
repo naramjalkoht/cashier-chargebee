@@ -437,4 +437,20 @@ class CustomerTest extends FeatureTestCase
         $this->assertInstanceOf(PromotionalCredit::class, $transaction);
         $this->assertSame(200, $transaction->amount);
     }
+
+    public function test_update_customer_from_chargebee(): void
+    {
+        $user = $this->createCustomer('test_update_customer_from_chargebee');
+        $user->createAsChargebeeCustomer();
+
+        $updateOptions = [
+            'email' => 'testupdatecustomer@cashier-chargebee.com',
+        ];
+
+        $customer = $user->updateChargebeeCustomer($updateOptions);
+        $this->assertSame('testupdatecustomer@cashier-chargebee.com', $customer->email);
+
+        $user->updateCustomerFromChargebee();
+        $this->assertSame('testupdatecustomer@cashier-chargebee.com', $user->email);
+    }
 }

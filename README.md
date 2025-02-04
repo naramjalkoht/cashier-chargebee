@@ -35,6 +35,7 @@
     - [Deleting Payment Methods of a Specific Type](#payment-methods-delete-multiple)
 - [Single Charges](#single-charges)
     - [Creating Payment Intents](#creating-payment-intents)
+    - [Payment Status Helpers](#payment-status-helpers)
     - [Finding Payment Intents](#finding-payment-intents)
 
 <a name="installation"></a>
@@ -452,17 +453,43 @@ Cashier will automatically verify these credentials for incoming webhook request
 <a name="handling-webhook-events"></a>
 ### Handling Webhook Events
 
-Cashier emits a `WebhookReceived` event for every incoming webhook, allowing you to handle these events in your application. By default, Cashier includes a listener that handles the `customer_deleted` event. This listener ensures that when a customer is deleted in Chargebee, their corresponding record in your application is updated accordingly.
+Cashier emits a `WebhookReceived` event for every incoming webhook, allowing you to handle these events in your application. By default, Cashier includes a `HandleWebhookReceived` listener that handles the `customer_deleted` and `customer_updated` events.
 
-If you need to modify the default behavior for the `customer_deleted` event or handle additional Chargebee events, you can provide your own listener. The listener class is configurable via the `cashier` configuration file:
+The `customer_deleted` event ensures that when a customer is deleted in Chargebee, their corresponding record in your application is updated accordingly by removing their Chargebee ID.
+
+The `customer_updated` event uses the `updateCustomerFromChargebee` method on your billable model to synchronize customer information. By default, this method maps Chargebee data to common fields such as `email` and `phone`. However, to ensure the correct mapping for your application, **you should override this method in your billable model**. This allows you to define how Chargebee customer attributes should be mapped to your model's columns. Additionally, you can include more data beyond the default fields, as Chargebee provides a wide range of customer attributes. For a full list, see the [Chargebee API documentation](https://apidocs.eu.chargebee.com/docs/api/customers?prod_cat_ver=2&lang=php#customer_attributes). Here’s an example implementation:
+
+```php
+/**
+ * Update customer with data from Chargebee.
+ */
+public function updateCustomerFromChargebee(): void
+{
+    $customer = $this->asChargebeeCustomer();
+
+    $chargebeeData = [
+        'name' => $customer->firstName.' '.$customer->lastName,
+        'email' => $customer->email,
+        'phone' => $customer->phone,
+        'billing_first_name' => $customer->billingAddress->firstName ?? null,
+        'billing_last_name' => $customer->billingAddress->lastName ?? null,
+        'billing_line1' => $customer->billingAddress->line1 ?? null,
+        'billing_city' => $customer->billingAddress->city ?? null,
+        'billing_address_state' => $customer->billingAddress->state ?? null,
+        'billing_address_country' => $customer->billingAddress->country ?? null,
+    ];
+
+    $this->update($chargebeeData);
+}
+```
+
+Additionally, the `customer_updated` event handler calls the `updateDefaultPaymentMethodFromChargebee` method to synchronize the default payment method from Chargebee to your application.
+
+If you need to modify the default behavior for the `customer_deleted` or `customer_updated` events, or handle additional Chargebee events, you can provide your own listener. The listener class is configurable via the `cashier` configuration file:
 
 ```init
 'webhook_listener' => \Laravel\CashierChargebee\Listeners\HandleWebhookReceived::class,
 ```
-
-Here's the rephrased version while maintaining the Markdown format:
-
----
 
 <a name="manage-payment-methods"></a>
 ## Managing Payment Methods
@@ -912,10 +939,10 @@ try {
 <a name="creating-payment-intents"></a>
 ### Creating Payment Intents
 
-You can create a new Chargebee payment intent by invoking the createPayment method on a billable model instance. This method initializes a Chargebee `PaymentIntent` with a given amount and optional parameters. For example, you may create a payment intent for 50 euros (note that you should use the lowest denomination of your currency, such as euro cents for euros):
+You can create a new Chargebee payment intent by invoking `pay` or `createPayment` methods on a billable model instance. These methods initialize a Chargebee `PaymentIntent` with a given amount and optional parameters. For example, you may create a payment intent for 50 euros (note that you should use the lowest denomination of your currency, such as euro cents for euros):
 
 ```php
-$payment = $user->createPayment(5000, [
+$payment = $user->pay(5000, [
     'currencyCode' => 'EUR',
 ]);
 ```
@@ -950,7 +977,61 @@ $rawAmount = $payment->rawAmount();
 ```
 
 The `Payment` class also implements Laravel's `Arrayable`, `Jsonable`, and `JsonSerializable` interfaces.
-The `Payment` class also implements Laravel's `Arrayable`, `Jsonable`, and `JsonSerializable` interfaces.
+
+<a name="payment-status-helpers"></a>
+### Payment Status Helpers
+
+The `Payment` instance provides a set of helper methods to determine the current status of a Chargebee `PaymentIntent`. The `requiresAction` method determines whether the payment requires additional steps, such as 3D Secure authentication:
+
+```php
+if ($payment->requiresAction()) {
+    // Prompt the user to complete additional authentication (e.g., 3D Secure)
+}
+```
+
+The `requiresCapture` method checks whether the payment has been successfully authorized but still requires capture. This is useful for workflows where payment authorization and finalization happen in separate steps:
+
+```php
+if ($payment->requiresCapture()) {
+    // Proceed with capturing the payment
+}
+```
+
+The `isCanceled` method determines whether the `PaymentIntent` has expired due to inaction:
+
+```php
+if ($payment->isCanceled()) {
+    // Handle expired or canceled payment scenario
+}
+```
+
+The `isSucceeded` method returns true if the payment has been finalized and the intent is marked as `consumed`:
+
+```php
+if ($payment->isSucceeded()) {
+    // Proceed with post-payment actions
+}
+```
+
+The `isProcessing` method determines if the payment is still in progress, meaning that additional authentication or user interaction may be required:
+
+```php
+if ($payment->isProcessing()) {
+    // Wait for the payment to complete
+}
+```
+
+You can use the `validate` method to check if additional user action, such as 3D Secure authentication, is needed. If so, an `IncompletePayment` exception is thrown:
+
+```php
+try {
+    $payment->validate();
+    // Proceed with payment handling
+} catch (\Laravel\CashierChargebee\Exceptions\IncompletePayment $exception) {
+    // Handle cases where additional action is required (e.g., 3D Secure)
+}
+```
+
 
 <a name="finding-payment-intents"></a>
 ### Finding Payment Intents

@@ -3,6 +3,7 @@
 namespace Laravel\CashierChargebee\Tests\Unit;
 
 use ChargeBee\ChargeBee\Models\PaymentIntent;
+use Laravel\CashierChargebee\Exceptions\IncompletePayment;
 use Laravel\CashierChargebee\Payment;
 use Laravel\CashierChargebee\Tests\TestCase;
 
@@ -61,5 +62,65 @@ class PaymentTest extends TestCase
         $this->assertEquals(5000, $payment->rawAmount());
         $this->assertStringContainsString('50.00', $amount);
         $this->assertStringContainsString('€', $amount);
+    }
+
+    public function test_requires_action(): void
+    {
+        $paymentIntent = new PaymentIntent(['status' => 'inited']);
+        $payment = new Payment($paymentIntent);
+
+        $this->assertTrue($payment->requiresAction());
+    }
+
+    public function test_requires_capture(): void
+    {
+        $paymentIntent = new PaymentIntent(['status' => 'authorized']);
+        $payment = new Payment($paymentIntent);
+
+        $this->assertTrue($payment->requiresCapture());
+    }
+
+    public function test_is_canceled(): void
+    {
+        $paymentIntent = new PaymentIntent(['status' => 'expired']);
+        $payment = new Payment($paymentIntent);
+
+        $this->assertTrue($payment->isCanceled());
+    }
+
+    public function test_is_succeeded(): void
+    {
+        $paymentIntent = new PaymentIntent(['status' => 'consumed']);
+        $payment = new Payment($paymentIntent);
+
+        $this->assertTrue($payment->isSucceeded());
+    }
+
+    public function test_is_processing(): void
+    {
+        $paymentIntent = new PaymentIntent(['status' => 'in_progress']);
+        $payment = new Payment($paymentIntent);
+
+        $this->assertTrue($payment->isProcessing());
+    }
+
+    public function test_validate_throws_exception_when_action_required(): void
+    {
+        $paymentIntent = new PaymentIntent(['status' => 'inited']);
+        $payment = new Payment($paymentIntent);
+
+        $this->expectException(IncompletePayment::class);
+
+        $payment->validate();
+    }
+
+    public function test_validate_does_not_throw_exception_when_no_action_required(): void
+    {
+        $paymentIntent = new PaymentIntent(['status' => 'consumed']);
+        $payment = new Payment($paymentIntent);
+
+        $payment->validate();
+
+        $this->assertTrue(true);
     }
 }

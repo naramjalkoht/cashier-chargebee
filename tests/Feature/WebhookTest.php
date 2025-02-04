@@ -2,6 +2,8 @@
 
 namespace Laravel\CashierChargebee\Tests\Feature;
 
+use ChargeBee\ChargeBee\Models\PaymentSource;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Laravel\CashierChargebee\Events\WebhookReceived;
@@ -125,6 +127,60 @@ class WebhookTest extends FeatureTestCase
             ->assertStatus(200);
     }
 
+    public function test_handle_customer_changed(): void
+    {
+        $this->withValidCredentials();
+        $user = $this->createCustomer('test_handle_customer_changed');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $updateOptions = [
+            'email' => 'testcustomerchanged@cashier-chargebee.com',
+        ];
+
+        $customer = $user->updateChargebeeCustomer($updateOptions);
+        $this->assertSame('testcustomerchanged@cashier-chargebee.com', $customer->email);
+
+        $payload = [
+            'event_type' => 'customer_changed',
+            'content' => [
+                'customer' => ['id' => $user->chargebeeId()],
+            ],
+        ];
+
+        $this->postJson($this->webhookUrl, $payload)
+            ->assertStatus(200);
+
+        $user->refresh();
+
+        $this->assertSame('testcustomerchanged@cashier-chargebee.com', $user->email);
+        $this->assertSame($paymentSource->card->brand, $user->pm_type);
+        $this->assertSame($paymentSource->card->last4, $user->pm_last_four);
+    }
+
+    public function test_customer_change_logs_no_matching_user_found(): void
+    {
+        $this->withValidCredentials();
+
+        Log::swap(\Mockery::mock(\Illuminate\Log\LogManager::class)->shouldIgnoreMissing());
+
+        Log::shouldReceive('info')
+            ->once()
+            ->with('Customer update attempted, but no matching user found.', [
+                'customer_id' => 'non_existent_customer_id',
+            ]);
+
+        $payload = [
+            'event_type' => 'customer_changed',
+            'content' => [
+                'customer' => ['id' => 'non_existent_customer_id'],
+            ],
+        ];
+
+        $this->postJson($this->webhookUrl, $payload)
+            ->assertStatus(200);
+    }
+
     protected function withValidCredentials(): void
     {
         $username = config('cashier.webhook.username');
@@ -133,5 +189,19 @@ class WebhookTest extends FeatureTestCase
         $this->withHeaders([
             'Authorization' => 'Basic '.base64_encode("$username:$password"),
         ]);
+    }
+
+    private function createCard(Model $user): ?PaymentSource
+    {
+        return PaymentSource::createCard([
+            'customer_id' => $user->chargebeeId(),
+            'card' => [
+                'number' => '4111 1111 1111 1111',
+                'cvv' => '123',
+                'expiry_year' => date('Y', strtotime('+ 1 year')),
+                'expiry_month' => date('m', strtotime('+ 1 year')),
+            ],
+        ]
+        )->paymentSource();
     }
 }
