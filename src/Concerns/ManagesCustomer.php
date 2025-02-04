@@ -8,6 +8,7 @@ use ChargeBee\ChargeBee\Models\PortalSession;
 use ChargeBee\ChargeBee\Models\PromotionalCredit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Exceptions\CustomerAlreadyCreated;
 use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
@@ -121,6 +122,31 @@ trait ManagesCustomer
             }
             throw $exception;
         }
+    }
+
+    /**
+     * Update customer with data from Chargebee.
+     */
+    public function updateCustomerFromChargebee(): void
+    {
+        $customer = $this->asChargebeeCustomer();
+
+        $chargebeeData = [
+            'first_name' => $customer->firstName,
+            'last_name' => $customer->lastName,
+            'email' => $customer->email,
+            'phone' => $customer->phone,
+        ];
+
+        $table = $this->getTable();
+
+        $filteredData = array_filter(
+            $chargebeeData,
+            fn ($key) => Schema::hasColumn($table, $key),
+            ARRAY_FILTER_USE_KEY
+        );
+
+        $this->update($filteredData);
     }
 
     /**
