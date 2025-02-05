@@ -135,6 +135,282 @@ class Subscription extends Model
     }
 
     /**
+     * Determine if the subscription is active, on trial, or within its grace period.
+     */
+    public function valid(): bool
+    {
+        return $this->active() || $this->onTrial() || $this->onGracePeriod();
+    }
+
+    /**
+     * Determine if the subscription is active.
+     * 
+     * @todo How to determine if subscription is active?
+     */
+    public function active(): bool
+    {
+        return ! $this->ended();
+    }
+
+    // /**
+    //  * Filter query by active.
+    //  */
+    // public function scopeActive(Builder $query): void
+    // {
+    //     $query->where(function ($query) {
+    //         $query->whereNull('ends_at')
+    //             ->orWhere(function ($query) {
+    //                 $query->onGracePeriod();
+    //             });
+    //     })->where('chargebee_status', '!=', ChargebeeSubscription::STATUS_INCOMPLETE_EXPIRED)
+    //         ->where('chargebee_status', '!=', ChargebeeSubscription::STATUS_UNPAID);
+
+    //     if (Cashier::$deactivatePastDue) {
+    //         $query->where('chargebee_status', '!=', ChargebeeSubscription::STATUS_PAST_DUE);
+    //     }
+
+    //     if (Cashier::$deactivateIncomplete) {
+    //         $query->where('chargebee_status', '!=', ChargebeeSubscription::STATUS_INCOMPLETE);
+    //     }
+    // }
+
+    /**
+     * Sync the Chargebee status of the subscription.
+     */
+    public function syncChargebeeStatus(): void
+    {
+        $subscription = $this->asChargebeeSubscription();
+
+        $this->chargebee_status = $subscription->status;
+
+        $this->save();
+    }
+
+    /**
+     * Determine if the subscription is recurring and not on trial.
+     */
+    public function recurring(): bool
+    {
+        return ! $this->onTrial() && ! $this->canceled();
+    }
+
+    /**
+     * Filter query by recurring.
+     */
+    public function scopeRecurring(Builder $query): void
+    {
+        $query->notOnTrial()->notCanceled();
+    }
+
+    /**
+     * Determine if the subscription is no longer active.
+     */
+    public function canceled(): bool
+    {
+        return ! is_null($this->ends_at);
+    }
+
+    /**
+     * Filter query by canceled.
+     */
+    public function scopeCanceled(Builder $query): void
+    {
+        $query->whereNotNull('ends_at');
+    }
+
+    /**
+     * Filter query by not canceled.
+     */
+    public function scopeNotCanceled(Builder $query): void
+    {
+        $query->whereNull('ends_at');
+    }
+
+    /**
+     * Determine if the subscription has ended and the grace period has expired.
+     */
+    public function ended(): bool
+    {
+        return $this->canceled() && ! $this->onGracePeriod();
+    }
+
+    /**
+     * Filter query by ended.
+     */
+    public function scopeEnded(Builder $query): void
+    {
+        $query->canceled()->notOnGracePeriod();
+    }
+
+    /**
+     * Determine if the subscription is within its trial period.
+     */
+    public function onTrial(): bool
+    {
+        return $this->trial_ends_at && $this->trial_ends_at->isFuture();
+    }
+
+    /**
+     * Filter query by on trial.
+     */
+    public function scopeOnTrial(Builder $query): void
+    {
+        $query->whereNotNull('trial_ends_at')->where('trial_ends_at', '>', Carbon::now());
+    }
+
+    /**
+     * Determine if the subscription's trial has expired.
+     */
+    public function hasExpiredTrial(): bool
+    {
+        return $this->trial_ends_at && $this->trial_ends_at->isPast();
+    }
+
+    /**
+     * Filter query by expired trial.
+     */
+    public function scopeExpiredTrial(Builder $query): void
+    {
+        $query->whereNotNull('trial_ends_at')->where('trial_ends_at', '<', Carbon::now());
+    }
+
+    /**
+     * Filter query by not on trial.
+     */
+    public function scopeNotOnTrial(Builder $query): void
+    {
+        $query->whereNull('trial_ends_at')->orWhere('trial_ends_at', '<=', Carbon::now());
+    }
+
+    /**
+     * Determine if the subscription is within its grace period after cancellation.
+     */
+    public function onGracePeriod(): bool
+    {
+        return $this->ends_at && $this->ends_at->isFuture();
+    }
+
+    /**
+     * Filter query by on grace period.
+     */
+    public function scopeOnGracePeriod(Builder $query): void
+    {
+        $query->whereNotNull('ends_at')->where('ends_at', '>', Carbon::now());
+    }
+
+    /**
+     * Filter query by not on grace period.
+     */
+    public function scopeNotOnGracePeriod(Builder $query): void
+    {
+        $query->whereNull('ends_at')->orWhere('ends_at', '<=', Carbon::now());
+    }
+
+    /**
+     * Cancel the subscription at the end of the billing period.
+     */
+    public function cancel(): self
+    {
+        $chargebeeSubscription = ChargebeeSubscription::cancelForItems($this->chargebee_id, [
+            'cancelOption' => 'end_of_term',
+        ])->subscription();
+
+        $this->chargebee_status = $chargebeeSubscription->status;
+
+        // If the user was on trial, we will set the grace period to end when the trial
+        // would have ended. Otherwise, we'll retrieve the end of the billing period
+        // period and make that the end of the grace period for this current user.
+        if ($this->onTrial()) {
+            $this->ends_at = $this->trial_ends_at;
+        } else {
+            $this->ends_at = Carbon::createFromTimestamp(
+                $chargebeeSubscription->currentTermEnd
+            );
+        }
+
+        $this->save();
+
+        return $this;
+    }
+
+    /**
+     * Cancel the subscription at a specific moment in time.
+     * 
+     * @todo creditOptionForCurrentTermCharges
+     */
+    public function cancelAt(DateTimeInterface|int $endsAt): self
+    {
+        if ($endsAt instanceof DateTimeInterface) {
+            $endsAt = $endsAt->getTimestamp();
+        }
+
+        $chargebeeSubscription = ChargebeeSubscription::cancelForItems($this->chargebee_id, [
+            'cancelOption' => 'specific_date',
+            'cancelAt' => $endsAt,
+        ])->subscription();
+
+        $this->chargebee_status = $chargebeeSubscription->status;
+
+        $this->ends_at = Carbon::createFromTimestamp($chargebeeSubscription->cancelledAt);
+
+        $this->save();
+
+        return $this;
+    }
+
+    /**
+     * Cancel the subscription immediately without invoicing.
+     */
+    public function cancelNow(): self
+    {
+        ChargebeeSubscription::cancelForItems($this->chargebee_id, [
+            'cancelOption' => 'immediately',
+        ])->subscription();
+
+        $this->markAsCanceled();
+
+        return $this;
+    }
+
+    /**
+     * Cancel the subscription immediately and invoice.
+     */
+    public function cancelNowAndInvoice(): self
+    {
+        ChargebeeSubscription::cancelForItems($this->chargebee_id, [
+            'cancelOption' => 'immediately',
+            'unbilledChargesOption' => 'invoice',
+        ])->subscription();
+
+        $this->markAsCanceled();
+
+        return $this;
+    }
+
+    /**
+     * Mark the subscription as canceled.
+     *
+     * @internal
+     */
+    public function markAsCanceled(): void
+    {
+        $this->fill([
+            'chargebee_status' => 'cancelled',
+            'ends_at' => Carbon::now(),
+        ])->save();
+    }
+
+    /**
+     * Update the underlying Chargebee subscription information for the model.
+     */
+    public function updateChargebeeSubscription(array $options = []): ChargebeeSubscription
+    {
+        $result = ChargebeeSubscription::updateForItems($this->chargebee_id, $options);
+
+        return $result->subscription();
+    }
+
+    /**
      * Get the subscription as a Chargebee subscription object.
      */
     public function asChargebeeSubscription(): ChargebeeSubscription

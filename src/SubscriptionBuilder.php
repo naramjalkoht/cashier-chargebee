@@ -108,9 +108,6 @@ class SubscriptionBuilder
      * Create a new Chargebee subscription.
      *
      * @throws \Exception
-     * @throws \Laravel\Cashier\Exceptions\IncompletePayment
-     * 
-     * @todo handlePaymentFailure
      */
     public function create(PaymentMethod|string|null $paymentMethod = null, array $customerOptions = [], array $subscriptionOptions = []): Subscription
     {
@@ -126,8 +123,6 @@ class SubscriptionBuilder
         ));
 
         $subscription = $this->createSubscription($chargebeeSubscription->subscription());
-
-        //$this->handlePaymentFailure($subscription, $paymentMethod);
 
         return $subscription;
     }
@@ -207,8 +202,6 @@ class SubscriptionBuilder
 
     /**
      * Get the trial ending date for the Chargebee payload.
-     * 
-     * @todo Consult
      */
     protected function getTrialEndForPayload(): int
     {
