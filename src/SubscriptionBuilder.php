@@ -3,6 +3,10 @@
 namespace Laravel\CashierChargebee;
 
 use Carbon\Carbon;
+use ChargeBee\ChargeBee\Models\Customer;
+use ChargeBee\ChargeBee\Models\ItemPrice;
+use ChargeBee\ChargeBee\Models\PaymentSource;
+use ChargeBee\ChargeBee\Models\Subscription as ChargebeeSubscription;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Traits\Conditionable;
@@ -68,13 +72,8 @@ class SubscriptionBuilder
 
     /**
      * Create a new subscription builder instance.
-     *
-     * @param  mixed  $owner
-     * @param  string  $type
-     * @param  string|string[]|array[]  $prices
-     * @return void
      */
-    public function __construct($owner, $type, $prices = [])
+    public function __construct(mixed $owner, string $type, string|array $prices = [])
     {
         $this->type = $type;
         $this->owner = $owner;
@@ -86,12 +85,8 @@ class SubscriptionBuilder
 
     /**
      * Set a price on the subscription builder.
-     *
-     * @param  string|array  $price
-     * @param  int|null  $quantity
-     * @return $this
      */
-    public function price($price, $quantity = 1)
+    public function price(string|array $price, ?int $quantity = 1): static
     {
         $options = is_array($price) ? $price : ['itemPriceId' => $price];
 
@@ -101,7 +96,7 @@ class SubscriptionBuilder
             $options['quantity'] = $quantity;
         }
 
-        if (isset($options['price'])) {
+        if (isset($options['itemPriceId'])) {
             $this->items[$options['itemPriceId']] = $options;
         } else {
             $this->items[] = $options;
@@ -111,66 +106,106 @@ class SubscriptionBuilder
     }
 
     /**
-     * Get the price tax rates for the Chargebee payload.
+     * Create a new Chargebee subscription.
      *
-     * @param  string  $price
-     * @return array|null
+     * @throws \Exception
      */
-    protected function getPriceTaxRatesForPayload($price)
-    {
-        if ($taxRates = $this->owner->priceTaxRates()) {
-            return $taxRates[$price] ?? null;
-        }
-    }
-
-    /**
-     * Begin a new Checkout Session.
-     *
-     * @param  array  $sessionOptions
-     * @param  array  $customerOptions
-     * @return \Laravel\CashierChargebee\Checkout
-     */
-    public function checkout(array $sessionOptions = [], array $customerOptions = [])
+    public function create(PaymentSource|string|null $paymentSource = null, array $customerOptions = [], array $subscriptionOptions = []): Subscription
     {
         if (empty($this->items)) {
             throw new Exception('At least one price is required when starting subscriptions.');
         }
 
-        if (! $this->skipTrial && $this->trialExpires) {
-            $minimumTrialPeriod = Carbon::now()->addHours(48)->addSeconds(10);
+        $chargebeeCustomer = $this->getChargebeeCustomer($paymentSource, $customerOptions);
 
-            $trialEnd = $this->trialExpires->gt($minimumTrialPeriod) ? $this->trialExpires : $minimumTrialPeriod;
-        } else {
-            $trialEnd = null;
-        }
+        $chargebeeSubscription = ChargebeeSubscription::createWithItems($chargebeeCustomer->id, array_merge(
+            $this->buildPayload(),
+            $subscriptionOptions
+        ));
 
-        $billingCycleAnchor = $trialEnd === null ? $this->billingCycleAnchor : null;
+        $subscription = $this->createSubscription($chargebeeSubscription->subscription());
 
-        $payload = array_filter([
-            'subscriptionItems' => Collection::make($this->items)->values()->all(),
-            'mode' => Session::MODE_SUBSCRIPTION,
-            'subscription' => array_filter([
-                'trialEnd' => $trialEnd ? $trialEnd->getTimestamp() : null,
-                'metadata' => array_merge($this->metadata, [
-                    'name' => $this->type,
-                    'type' => $this->type,
-                ]),
-            ]),
-        ]);
-
-        return Checkout::customer($this->owner, $this)
-            ->create([], array_merge_recursive($payload, $sessionOptions), $customerOptions);
+        return $subscription;
     }
 
     /**
-     * Get the tax rates for the Chargebee payload.
-     *
-     * @return array|null
+     * Create the Eloquent Subscription.
+     * 
+     * @todo Consult chargebee_id on item
      */
-    protected function getTaxRatesForPayload()
+    protected function createSubscription(ChargebeeSubscription $chargebeeSubscription): Subscription
     {
-        if ($taxRates = $this->owner->taxRates()) {
-            return $taxRates;
+        if ($subscription = $this->owner->subscriptions()->where('chargebee_id', $chargebeeSubscription->id)->first()) {
+            return $subscription;
         }
+
+        $firstItem = $chargebeeSubscription->subscriptionItems[0];
+        $isSinglePrice = count($chargebeeSubscription->subscriptionItems) === 1;
+
+        $subscription = $this->owner->subscriptions()->create([
+            'type' => $this->type,
+            'chargebee_id' => $chargebeeSubscription->id,
+            'chargebee_status' => $chargebeeSubscription->status,
+            'chargebee_price' => $isSinglePrice ? $firstItem->itemPriceId : null,
+            'quantity' => $isSinglePrice ? ($firstItem->quantity ?? null) : null,
+            'trial_ends_at' => ! $this->skipTrial ? $this->trialExpires : null,
+            'ends_at' => null,
+        ]);
+
+        foreach ($chargebeeSubscription->subscriptionItems as $item) {
+            $price = ItemPrice::retrieve($item->itemPriceId)->itemPrice();
+            $subscription->items()->create([
+                'chargebee_id' => $price->itemId,
+                'chargebee_product' => $price->itemId,
+                'chargebee_price' => $item->itemPriceId,
+                'quantity' => $item->quantity ?? null,
+            ]);
+        }
+
+        return $subscription;
+    }
+
+    /**
+     * Get the Chargebee customer instance for the current user and payment source.
+     */
+    protected function getChargebeeCustomer(PaymentSource|string|null $paymentSource = null, array $options = []): Customer
+    {
+        $customer = $this->owner->createOrGetChargebeeCustomer($options);
+
+        if ($paymentSource) {
+            $this->owner->updateDefaultPaymentMethod($paymentSource);
+        }
+
+        return $customer;
+    }
+
+    /**
+     * Build the payload for subscription creation.
+     * 
+     * @todo Clarify startDate
+     */
+    protected function buildPayload(): array
+    {
+        $payload = array_filter([
+            'couponIds' => $this->couponIds,
+            'metaData' => $this->metadata,
+            'subscriptionItems' => Collection::make($this->items)->values()->all(),
+            'trialEnd' => $this->getTrialEndForPayload(),
+            'autoCollection' => 'off',
+        ]);
+
+        return $payload;
+    }
+
+    /**
+     * Get the trial ending date for the Chargebee payload.
+     */
+    protected function getTrialEndForPayload(): int
+    {
+        if ($this->trialExpires) {
+            return $this->trialExpires->getTimestamp();
+        }
+
+        return 0;
     }
 }

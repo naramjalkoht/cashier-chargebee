@@ -13,8 +13,9 @@ trait Billable
 {
     use HandlesTaxes;
     use ManagesCustomer;
-    use PerformsCharges;
+    use ManagesPaymentMethods;
     use ManagesSubscriptions;
+    use PerformsCharges;
     use ManagesInvoices;
     use ManagesPaymentMethods;
 }
