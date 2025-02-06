@@ -249,7 +249,7 @@ class SubscriptionTest extends FeatureTestCase
 
     public function test_paused(): void
     {
-        $subscription = Subscription::factory()->create(['status' => 'paused']);
+        $subscription = Subscription::factory()->create(['chargebee_status' => 'paused']);
 
         $this->assertTrue($subscription->paused());
     }
