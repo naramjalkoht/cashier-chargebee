@@ -4,8 +4,9 @@ namespace Laravel\Cashier\Tests\Feature;
 
 use Laravel\CashierChargebee\Subscription;
 use Laravel\CashierChargebee\Tests\Feature\FeatureTestCase;
+use Laravel\CashierChargebee\Tests\TestCase;
 
-class SubscriptionTest extends FeatureTestCase
+class SubscriptionTest extends TestCase
 {
     public function test_prorate_on_subscription_create()
     {

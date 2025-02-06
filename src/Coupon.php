@@ -44,7 +44,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      */
     public function isPercentage()
     {
-        return !is_null($this->coupon->percent_off);
+        return $this->coupon->discountType == 'percentage';
     }
 
     /**
@@ -54,7 +54,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      */
     public function percentOff()
     {
-        return $this->coupon->percent_off;
+        return $this->coupon->discountPercentage;
     }
 
     /**
@@ -64,7 +64,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      */
     public function amountOff()
     {
-        if (!is_null($this->coupon->amount_off)) {
+        if (!is_null($this->coupon->discountAmount)) {
             return $this->formatAmount($this->rawAmountOff());
         }
     }
@@ -76,7 +76,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      */
     public function rawAmountOff()
     {
-        return $this->coupon->amount_off;
+        return $this->coupon->discountAmount;
     }
 
     /**
@@ -87,15 +87,15 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      */
     protected function formatAmount($amount)
     {
-        return Cashier::formatAmount($amount, $this->coupon->currency);
+        return Cashier::formatAmount($amount, $this->coupon->currencyCode);
     }
 
     /**
-     * Get the Stripe Coupon instance.
+     * Get the Chargebee Coupon instance.
      *
      * @return \ChargeBee\ChargeBee\Models\Coupon
      */
-    public function asStripeCoupon()
+    public function asChargebeeCoupon()
     {
         return $this->coupon;
     }
@@ -107,7 +107,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      */
     public function toArray()
     {
-        return $this->asStripeCoupon()->getValues();
+        return $this->asChargebeeCoupon()->getValues();
     }
 
     /**
@@ -133,7 +133,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
-     * Dynamically get values from the Stripe object.
+     * Dynamically get values from the Chargebee object.
      *
      * @param  string  $key
      * @return mixed

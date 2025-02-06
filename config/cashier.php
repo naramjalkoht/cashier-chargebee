@@ -1,5 +1,7 @@
 <?php
 
+use Laravel\CashierChargebee\Invoices\DompdfInvoiceRenderer;
+
 return [
 
     /*
@@ -57,7 +59,7 @@ return [
     |
     */
 
-    'currency' => env('CASHIER_CURRENCY', 'usd'),
+    'currency' => env('CASHIER_CURRENCY', 'USD'),
 
     /*
     |--------------------------------------------------------------------------
@@ -71,4 +73,13 @@ return [
     */
 
     'currency_locale' => env('CASHIER_CURRENCY_LOCALE', 'en'),
+
+    'invoices' => [
+        'renderer' => env('CASHIER_INVOICE_RENDERER', DompdfInvoiceRenderer::class),
+
+        'options' => [
+            // Supported: 'letter', 'legal', 'A4'
+            'paper' => env('CASHIER_PAPER', 'letter'),
+        ],
+    ],
 ];

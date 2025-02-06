@@ -1,21 +1,22 @@
 <?php
 
 namespace Laravel\CashierChargebee;
-use ChargeBee\ChargeBee\Models\InvoiceLineItem as ChargeBeeInvoiceLineItem;
 use Carbon\Carbon;
 use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use JsonSerializable;
+use Laravel\CashierChargebee\Contracts\InvoiceRenderer;
 use Laravel\CashierChargebee\Exceptions\InvalidInvoice;
 use Symfony\Component\HttpFoundation\Response;
 class Invoice implements Arrayable, Jsonable, JsonSerializable
 {
     /**
-     * The Stripe model instance.
+     * The Chargebee model instance.
      *
      * @var \Illuminate\Database\Eloquent\Model
      */
@@ -273,7 +274,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
-     * Get all of the discount objects from the Stripe invoice.
+     * Get all of the discount objects from the Chargebee invoice.
      *
      * @return \Laravel\CashierChargebee\Discount[]
      */
@@ -309,13 +310,9 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      */
     public function rawDiscountFor(Discount $discount)
     {
-        return optional(Collection::make($this->invoice->total_discount_amounts)
+        return optional(Collection::make($this->invoice->discounts)
             ->first(function ($discountAmount) use ($discount) {
-                if (is_string($discountAmount->discount)) {
-                    return $discountAmount->discount === $discount->id;
-                } else {
-                    return $discountAmount->discount->id === $discount->id;
-                }
+                return $discountAmount->entityId === $discount->entityId;
             }))
             ->amount;
     }
@@ -339,7 +336,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     {
         $total = 0;
 
-        foreach ((array) $this->invoice->total_discount_amounts as $discount) {
+        foreach ((array) $this->invoice->discounts as $discount) {
             $total += $discount->amount;
         }
 
@@ -373,7 +370,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     /**
      * Get the taxes applied to the invoice.
      *
-     * @return \Laravel\Cashier\Tax[]
+     * @return \Laravel\CashierChargebee\Tax[]
      */
     public function taxes()
     {
@@ -381,12 +378,13 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
             return $this->taxes;
         }
 
-        $this->refreshWithExpandedData();
-
-        return $this->taxes = Collection::make($this->invoice->total_tax_amounts)
-            ->sortByDesc('inclusive')
+        return $this->taxes = Collection::make($this->invoice->lineItemTaxes)
             ->map(function (object $taxAmount) {
-                return new Tax($taxAmount->amount, $this->invoice->currency, $taxAmount->tax_rate);
+                return new Tax(
+                    $taxAmount->taxAmount,
+                    $this->invoice->currencyCode,
+                    $taxAmount->taxRate
+                );
             })
             ->all();
     }
@@ -396,9 +394,9 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function isNotTaxExempt()
+    public function isNotTaxExempt(): bool
     {
-        return $this->invoice->customer_tax_exempt === '';
+        return $this->owner()->isNotTaxExempt();
     }
 
     /**
@@ -406,19 +404,9 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function isTaxExempt()
+    public function isTaxExempt(): bool
     {
-        return $this->invoice->customer_tax_exempt === '';
-    }
-
-    /**
-     * Determine if reverse charge applies to the customer.
-     *
-     * @return bool
-     */
-    public function reverseChargeApplies()
-    {
-        return $this->invoice->customer_tax_exempt === '';
+        return $this->owner()->isTaxExempt();
     }
 
     /**
@@ -449,7 +437,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     public function invoiceItems()
     {
         return Collection::make($this->invoiceLineItems())->filter(function (InvoiceLineItem $item) {
-            return $item->type === 'invoiceitem';
+            return $item->subscriptionId == null;
         })->all();
     }
 
@@ -571,33 +559,24 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
-     * Pay the Stripe invoice.
+     * Pay the Chargebee invoice.
      *
      * @param  array  $options
      * @return $this
      */
     public function pay(array $options = [])
     {
-        $this->invoice = $this->invoice->pay($options);
+        if (Arr::get($options, 'off_session', true)) {
+            $this->invoice = ChargeBeeInvoice::recordPayment($this->invoice->id, $options)->invoice();
+        } else {
+            $this->invoice = ChargeBeeInvoice::collectPayment($this->invoice->id, $options)->invoice();
+        }
 
         return $this;
     }
 
     /**
-     * Send the Stripe invoice to the customer.
-     *
-     * @param  array  $options
-     * @return $this
-     */
-    public function send(array $options = [])
-    {
-        $this->invoice = $this->invoice->sendInvoice($options);
-
-        return $this;
-    }
-
-    /**
-     * Void the Stripe invoice.
+     * Void the Chargebee invoice. 
      *
      * @param  array  $options
      * @return $this
@@ -610,20 +589,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
-     * Mark an invoice as uncollectible.
-     *
-     * @param  array  $options
-     * @return $this
-     */
-    public function markUncollectible(array $options = [])
-    {
-        $this->invoice = $this->invoice->markUncollectible($options);
-
-        return $this;
-    }
-
-    /**
-     * Delete the Stripe invoice.
+     * Delete the Chargebee invoice.
      *
      * @param  array  $options
      * @return $this
@@ -663,16 +629,6 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     public function isPaid()
     {
         return $this->invoice->status === 'paid';
-    }
-
-    /**
-     * Determine if the invoice is uncollectible.
-     *
-     * @return bool
-     */
-    public function isUncollectible()
-    {
-        return $this->invoice->status === '';
     }
 
     /**
@@ -802,7 +758,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
-     * Dynamically get values from the Stripe object.
+     * Dynamically get values from the Chargebee object.
      *
      * @param  string  $key
      * @return mixed

@@ -5,7 +5,9 @@ namespace Laravel\CashierChargebee;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Laravel\CashierChargebee\Contracts\InvoiceRenderer;
 use Laravel\CashierChargebee\Events\WebhookReceived;
+use Laravel\CashierChargebee\Invoices\DompdfInvoiceRenderer;
 use Laravel\CashierChargebee\Listeners\HandleWebhookReceived;
 
 class CashierServiceProvider extends ServiceProvider
@@ -32,6 +34,7 @@ class CashierServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->configure();
+        $this->bindInvoiceRenderer();
     }
 
     /**
@@ -40,9 +43,21 @@ class CashierServiceProvider extends ServiceProvider
     protected function configure(): void
     {
         $this->mergeConfigFrom(
-            __DIR__.'/../config/cashier.php',
+            __DIR__ . '/../config/cashier.php',
             'cashier'
         );
+    }
+
+    /**
+     * Bind the default invoice renderer.
+     *
+     * @return void
+     */
+    protected function bindInvoiceRenderer()
+    {
+        $this->app->bind(InvoiceRenderer::class, function ($app) {
+            return $app->make(config('cashier.invoices.renderer', DompdfInvoiceRenderer::class));
+        });
     }
 
     /**
@@ -56,7 +71,7 @@ class CashierServiceProvider extends ServiceProvider
                 'namespace' => 'Laravel\CashierChargebee\Http\Controllers',
                 'as' => 'chargebee.',
             ], function () {
-                $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
+                $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
             });
         }
     }
@@ -66,7 +81,7 @@ class CashierServiceProvider extends ServiceProvider
      */
     protected function registerResources(): void
     {
-        $this->loadViewsFrom(__DIR__.'/../resources/views', 'cashier');
+        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'cashier');
     }
 
     /**
@@ -80,15 +95,15 @@ class CashierServiceProvider extends ServiceProvider
                 : 'publishes';
 
             $this->{$publishesMigrationsMethod}([
-                __DIR__.'/../database/migrations' => $this->app->databasePath('migrations'),
+                __DIR__ . '/../database/migrations' => $this->app->databasePath('migrations'),
             ], 'cashier-migrations');
 
             $this->publishes([
-                __DIR__.'/../config/cashier.php' => $this->app->configPath('cashier.php'),
+                __DIR__ . '/../config/cashier.php' => $this->app->configPath('cashier.php'),
             ], 'cashier-config');
 
             $this->publishes([
-                __DIR__.'/../resources/views' => $this->app->resourcePath('views/vendor/cashier'),
+                __DIR__ . '/../resources/views' => $this->app->resourcePath('views/vendor/cashier'),
             ], 'cashier-views');
         }
     }

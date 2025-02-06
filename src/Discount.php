@@ -11,7 +11,7 @@ use \ChargeBee\ChargeBee\Models\Discount as ChargeBeeDiscount;
 class Discount implements Arrayable, Jsonable, JsonSerializable
 {
     /**
-     * The Stripe Discount instance.
+     * The Chargebee Discount instance.
      *
      * @var ChargeBeeDiscount
      */
@@ -61,11 +61,11 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
-     * Get the Stripe Discount instance.
+     * Get the Chargebee Discount instance.
      *
      * @return \ChargeBee\ChargeBee\Models\Discount
      */
-    public function asStripeDiscount()
+    public function asChargebeeDiscount()
     {
         return $this->discount;
     }
@@ -77,7 +77,7 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
      */
     public function toArray()
     {
-        return $this->asStripeDiscount()->getValues();
+        return $this->asChargebeeDiscount()->getValues();
     }
 
     /**
@@ -103,7 +103,7 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
-     * Dynamically get values from the Stripe object.
+     * Dynamically get values from the Chargebee object.
      *
      * @param  string  $key
      * @return mixed

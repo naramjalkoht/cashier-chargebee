@@ -3,7 +3,6 @@
 namespace Laravel\CashierChargebee\Concerns;
 
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
-use ChargeBee\ChargeBee\Models\Customer;
 use ChargeBee\ChargeBee\Models\Estimate;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
@@ -14,10 +13,6 @@ use Laravel\CashierChargebee\Exceptions\InvalidInvoice;
 use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
 use Laravel\CashierChargebee\Invoice;
 use Laravel\CashierChargebee\InvoiceBuilder;
-use Laravel\CashierChargebee\Payment;
-use LogicException;
-use Stripe\Exception\CardException as StripeCardException;
-use Stripe\Exception\InvalidRequestException as StripeInvalidRequestException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -44,16 +39,18 @@ trait ManagesInvoices
             return;
         }
 
-        $parameters = array_merge([
-            'automatic_tax' => $this->automaticTaxPayload(),
-            'customerId' => $this->chargebeeId,
-        ], $options);
-
         try {
-            $stripeInvoice = Estimate::upcomingInvoicesEstimate($this->chargebeeId);
 
-            dd($stripeInvoice);
-            return new Invoice($this, $stripeInvoice, $parameters);
+            if (Arr::has($options, 'subscription')) {
+                $chargebeeInvoice = Estimate::advanceInvoiceEstimate(
+                    $options['subscription'],
+                    ['customerId' => $this->chargebeeId()] + $options
+                );
+            } else {
+                $chargebeeInvoice = Estimate::upcomingInvoicesEstimate($this->chargebeeId);
+            }
+
+            return new Invoice($this, $chargebeeInvoice->estimate());
         } catch (InvalidRequestException $exception) {
             //
         }
@@ -122,7 +119,7 @@ trait ManagesInvoices
      *
      * @param  bool  $includePending
      * @param  array  $parameters
-     * @return \Illuminate\Support\Collection|\Laravel\Cashier\Invoice[]
+     * @return \Illuminate\Support\Collection|\Laravel\CashierChargebee\Invoice[]
      */
     public function invoices($includePending = false, $parameters = [])
     {
@@ -134,16 +131,11 @@ trait ManagesInvoices
 
         $parameters = array_merge(['limit' => 24], $parameters);
 
-        $stripeInvoices = static::stripe()->invoices->all(
-            ['customer' => $this->stripe_id] + $parameters
-        );
+        $chargebeeInvoices = ChargeBeeInvoice::all(['customerId' => $this->chargebeeId()] + $parameters);
 
-        // Here we will loop through the Stripe invoices and create our own custom Invoice
-        // instances that have more helper methods and are generally more convenient to
-        // work with than the plain Stripe objects are. Then, we'll return the array.
-        if (!is_null($stripeInvoices)) {
-            foreach ($stripeInvoices->data as $invoice) {
-                if ($invoice->paid || $includePending) {
+        if (!is_null($chargebeeInvoices)) {
+            foreach ($chargebeeInvoices->invoices() as $invoice) {
+                if ($invoice->status == 'paid' || $includePending) {
                     $invoices[] = new Invoice($this, $invoice);
                 }
             }
@@ -156,7 +148,7 @@ trait ManagesInvoices
      * Get an array of the customer's invoices, including pending invoices.
      *
      * @param  array  $parameters
-     * @return \Illuminate\Support\Collection|\Laravel\Cashier\Invoice[]
+     * @return \Illuminate\Support\Collection|\Laravel\CashierChargebee\Invoice[]
      */
     public function invoicesIncludingPending(array $parameters = [])
     {
@@ -181,11 +173,7 @@ trait ManagesInvoices
         }
 
         if (!is_null($cursor)) {
-            if ($cursor->pointsToNextItems()) {
-                $parameters['starting_after'] = $cursor->parameter('id');
-            } else {
-                $parameters['ending_before'] = $cursor->parameter('id');
-            }
+            $parameters['offset'] = $cursor->parameter('next_offset');
         }
 
         $invoices = $this->invoices(true, array_merge($parameters, ['limit' => $perPage + 1]));
@@ -197,7 +185,7 @@ trait ManagesInvoices
         return new CursorPaginator($invoices, $perPage, $cursor, array_merge([
             'path' => Paginator::resolveCurrentPath(),
             'cursorName' => $cursorName,
-            'parameters' => ['id'],
+            'parameters' => ['next_offset'],
         ]));
     }
 }

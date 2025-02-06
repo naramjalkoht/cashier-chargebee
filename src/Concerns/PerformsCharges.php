@@ -98,7 +98,7 @@ trait PerformsCharges
         ];
 
         return $this->checkout([], array_merge($sessionOptions, [
-            'currencyCode' => strtoupper($this->preferredCurrency()),
+            'currencyCode' => $this->preferredCurrency(),
             'charges' => $charges,
         ]), $customerOptions);
     }

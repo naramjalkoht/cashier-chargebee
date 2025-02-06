@@ -7,7 +7,6 @@ use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Collection;
 use JsonSerializable;
-use Stripe\TaxRate as StripeTaxRate;
 use ChargeBee\ChargeBee\Models\InvoiceLineItem as ChargeBeeInvoiceLineItem;
 
 class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
@@ -56,87 +55,28 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      */
     public function unitAmountExcludingTax()
     {
-        return $this->formatAmount($this->item->unit_amount_excluding_tax ?? 0);
-    }
-
-    /**
-     * Determine if the line item has both inclusive and exclusive tax.
-     *
-     * @return bool
-     */
-    public function hasBothInclusiveAndExclusiveTax()
-    {
-        return $this->inclusiveTaxPercentage() && $this->exclusiveTaxPercentage();
+        return $this->formatAmount($this->item->unitAmount - $this->item->taxAmount);
     }
 
     /**
      * Get the total percentage of the default inclusive tax for the invoice line item.
      *
-     * @return int|null
+     * @return float
      */
     public function inclusiveTaxPercentage()
     {
-        if ($this->invoice->isNotTaxExempt()) {
-            return $this->calculateTaxPercentageByTaxAmount(true);
-        }
-
-        return $this->calculateTaxPercentageByTaxRate(true);
+        return $this->invoice->priceType == 'tax_inclusive' ? $this->taxRate : 0;
     }
 
     /**
      * Get the total percentage of the default exclusive tax for the invoice line item.
      *
-     * @return int
+     * @return float
      */
     public function exclusiveTaxPercentage()
     {
-        if ($this->invoice->isNotTaxExempt()) {
-            return $this->calculateTaxPercentageByTaxAmount(false);
-        }
+        return $this->invoice->priceType == 'tax_exclusive' ? $this->taxRate : 0;
 
-        return $this->calculateTaxPercentageByTaxRate(false);
-    }
-
-    /**
-     * Calculate the total tax percentage for either the inclusive or exclusive tax by tax rate.
-     *
-     * @param  bool  $inclusive
-     * @return int
-     */
-    protected function calculateTaxPercentageByTaxRate($inclusive)
-    {
-        if (!$this->item->tax_rates) {
-            return 0;
-        }
-
-        return (int) Collection::make($this->item->tax_rates)
-            ->filter(function (StripeTaxRate $taxRate) use ($inclusive) {
-                return $taxRate->inclusive === (bool) $inclusive;
-            })
-            ->sum(function (StripeTaxRate $taxRate) {
-                return $taxRate->percentage;
-            });
-    }
-
-    /**
-     * Calculate the total tax percentage for either the inclusive or exclusive tax by tax amount.
-     *
-     * @param  bool  $inclusive
-     * @return int
-     */
-    protected function calculateTaxPercentageByTaxAmount($inclusive)
-    {
-        if (!$this->item->tax_amounts) {
-            return 0;
-        }
-
-        return (int) Collection::make($this->item->tax_amounts)
-            ->filter(function (object $taxAmount) use ($inclusive) {
-                return $taxAmount->inclusive === (bool) $inclusive;
-            })
-            ->sum(function (object $taxAmount) {
-                return $taxAmount->tax_rate->percentage;
-            });
     }
 
     /**
@@ -146,11 +86,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      */
     public function hasTaxRates()
     {
-        if ($this->invoice->isNotTaxExempt()) {
-            return !empty($this->item->tax_amounts);
-        }
-
-        return !empty($this->item->tax_rates);
+        return !empty($this->item->taxRate);
     }
 
     /**
@@ -185,7 +121,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
     public function startDateAsCarbon()
     {
         if ($this->hasPeriod()) {
-            return Carbon::createFromTimestampUTC($this->item->period->start);
+            return Carbon::createFromTimestampUTC($this->item->dateFrom);
         }
     }
 
@@ -197,7 +133,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
     public function endDateAsCarbon()
     {
         if ($this->hasPeriod()) {
-            return Carbon::createFromTimestampUTC($this->item->period->end);
+            return Carbon::createFromTimestampUTC($this->item->dateTo);
         }
     }
 
@@ -208,7 +144,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      */
     public function hasPeriod()
     {
-        return !is_null($this->item->period);
+        return !is_null($this->item->dateFrom) && !is_null($this->item->dateTo);
     }
 
     /**
@@ -218,7 +154,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      */
     public function periodStartAndEndAreEqual()
     {
-        return $this->hasPeriod() ? $this->item->period->start === $this->item->period->end : false;
+        return $this->hasPeriod() ? $this->item->dateFrom === $this->item->dateTo : false;
     }
 
     /**
@@ -228,7 +164,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      */
     public function isSubscription()
     {
-        return $this->item->type === 'subscription';
+        return $this->item->subscriptionId != null;
     }
 
     /**
@@ -239,11 +175,11 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      */
     protected function formatAmount($amount)
     {
-        return Cashier::formatAmount($amount, $this->item->currency);
+        return Cashier::formatAmount($amount, $this->invoice()->currencyCode);
     }
 
     /**
-     * Get the Stripe model instance.
+     * Get the Chargebee model instance.
      *
      * @return \Laravel\CashierChargebee\Invoice
      */
@@ -253,11 +189,11 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
-     * Get the underlying Stripe invoice line item.
+     * Get the underlying Chargebee invoice line item.
      *
      * @return \ChargeBee\ChargeBee\Models\InvoiceLineItem
      */
-    public function asStripeInvoiceLineItem()
+    public function asChargebeeInvoiceLineItem()
     {
         return $this->item;
     }
@@ -269,7 +205,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      */
     public function toArray()
     {
-        return $this->asStripeInvoiceLineItem()->getValues();
+        return $this->asChargebeeInvoiceLineItem()->getValues();
     }
 
     /**
@@ -295,7 +231,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
-     * Dynamically access the Stripe invoice line item instance.
+     * Dynamically access the Chargebee invoice line item instance.
      *
      * @param  string  $key
      * @return mixed

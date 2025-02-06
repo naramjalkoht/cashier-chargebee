@@ -10,6 +10,7 @@ use Laravel\CashierChargebee\Invoice;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use ChargeBee\ChargeBee\Models\InvoiceLineItem as ChargeBeeInvoiceLineItem;
+use ChargeBee\ChargeBee\Models\Subscription;
 
 class InvoicesTest extends FeatureTestCase
 {
@@ -108,20 +109,24 @@ class InvoicesTest extends FeatureTestCase
         $user = $this->createCustomerWithPaymentSource('customer_can_be_invoiced_with_quantity');
 
         $response = $user->newInvoice()
-            ->tabFor('Laracon', 1000, ['quantity' => 5])
+            ->tabFor('Laracon', amount: 5000)
             ->invoice();
 
         $this->assertInstanceOf(Invoice::class, $response);
         $this->assertEquals(5000, $response->total);
+    }
 
-        $response = $user->tab('Laracon', null, [
-            'unit_amount' => 1000,
-            'quantity' => 2,
+    public function test_upcoming_invoice()
+    {
+        $user = $this->createCustomerWithPaymentSource('subscription_upcoming_invoice');
+        $subscription = Subscription::createWithItems($user->chargebee_id, [
+
         ]);
 
-        $this->assertInstanceOf(ChargeBeeInvoiceLineItem::class, $response);
-        $this->assertEquals(1000, $response->unit_amount);
-        $this->assertEquals(2, $response->quantity);
+        $invoice = $subscription->previewInvoice(static::$otherPriceId);
+
+        $this->assertSame('draft', $invoice->status);
+        $this->assertSame(1000, $invoice->total);
     }
 
     protected function createCustomerWithPaymentSource($description = 'testuser', array $options = []): User
