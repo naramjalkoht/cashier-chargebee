@@ -711,7 +711,7 @@ echo 'Payment method added and set as default: ' . $paymentMethod->id;
 
 #### Behavior:
 - Ensures that the customer exists in Chargebee before proceeding.
-- If `$setAsDefault` is `true`, the method calls `setDefaultPaymentMethod` to assign the newly added payment method as the default.
+- If `$setAsDefault` is `true`, the method calls `updateDefaultPaymentMethod` to assign the newly added payment method as the default.
 - Returns a `PaymentMethod` instance linked to the added `PaymentSource`.
 
 #### Error Handling:
@@ -781,11 +781,11 @@ if ($defaultPaymentMethod) {
 <a name="payment-methods-set-default"></a>
 ### Setting the Default Payment Method
 
-The `setDefaultPaymentMethod` method allows you to designate a specific payment method as the primary payment source for a customer in Chargebee.
+The `updateDefaultPaymentMethod` method allows you to designate a specific payment method as the primary payment source for a customer in Chargebee.
 
 #### Method Signature:
 ```php
-public function setDefaultPaymentMethod(PaymentSource|string $paymentSource): ?Customer
+public function updateDefaultPaymentMethod(PaymentSource|string $paymentSource): ?Customer
 ```
 
 #### Parameters:
@@ -799,7 +799,7 @@ $user->createAsChargebeeCustomer();
 $paymentSourceId = 'pm_123456789';
 
 try {
-    $user->setDefaultPaymentMethod($paymentSourceId);
+    $user->updateDefaultPaymentMethod($paymentSourceId);
     echo 'Default payment method updated successfully.';
 } catch (Exception $e) {
     echo 'Error: ' . $e->getMessage();

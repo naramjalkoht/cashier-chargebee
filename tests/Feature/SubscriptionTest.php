@@ -6,6 +6,9 @@ use Carbon\Carbon;
 use ChargeBee\ChargeBee\Models\Item;
 use ChargeBee\ChargeBee\Models\ItemFamily;
 use ChargeBee\ChargeBee\Models\ItemPrice;
+use ChargeBee\ChargeBee\Models\PaymentSource;
+use ChargeBee\ChargeBee\Models\Subscription as ChargebeeSubscription;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 class SubscriptionTest extends FeatureTestCase
@@ -91,9 +94,11 @@ class SubscriptionTest extends FeatureTestCase
     public function test_subscription_can_be_created_and_status_synced(): void
     {
         $user = $this->createCustomer('subscription_can_be_created');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
 
         $subscription = $user->newSubscription('main', static::$euroPriceId)
-            ->create('pm_card_visa');
+            ->create($paymentSource);
 
         $this->assertEquals(1, count($user->subscriptions));
         $this->assertNotNull(($subscription = $user->subscription('main'))->chargebee_id);
@@ -130,9 +135,11 @@ class SubscriptionTest extends FeatureTestCase
     public function test_subscription_can_be_cancelled_at_the_end_of_the_billing_period(): void
     {
         $user = $this->createCustomer('subscription_can_be_cancelled');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
 
         $subscription = $user->newSubscription('main', static::$euroPriceId)
-            ->create('pm_card_visa');
+            ->create($paymentSource);
         
         $this->assertSame('active', $subscription->chargebee_status);
 
@@ -147,9 +154,11 @@ class SubscriptionTest extends FeatureTestCase
     public function test_subscription_can_be_cancelled_at_specific_date(): void
     {
         $user = $this->createCustomer('subscription_can_be_cancelled');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
 
         $subscription = $user->newSubscription('main', static::$euroPriceId)
-            ->create('pm_card_visa');
+            ->create($paymentSource);
         
         $this->assertSame('active', $subscription->chargebee_status);
 
@@ -164,9 +173,11 @@ class SubscriptionTest extends FeatureTestCase
     public function test_subscription_can_be_cancelled_now(): void
     {
         $user = $this->createCustomer('subscription_can_be_cancelled');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
 
         $subscription = $user->newSubscription('main', static::$euroPriceId)
-            ->create('pm_card_visa');
+            ->create($paymentSource);
         
         $this->assertSame('active', $subscription->chargebee_status);
 
@@ -182,9 +193,11 @@ class SubscriptionTest extends FeatureTestCase
     public function test_subscription_can_be_cancelled_now_and_invoiced(): void
     {
         $user = $this->createCustomer('subscription_can_be_cancelled');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
 
         $subscription = $user->newSubscription('main', static::$euroPriceId)
-            ->create('pm_card_visa');
+            ->create($paymentSource);
         
         $this->assertSame('active', $subscription->chargebee_status);
 
@@ -195,5 +208,41 @@ class SubscriptionTest extends FeatureTestCase
         $this->assertSame('cancelled', $retrievedSubscription->status);
         $this->assertEquals('cancelled', $subscription->chargebee_status);
         $this->assertTrue($subscription->ends_at->isToday());
+    }
+
+    public function test_subscription_can_be_resumed(): void
+    {
+        $user = $this->createCustomer('subscription_can_be_resumed');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$euroPriceId)
+            ->create($paymentSource);
+
+        ChargebeeSubscription::pause($subscription->chargebee_id, [
+            "pauseOption" => "immediately"
+        ])->subscription();
+
+        $subscription->syncChargebeeStatus();
+
+        $this->assertSame('paused', $subscription->chargebee_status);
+
+        $subscription->resume();
+
+        $this->assertSame('active', $subscription->chargebee_status);
+    }
+
+    private function createCard(Model $user): ?PaymentSource
+    {
+        return PaymentSource::createCard([
+            'customer_id' => $user->chargebeeId(),
+            'card' => [
+                'number' => '4111 1111 1111 1111',
+                'cvv' => '123',
+                'expiry_year' => date('Y', strtotime('+ 1 year')),
+                'expiry_month' => date('m', strtotime('+ 1 year')),
+            ],
+        ]
+        )->paymentSource();
     }
 }

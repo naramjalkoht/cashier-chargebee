@@ -5,6 +5,7 @@ namespace Laravel\CashierChargebee;
 use Carbon\Carbon;
 use ChargeBee\ChargeBee\Models\Customer;
 use ChargeBee\ChargeBee\Models\ItemPrice;
+use ChargeBee\ChargeBee\Models\PaymentSource;
 use ChargeBee\ChargeBee\Models\Subscription as ChargebeeSubscription;
 use Exception;
 use Illuminate\Support\Collection;
@@ -109,13 +110,13 @@ class SubscriptionBuilder
      *
      * @throws \Exception
      */
-    public function create(PaymentMethod|string|null $paymentMethod = null, array $customerOptions = [], array $subscriptionOptions = []): Subscription
+    public function create(PaymentSource|string|null $paymentSource = null, array $customerOptions = [], array $subscriptionOptions = []): Subscription
     {
         if (empty($this->items)) {
             throw new Exception('At least one price is required when starting subscriptions.');
         }
 
-        $chargebeeCustomer = $this->getChargebeeCustomer($paymentMethod, $customerOptions);
+        $chargebeeCustomer = $this->getChargebeeCustomer($paymentSource, $customerOptions);
 
         $chargebeeSubscription = ChargebeeSubscription::createWithItems($chargebeeCustomer->id, array_merge(
             $this->buildPayload(),
@@ -155,7 +156,7 @@ class SubscriptionBuilder
             $price = ItemPrice::retrieve($item->itemPriceId)->itemPrice();
             $subscription->items()->create([
                 'chargebee_id' => $price->itemId,
-                'chargebee_product' => $price->name,
+                'chargebee_product' => $price->itemId,
                 'chargebee_price' => $item->itemPriceId,
                 'quantity' => $item->quantity ?? null,
             ]);
@@ -165,17 +166,15 @@ class SubscriptionBuilder
     }
 
     /**
-     * Get the Chargebee customer instance for the current user and payment method.
-     * 
-     * @todo Use updateDefaultPaymentMethod
+     * Get the Chargebee customer instance for the current user and payment source.
      */
-    protected function getChargebeeCustomer(PaymentMethod|string|null $paymentMethod = null, array $options = []): Customer
+    protected function getChargebeeCustomer(PaymentSource|string|null $paymentSource = null, array $options = []): Customer
     {
         $customer = $this->owner->createOrGetChargebeeCustomer($options);
 
-        // if ($paymentMethod) {
-        //     $this->owner->updateDefaultPaymentMethod($paymentMethod);
-        // }
+        if ($paymentSource) {
+            $this->owner->updateDefaultPaymentMethod($paymentSource);
+        }
 
         return $customer;
     }
@@ -183,18 +182,16 @@ class SubscriptionBuilder
     /**
      * Build the payload for subscription creation.
      * 
-     * @todo Clarify netTermDays, autoCollection, trialEnd, startDate
+     * @todo Clarify startDate
      */
     protected function buildPayload(): array
     {
         $payload = array_filter([
-            'startDate' => $this->billingCycleAnchor,
             'couponIds' => $this->couponIds,
             'metaData' => $this->metadata,
             'subscriptionItems' => Collection::make($this->items)->values()->all(),
             'trialEnd' => $this->getTrialEndForPayload(),
             'autoCollection' => 'off',
-            //'netTermDays' => 30,
         ]);
 
         return $payload;

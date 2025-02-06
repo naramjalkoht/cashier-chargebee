@@ -144,35 +144,19 @@ class Subscription extends Model
 
     /**
      * Determine if the subscription is active.
-     * 
-     * @todo How to determine if subscription is active?
      */
     public function active(): bool
     {
-        return ! $this->ended();
+        return $this->chargebee_status === 'active';
     }
 
-    // /**
-    //  * Filter query by active.
-    //  */
-    // public function scopeActive(Builder $query): void
-    // {
-    //     $query->where(function ($query) {
-    //         $query->whereNull('ends_at')
-    //             ->orWhere(function ($query) {
-    //                 $query->onGracePeriod();
-    //             });
-    //     })->where('chargebee_status', '!=', ChargebeeSubscription::STATUS_INCOMPLETE_EXPIRED)
-    //         ->where('chargebee_status', '!=', ChargebeeSubscription::STATUS_UNPAID);
-
-    //     if (Cashier::$deactivatePastDue) {
-    //         $query->where('chargebee_status', '!=', ChargebeeSubscription::STATUS_PAST_DUE);
-    //     }
-
-    //     if (Cashier::$deactivateIncomplete) {
-    //         $query->where('chargebee_status', '!=', ChargebeeSubscription::STATUS_INCOMPLETE);
-    //     }
-    // }
+    /**
+     * Filter query by active.
+     */
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('chargebee_status', 'active');
+    }
 
     /**
      * Sync the Chargebee status of the subscription.
@@ -307,6 +291,14 @@ class Subscription extends Model
     }
 
     /**
+     * Determine if the subscription is paused.
+     */
+    public function paused(): bool
+    {
+        return $this->chargebee_status === 'paused';
+    }
+
+    /**
      * Cancel the subscription at the end of the billing period.
      */
     public function cancel(): self
@@ -347,6 +339,7 @@ class Subscription extends Model
         $chargebeeSubscription = ChargebeeSubscription::cancelForItems($this->chargebee_id, [
             'cancelOption' => 'specific_date',
             'cancelAt' => $endsAt,
+            'creditOptionForCurrentTermCharges' => $this->getCreditOptionForCurrentCharges(),
         ])->subscription();
 
         $this->chargebee_status = $chargebeeSubscription->status;
@@ -365,6 +358,7 @@ class Subscription extends Model
     {
         ChargebeeSubscription::cancelForItems($this->chargebee_id, [
             'cancelOption' => 'immediately',
+            'creditOptionForCurrentTermCharges' => $this->getCreditOptionForCurrentCharges(),
         ])->subscription();
 
         $this->markAsCanceled();
@@ -398,6 +392,51 @@ class Subscription extends Model
             'chargebee_status' => 'cancelled',
             'ends_at' => Carbon::now(),
         ])->save();
+    }
+
+    /**
+     * Resume the paused subscription.
+     *
+     * @throws \LogicException
+     */
+    public function resume(): self
+    {
+        if (! $this->paused()) {
+            throw new LogicException('Only paused subscriptions can be resumed.');
+        }
+
+        $chargebeeSubscription = ChargebeeSubscription::resume($this->chargebee_id, [
+            "resumeOption" => "immediately",
+        ])->subscription();
+
+        $this->fill([
+            'chargebee_status' => $chargebeeSubscription->status,
+        ])->save();
+
+        return $this;
+    }
+
+    // /**
+    //  * Determine if the subscription has pending updates.
+    //  */
+    // public function pending(): bool
+    // {
+    //     return ! is_null($this->asChargebeeSubscription()->hasScheduledChanges);
+    // }
+
+    public function getCreditOptionForCurrentCharges(): string
+    {
+        $prorateBehavior = $this->prorateBehavior();
+
+        if ($prorateBehavior === true) {
+            return 'prorate';
+        }
+        
+        if ($prorateBehavior === false) {
+            return 'full';
+        }
+        
+        return 'none';
     }
 
     /**

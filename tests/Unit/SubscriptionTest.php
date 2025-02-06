@@ -96,6 +96,34 @@ class SubscriptionTest extends FeatureTestCase
         $subscription->findItemOrFail('nonexistent_price');
     }
 
+    public function test_valid(): void
+    {
+        $subscription = Subscription::factory()->create();
+
+        $this->assertTrue($subscription->valid());
+
+        $subscription = Subscription::factory()->create();
+        $subscription->markAsCanceled();
+
+        $this->assertFalse($subscription->valid());
+    }
+
+    public function test_active(): void
+    {
+        $subscription = Subscription::factory()->create();
+
+        $this->assertTrue($subscription->active());
+    }
+
+    public function test_scope_active(): void
+    {
+        Subscription::factory()->create();
+        $query = Subscription::query();
+        $query->active();
+
+        $this->assertEquals(1, $query->count());
+    }
+
     public function test_recurring(): void
     {
         $subscription = Subscription::factory()->create(['trial_ends_at' => null, 'ends_at' => null]);
@@ -217,6 +245,13 @@ class SubscriptionTest extends FeatureTestCase
         $query->notOnGracePeriod();
 
         $this->assertEquals(1, $query->count());
+    }
+
+    public function test_paused(): void
+    {
+        $subscription = Subscription::factory()->create(['status' => 'paused']);
+
+        $this->assertTrue($subscription->paused());
     }
 
     public function test_mark_as_canceled(): void
