@@ -4,6 +4,7 @@ namespace Laravel\CashierChargebee\Tests\Unit;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use InvalidArgumentException;
 use Laravel\CashierChargebee\Subscription;
 use Laravel\CashierChargebee\SubscriptionItem;
 use Laravel\CashierChargebee\Tests\Feature\FeatureTestCase;
@@ -263,5 +264,14 @@ class SubscriptionTest extends FeatureTestCase
         $this->assertEquals('cancelled', $subscription->chargebee_status);
         $this->assertNotNull($subscription->ends_at);
         $this->assertTrue($subscription->ends_at->isToday());
+    }
+
+    public function test_guard_against_multiple_prices(): void
+    {
+        $subscription = Subscription::factory()->create(['chargebee_price' => null]);
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $subscription->guardAgainstMultiplePrices();
     }
 }
