@@ -3,7 +3,7 @@
 namespace Laravel\CashierChargebee\Concerns;
 
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
-use ChargeBee\ChargeBee\Models\Estimate;
+use ChargeBee\ChargeBee\Models\Estimate as ChargeBeeEstimate;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Pagination\Paginator;
@@ -12,6 +12,7 @@ use Illuminate\Support\Collection;
 use Laravel\CashierChargebee\Exceptions\InvalidInvoice;
 use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
 use Laravel\CashierChargebee\Invoice;
+use Laravel\CashierChargebee\Estimate;
 use Laravel\CashierChargebee\InvoiceBuilder;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -42,15 +43,15 @@ trait ManagesInvoices
         try {
 
             if (Arr::has($options, 'subscription')) {
-                $chargebeeInvoice = Estimate::advanceInvoiceEstimate(
+                $chargebeeEstimate = ChargeBeeEstimate::advanceInvoiceEstimate(
                     $options['subscription'],
                     ['customerId' => $this->chargebeeId()] + $options
                 );
             } else {
-                $chargebeeInvoice = Estimate::upcomingInvoicesEstimate($this->chargebeeId);
+                $chargebeeEstimate = ChargeBeeEstimate::upcomingInvoicesEstimate($this->chargebeeId());
             }
 
-            return new Invoice($this, $chargebeeInvoice->estimate());
+            return new Estimate($this, $chargebeeEstimate->estimate());
         } catch (InvalidRequestException $exception) {
             //
         }

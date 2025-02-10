@@ -35,7 +35,7 @@ abstract class FeatureTestCase extends TestCase
         ], $options));
     }
 
-    protected function createItemPrice($price, $amount)
+    protected function createPrice($price, $amount): ItemPrice
     {
         $ts = now()->timestamp;
         $id = strtolower(str_replace(" ", "_", $price)) . "-" . $ts;
@@ -61,6 +61,37 @@ abstract class FeatureTestCase extends TestCase
             'itemId' => $item->item()->id,
             'itemFamilyId' => $itemFamily->itemFamily()->id,
             'currencyCode' => config('cashier.currency'),
+        ]);
+
+        return $itemPrice->itemPrice();
+    }
+
+    protected function createSubscriptionPrice($price, $amount)
+    {
+        $ts = now()->timestamp;
+
+        $itemFamily = ItemFamily::create([
+            'id' => "$price-$ts",
+            'name' => "$price-$ts",
+        ]);
+
+        $item = Item::create([
+            'id' => "$price-$ts",
+            'name' => "$price-$ts",
+            'type' => 'plan',
+            'itemFamilyId' => $itemFamily->itemFamily()->id,
+        ]);
+
+        $itemPrice = ItemPrice::create([
+            'id' => "$price-$ts",
+            'name' => "$price-$ts",
+            'price' => $amount,
+            'pricingModel' => 'per_unit',
+            'itemId' => $item->item()->id,
+            'itemFamilyId' => $itemFamily->itemFamily()->id,
+            'currencyCode' => config('cashier.currency'),
+            'period' => 1,
+            'periodUnit' => 'year',
         ]);
 
         return $itemPrice->itemPrice();

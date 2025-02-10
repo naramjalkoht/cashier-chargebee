@@ -92,7 +92,7 @@ class SubscriptionBuilder
 
         $quantity = $price['quantity'] ?? $quantity;
 
-        if (! is_null($quantity)) {
+        if (!is_null($quantity)) {
             $options['quantity'] = $quantity;
         }
 
@@ -148,7 +148,7 @@ class SubscriptionBuilder
             'chargebee_status' => $chargebeeSubscription->status,
             'chargebee_price' => $isSinglePrice ? $firstItem->itemPriceId : null,
             'quantity' => $isSinglePrice ? ($firstItem->quantity ?? null) : null,
-            'trial_ends_at' => ! $this->skipTrial ? $this->trialExpires : null,
+            'trial_ends_at' => !$this->skipTrial ? $this->trialExpires : null,
             'ends_at' => null,
         ]);
 
@@ -208,4 +208,60 @@ class SubscriptionBuilder
 
         return 0;
     }
+
+    /**
+     * Get the price tax rates for the Chargebee payload.
+     *
+     * @param  string  $price
+     * @return array|null
+     */
+    protected function getPriceTaxRatesForPayload($price): array|null
+    {
+        if ($taxRates = $this->owner->priceTaxRates()) {
+            return $taxRates[$price] ?? null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Begin a new Checkout Session.
+     *
+     * @param  array  $sessionOptions
+     * @param  array  $customerOptions
+     * @return \Laravel\CashierChargebee\Checkout
+     */
+    public function checkout(array $sessionOptions = [], array $customerOptions = []): Checkout
+    {
+        if (empty($this->items)) {
+            throw new Exception('At least one price is required when starting subscriptions.');
+        }
+
+        if (!$this->skipTrial && $this->trialExpires) {
+            $minimumTrialPeriod = Carbon::now()->addHours(48)->addSeconds(10);
+
+            $trialEnd = $this->trialExpires->gt($minimumTrialPeriod) ? $this->trialExpires : $minimumTrialPeriod;
+        } else {
+            $trialEnd = null;
+        }
+
+        $billingCycleAnchor = $trialEnd === null ? $this->billingCycleAnchor : null;
+
+        $payload = array_filter([
+            'subscriptionItems' => Collection::make($this->items)->values()->all(),
+            'mode' => Session::MODE_SUBSCRIPTION,
+            'subscription' => array_filter([
+                'trialEnd' => $trialEnd ? $trialEnd->getTimestamp() : null,
+                'metadata' => array_merge($this->metadata, [
+                    'name' => $this->type,
+                    'type' => $this->type,
+                ]),
+            ]),
+        ]);
+
+        return Checkout::customer($this->owner, $this)
+            ->create([], array_merge_recursive($payload, $sessionOptions), $customerOptions);
+    }
+
+
 }

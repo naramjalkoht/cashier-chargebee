@@ -35,13 +35,16 @@
         "illuminate/support": "^10.0|^11.0",
         "illuminate/database": "^10.0|^11.0",
         "moneyphp/money": "^4.0",
-        "chargebee/chargebee-php": "^3.38",
-        "dompdf/dompdf": "^3.1"
+        "chargebee/chargebee-php": "^3.38"
     },
     "require-dev": {
+        "dompdf/dompdf": "^2.0",
         "orchestra/testbench": "^8.18|^9.0",
         "phpunit/phpunit": "^10.4",
         "phpstan/phpstan": "^1.10"
+    },
+    "suggest": {
+        "dompdf/dompdf": "Required when generating and downloading invoice PDF's using Dompdf (^1.0.1|^2.0)."
     },
     "autoload-dev": {
         "psr-4": {

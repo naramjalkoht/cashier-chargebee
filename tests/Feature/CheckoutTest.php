@@ -23,8 +23,8 @@ class CheckoutTest extends FeatureTestCase
     {
         $user = $this->createCustomer('can_start_a_product_checkout_session');
 
-        $shirtPrice = $this->createItemPrice('T-shirt', amount: 1500);
-        $carPrice = $this->createItemPrice('Car', 30000);
+        $shirtPrice = $this->createPrice('T-shirt', amount: 1500);
+        $carPrice = $this->createPrice('Car', 30000);
 
         $items = [$shirtPrice->id => 5, $carPrice->id];
 
@@ -41,7 +41,7 @@ class CheckoutTest extends FeatureTestCase
     {
         $user = $this->createCustomer('can_start_checkout_session_with_coupon');
 
-        $shirtPrice = $this->createItemPrice('T-shirt', 1500);
+        $shirtPrice = $this->createPrice('T-shirt', 1500);
 
         $id = 'coupon_' . now()->timestamp;
         $coupon = Coupon::createForItems([
@@ -93,7 +93,7 @@ class CheckoutTest extends FeatureTestCase
     {
         $user = $this->createCustomer('can_start_a_subscription_checkout_session');
 
-        $price = $this->createSubscription('Forge-Hobby', 1500);
+        $price = $this->createSubscriptionPrice('Forge-Hobby', 1500);
 
         $checkout = $user->newSubscription('default', $price->id)
             ->checkout([
@@ -128,7 +128,7 @@ class CheckoutTest extends FeatureTestCase
 
     public function test_guest_customers_can_start_a_checkout_session()
     {
-        $shirtPrice = $this->createItemPrice('T-shirt', 1500);
+        $shirtPrice = $this->createPrice('T-shirt', 1500);
 
         $checkout = Checkout::guest()->create($shirtPrice->id, [
             'success_url' => 'http://example.com',
@@ -136,36 +136,5 @@ class CheckoutTest extends FeatureTestCase
         ]);
 
         $this->assertInstanceOf(Checkout::class, $checkout);
-    }
-
-    protected function createSubscription($price, $amount)
-    {
-        $ts = now()->timestamp;
-
-        $itemFamily = ItemFamily::create([
-            'id' => "$price-$ts",
-            'name' => "$price-$ts",
-        ]);
-
-        $item = Item::create([
-            'id' => "$price-$ts",
-            'name' => "$price-$ts",
-            'type' => 'plan',
-            'itemFamilyId' => $itemFamily->itemFamily()->id,
-        ]);
-
-        $itemPrice = ItemPrice::create([
-            'id' => "$price-$ts",
-            'name' => "$price-$ts",
-            'price' => $amount,
-            'pricingModel' => 'per_unit',
-            'itemId' => $item->item()->id,
-            'itemFamilyId' => $itemFamily->itemFamily()->id,
-            'currencyCode' => config('cashier.currency'),
-            'period' => 1,
-            'periodUnit' => 'year',
-        ]);
-
-        return $itemPrice->itemPrice();
     }
 }

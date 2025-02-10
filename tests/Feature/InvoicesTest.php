@@ -35,7 +35,7 @@ class InvoicesTest extends FeatureTestCase
     public function test_customer_can_be_invoiced_with_a_price()
     {
         $user = $this->createCustomerWithPaymentSource('customer_can_be_invoiced');
-        $price = $this->createItemPrice('Laravel T-shirt', amount: 499);
+        $price = $this->createPrice('Laravel T-shirt', amount: 499);
 
         $invoice = $user->newInvoice()
             ->tabPrice($price->id, 2)
@@ -119,10 +119,11 @@ class InvoicesTest extends FeatureTestCase
     public function test_upcoming_invoice()
     {
         $user = $this->createCustomerWithPaymentSource('subscription_upcoming_invoice');
-        $subscription = Subscription::createWithItems($user->chargebee_id, [
+        $price = $this->createSubscriptionPrice('Laracon', 1000);
+        $subscription = $user->newSubscription('main', $price->id)
+            ->create();
 
-        ]);
-
+        dd($user->upcomingInvoice(['subscription' => $subscription->chargebee_id]));
         $invoice = $subscription->previewInvoice(static::$otherPriceId);
 
         $this->assertSame('draft', $invoice->status);

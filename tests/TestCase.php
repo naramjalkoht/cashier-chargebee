@@ -27,7 +27,6 @@ abstract class TestCase extends OrchestraTestCase
 
     protected function defineEnvironment($app)
     {
-        // Setup default database to use sqlite :memory:
         tap($app['config'], function (Repository $config) {
             $config->set('cashier.currency', env('CASHIER_CURRENCY', 'USD'));
         });
