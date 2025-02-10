@@ -299,6 +299,67 @@ class Subscription extends Model
     }
 
     /**
+     * Force the trial to end immediately.
+     *
+     * This method must be combined with swap, resume, etc.
+     */
+    public function skipTrial(): static
+    {
+        $this->trial_ends_at = null;
+
+        return $this;
+    }
+
+    /**
+     * Force the subscription's trial to end immediately.
+     */
+    public function endTrial(): static
+    {
+        if (is_null($this->trial_ends_at)) {
+            return $this;
+        }
+
+        $updateData = ['trialEnd' => 0];
+    
+        $prorateBehavior = $this->prorateBehavior();
+        if (!is_null($prorateBehavior)) {
+            $updateData['prorate'] = $prorateBehavior;
+        }
+
+        $this->updateChargebeeSubscription($updateData);
+
+        $this->trial_ends_at = null;
+        $this->save();
+
+        return $this;
+    }
+
+    /**
+     * Extend an existing subscription's trial period.
+     */
+    public function extendTrial(CarbonInterface $date): self
+    {
+        if (! $date->isFuture()) {
+            throw new InvalidArgumentException("Extending a subscription's trial requires a date in the future.");
+        }
+
+        $updateData = ['trialEnd' => $date->getTimestamp()];
+    
+        $prorateBehavior = $this->prorateBehavior();
+        if (!is_null($prorateBehavior)) {
+            $updateData['prorate'] = $prorateBehavior;
+        }
+
+        $this->updateChargebeeSubscription($updateData);
+
+        $this->trial_ends_at = $date;
+
+        $this->save();
+
+        return $this;
+    }
+
+    /**
      * Cancel the subscription at the end of the billing period.
      */
     public function cancel(): self
@@ -423,6 +484,20 @@ class Subscription extends Model
     // {
     //     return ! is_null($this->asChargebeeSubscription()->hasScheduledChanges);
     // }
+
+    /**
+     * Make sure a price argument is provided when the subscription is a subscription with multiple prices.
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function guardAgainstMultiplePrices(): void
+    {
+        if ($this->hasMultiplePrices()) {
+            throw new InvalidArgumentException(
+                'This method requires a price argument since the subscription has multiple prices.'
+            );
+        }
+    }
 
     public function getCreditOptionForCurrentCharges(): string
     {

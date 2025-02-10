@@ -3,13 +3,17 @@
 namespace Laravel\CashierChargebee;
 
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use ChargeBee\ChargeBee\Models\Customer;
 use ChargeBee\ChargeBee\Models\ItemPrice;
 use ChargeBee\ChargeBee\Models\PaymentSource;
 use ChargeBee\ChargeBee\Models\Subscription as ChargebeeSubscription;
+use DateTimeInterface;
 use Exception;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Traits\Conditionable;
+use InvalidArgumentException;
 use Laravel\CashierChargebee\Concerns\AllowsCoupons;
 use Laravel\CashierChargebee\Concerns\HandlesTaxes;
 use Laravel\CashierChargebee\Concerns\Prorates;
@@ -103,6 +107,92 @@ class SubscriptionBuilder
         }
 
         return $this;
+    }
+
+    /**
+     * Set a metered price on the subscription builder.
+     */
+    public function meteredPrice(string $price): static
+    {
+        return $this->price($price, null);
+    }
+
+    /**
+     * Specify the quantity of a subscription item.
+     */
+    public function quantity(?int $quantity, ?string $price = null): static
+    {
+        if (is_null($price)) {
+            if (count($this->items) > 1) {
+                throw new InvalidArgumentException('Price is required when creating subscriptions with multiple prices.');
+            }
+
+            $price = Arr::first($this->items)['itemPriceId'];
+        }
+
+        return $this->price($price, $quantity);
+    }
+
+    /**
+     * Specify the number of days of the trial.
+     */
+    public function trialDays(int $trialDays): static
+    {
+        $this->trialExpires = Carbon::now()->addDays($trialDays);
+
+        return $this;
+    }
+
+    /**
+     * Specify the ending date of the trial.
+     */
+    public function trialUntil(Carbon|CarbonInterface $trialUntil): static
+    {
+        $this->trialExpires = $trialUntil;
+
+        return $this;
+    }
+
+    /**
+     * Force the trial to end immediately.
+     */
+    public function skipTrial(): static
+    {
+        $this->skipTrial = true;
+
+        return $this;
+    }
+
+    /**
+     * Change the billing cycle anchor on a subscription creation.
+     */
+    public function anchorBillingCycleOn(DateTimeInterface|int $date): static
+    {
+        if ($date instanceof DateTimeInterface) {
+            $date = $date->getTimestamp();
+        }
+
+        $this->billingCycleAnchor = $date;
+
+        return $this;
+    }
+
+    /**
+     * The metadata to apply to a new subscription.
+     */
+    public function withMetadata(array $metadata): static
+    {
+        $this->metadata = (array) $metadata;
+
+        return $this;
+    }
+
+    /**
+     * Add a new Chargebee subscription to the Chargebee model.
+     */
+    public function add(array $customerOptions = [], array $subscriptionOptions = []): Subscription
+    {
+        return $this->create(null, $customerOptions, $subscriptionOptions);
     }
 
     /**
@@ -263,5 +353,11 @@ class SubscriptionBuilder
             ->create([], array_merge_recursive($payload, $sessionOptions), $customerOptions);
     }
 
-
+    /*
+     * Get the items set on the subscription builder.
+     */
+    public function getItems(): array
+    {
+        return $this->items;
+    }
 }

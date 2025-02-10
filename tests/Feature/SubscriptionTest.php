@@ -111,26 +111,29 @@ class SubscriptionTest extends FeatureTestCase
         $this->assertSame($retrievedSubscription->status, $subscription->chargebee_status);
     }
 
-    // public function test_subscriptions_can_be_updated(): void
-    // {
-    //     $user = $this->createCustomer('subscriptions_can_be_updated');
+    public function test_subscriptions_can_be_updated(): void
+    {
+        $user = $this->createCustomer('subscriptions_can_be_updated');
 
-    //     $subscription = $user->newSubscription('main', static::$euroPriceId)
-    //         ->create('pm_card_visa');
+        $subscription = $user->newSubscription('main', static::$euroPriceId)
+            ->add();
 
-    //     $updateOptions = [
-    //         'subscriptionItems' => [
-    //             [
-    //                 'itemPriceId' => static::$euroPriceId,
-    //                 'quantity' => 4,
-    //                 'unitPrice' => 2000,
-    //             ]
-    //         ],
-    //     ];
+        $updateOptions = [
+            'subscriptionItems' => [
+                [
+                    'itemPriceId' => static::$euroPriceId,
+                    'quantity' => 4,
+                    'unitPrice' => 2000,
+                ]
+            ],
+        ];
 
-    //     $updatedSubscription = $subscription->updateChargebeeSubscription($updateOptions);
-    //     $this->assertTrue(true);
-    // }
+        $updatedSubscription = $subscription->updateChargebeeSubscription($updateOptions);
+        
+        $this->assertSame(static::$euroPriceId, $updatedSubscription->subscriptionItems[0]->itemPriceId);
+        $this->assertSame(4, $updatedSubscription->subscriptionItems[0]->quantity);
+        $this->assertSame(2000, $updatedSubscription->subscriptionItems[0]->unitPrice);
+    }
 
     public function test_subscription_can_be_cancelled_at_the_end_of_the_billing_period(): void
     {
@@ -230,6 +233,60 @@ class SubscriptionTest extends FeatureTestCase
         $subscription->resume();
 
         $this->assertSame('active', $subscription->chargebee_status);
+    }
+
+    public function test_create_subscription_with_trial(): void
+    {
+        $user = $this->createCustomer('test_create_subscription_with_trial');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $user->newSubscription('main', static::$euroPriceId)
+            ->trialDays(7)
+            ->create($paymentSource);
+
+        $subscription = $user->subscription('main');
+
+        $this->assertTrue($subscription->onTrial());
+        $this->assertSame('in_trial', $subscription->asChargebeeSubscription()->status);
+        $this->assertEquals(Carbon::today()->addDays(7)->day, $user->trialEndsAt('main')->day);
+    }
+
+    public function test_trial_can_be_extended(): void
+    {
+        $user = $this->createCustomer('test_trial_can_be_extended');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$euroPriceId)
+            ->trialDays(7)
+            ->create($paymentSource);
+
+        $this->assertSame('in_trial', $subscription->asChargebeeSubscription()->status);
+
+        $subscription->extendTrial($trialEndsAt = now()->addDays(8)->floor());
+
+        $this->assertSame('in_trial', $subscription->asChargebeeSubscription()->status);
+        $this->assertTrue($trialEndsAt->equalTo($subscription->trial_ends_at));
+        $this->assertEquals($subscription->asChargebeeSubscription()->trialEnd, $trialEndsAt->getTimestamp());
+    }
+
+    public function test_trial_can_be_ended(): void
+    {
+        $user = $this->createCustomer('test_trial_can_be_ended');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$euroPriceId)
+            ->trialDays(10)
+            ->create($paymentSource);
+
+        $this->assertSame('in_trial', $subscription->asChargebeeSubscription()->status);
+
+        $subscription->endTrial();
+
+        $this->assertNull($subscription->trial_ends_at);
+        $this->assertSame('active', $subscription->asChargebeeSubscription()->status);
     }
 
     private function createCard(Model $user): ?PaymentSource
