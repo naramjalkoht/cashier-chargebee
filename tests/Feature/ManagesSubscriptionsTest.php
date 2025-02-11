@@ -5,7 +5,6 @@ namespace Laravel\CashierChargebee\Tests\Feature;
 use Carbon\Carbon;
 use Laravel\CashierChargebee\Subscription;
 use Laravel\CashierChargebee\SubscriptionItem;
-use Laravel\CashierChargebee\Tests\Feature\FeatureTestCase;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
 
 class ManagesSubscriptionsTest extends FeatureTestCase
@@ -73,7 +72,7 @@ class ManagesSubscriptionsTest extends FeatureTestCase
     {
         $user = User::factory()->create();
         Subscription::factory()->create(['user_id' => $user->id, 'ends_at' => null]);
-        
+
         $this->assertTrue($user->subscribed());
     }
 
@@ -87,7 +86,7 @@ class ManagesSubscriptionsTest extends FeatureTestCase
     {
         $user = User::factory()->create();
         $subscription = Subscription::factory()->create(['user_id' => $user->id, 'type' => 'default']);
-        
+
         $this->assertEquals($subscription->id, $user->subscription('default')->id);
     }
 
@@ -95,7 +94,7 @@ class ManagesSubscriptionsTest extends FeatureTestCase
     {
         $user = User::factory()->create();
         Subscription::factory()->count(2)->create(['user_id' => $user->id]);
-        
+
         $this->assertCount(2, $user->subscriptions);
     }
 
@@ -103,7 +102,7 @@ class ManagesSubscriptionsTest extends FeatureTestCase
     {
         $user = User::factory()->create();
         Subscription::factory()->create(['user_id' => $user->id]);
-        
+
         $this->assertFalse($user->subscribedToProduct('product_123'));
     }
 
@@ -121,7 +120,7 @@ class ManagesSubscriptionsTest extends FeatureTestCase
             'subscription_id' => $subscription->id,
             'chargebee_price' => 'price_123',
         ]);
-        
+
         $this->assertTrue($user->subscribedToPrice('price_123'));
     }
 
@@ -135,7 +134,7 @@ class ManagesSubscriptionsTest extends FeatureTestCase
     {
         $user = User::factory()->create();
         Subscription::factory()->create(['user_id' => $user->id]);
-        
+
         $this->assertFalse($user->onPrice('price_123'));
     }
 
@@ -147,7 +146,7 @@ class ManagesSubscriptionsTest extends FeatureTestCase
             'subscription_id' => $subscription->id,
             'chargebee_product' => 'product_123',
         ]);
-        
+
         $this->assertTrue($user->onProduct('product_123'));
     }
 }

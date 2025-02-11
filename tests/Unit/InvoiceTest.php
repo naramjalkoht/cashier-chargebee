@@ -5,14 +5,13 @@ namespace Laravel\CashierChargebee\Tests\Unit;
 use Carbon\Carbon;
 use Carbon\CarbonTimeZone;
 use ChargeBee\ChargeBee\Models\Discount as ChargeBeeDiscount;
+use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
+use ChargeBee\ChargeBee\Models\InvoiceLineItemTax;
 use Laravel\CashierChargebee\Discount;
 use Laravel\CashierChargebee\Invoice;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
 use Laravel\CashierChargebee\Tests\TestCase;
 use Mockery as m;
-use stdClass;
-use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
-use ChargeBee\ChargeBee\Models\Subscription;
 
 class InvoiceTest extends TestCase
 {
@@ -27,9 +26,8 @@ class InvoiceTest extends TestCase
     {
         $chargebeeInvoice = new ChargeBeeInvoice([
             'customerId' => 'foo',
-            'date' => 1560541724
+            'date' => 1560541724,
         ]);
-
 
         $user = new User();
         $user->chargebee_id = 'foo';
@@ -46,7 +44,7 @@ class InvoiceTest extends TestCase
     {
         $chargebeeInvoice = new ChargeBeeInvoice([
             'customerId' => 'foo',
-            'date' => 1560541724
+            'date' => 1560541724,
         ]);
 
         $user = new User();
@@ -65,9 +63,8 @@ class InvoiceTest extends TestCase
         $chargebeeInvoice = new ChargeBeeInvoice([
             'customerId' => 'foo',
             'total' => 1000,
-            'currencyCode' => config('cashier.currency')
+            'currencyCode' => config('cashier.currency'),
         ]);
-
 
         $user = new User();
         $user->chargebee_id = 'foo';
@@ -84,7 +81,7 @@ class InvoiceTest extends TestCase
         $chargebeeInvoice = new ChargeBeeInvoice([
             'customerId' => 'foo',
             'total' => 1000,
-            'currencyCode' => config('cashier.currency')
+            'currencyCode' => config('cashier.currency'),
         ]);
 
         $user = new User();
@@ -103,7 +100,7 @@ class InvoiceTest extends TestCase
             'customerId' => 'foo',
             'total' => 1000,
             'currencyCode' => config('cashier.currency'),
-            'creditsApplied' => '450'
+            'creditsApplied' => '450',
         ]);
         $chargebeeInvoice->customer = 'foo';
         $chargebeeInvoice->total = 1000;
@@ -125,7 +122,7 @@ class InvoiceTest extends TestCase
         $chargebeeInvoice = new ChargeBeeInvoice([
             'customerId' => 'foo',
             'subTotal' => 500,
-            'currencyCode' => config('cashier.currency')
+            'currencyCode' => config('cashier.currency'),
         ]);
 
         $user = new User();
@@ -189,7 +186,6 @@ class InvoiceTest extends TestCase
         $chargebeeInvoice->ending_balance = -450;
         $chargebeeInvoice->currency = config('cashier.currency');
 
-
         $user = new User();
         $user->chargebee_id = 'foo';
 
@@ -206,7 +202,6 @@ class InvoiceTest extends TestCase
         $chargebeeInvoice->ending_balance = -350;
         $chargebeeInvoice->starting_balance = -500;
         $chargebeeInvoice->currency = config('cashier.currency');
-
 
         $user = new User();
         $user->chargebee_id = 'foo';
@@ -226,7 +221,6 @@ class InvoiceTest extends TestCase
         $chargebeeInvoice->starting_balance = -500;
         $chargebeeInvoice->currency = config('cashier.currency');
 
-
         $user = new User();
         $user->chargebee_id = 'foo';
 
@@ -242,21 +236,20 @@ class InvoiceTest extends TestCase
         $discountAmount = new ChargeBeeDiscount([
             'entityId' => 'foo',
             'description' => 'foo',
-            'amount' => 50
+            'amount' => 50,
         ]);
 
         $otherDiscountAmount = new ChargeBeeDiscount([
             'entityId' => 'bar',
             'description' => 'bar',
-            'amount' => 100
+            'amount' => 100,
         ]);
-
 
         $chargebeeInvoice = new ChargeBeeInvoice([
             'customerId' => 'foo',
             'discounts' => [$discountAmount, $otherDiscountAmount],
             'total' => 1000,
-            'currencyCode' => config('cashier.currency')
+            'currencyCode' => config('cashier.currency'),
         ]);
 
         $user = new User();
@@ -265,25 +258,34 @@ class InvoiceTest extends TestCase
         $invoice = new Invoice($user, $chargebeeInvoice);
 
         $this->assertTrue($invoice->hasDiscount());
-        $this->assertSame(150, $invoice->rawDiscount());
+        $this->assertNotNull($invoice->discounts());
+        $this->assertSame('$1.50', $invoice->discount());
         $this->assertSame(50, $invoice->rawDiscountFor(new Discount($discountAmount)));
+        $this->assertSame('$0.50', $invoice->discountFor(new Discount($discountAmount)));
+
         $this->assertNull($invoice->rawDiscountFor(
             new Discount(new ChargeBeeDiscount([
                 'entity_id' => 'baz',
                 'description' => 'baz',
-                'amount' => 100
+                'amount' => 100,
             ]))
         ));
     }
 
     public function test_it_can_return_its_tax()
     {
-
         $chargebeeInvoice = new ChargeBeeInvoice([
             'customerId' => 'foo',
             'tax' => 50,
             'currencyCode' => config('cashier.currency'),
             'total' => 1000,
+            'lineItemTaxes' => [
+                new InvoiceLineItemTax([
+                    'tax_name' => 'GST',
+                    'tax_amount' => 50,
+                    'tax_rate' => '0.5',
+                ]),
+            ],
         ]);
 
         $user = new User();
@@ -293,6 +295,7 @@ class InvoiceTest extends TestCase
 
         $tax = $invoice->tax();
 
+        $this->assertEquals('$0.50', $invoice->taxes()[0]->amount());
         $this->assertEquals('$0.50', $tax);
 
         $chargebeeInvoice = new ChargeBeeInvoice([
@@ -309,37 +312,5 @@ class InvoiceTest extends TestCase
         $tax = $invoice->tax();
 
         $this->assertEquals('$0.00', $tax);
-    }
-
-    public function skip_test_it_can_determine_if_the_customer_was_exempt_from_taxes()
-    {
-        $chargebeeInvoice = new ChargeBeeInvoice([
-            'customerId' => 'foo',
-            'currencyCode' => config('cashier.currency'),
-            'total' => 1000,
-        ]);
-
-        $user = new User();
-        $user->chargebee_id = 'foo';
-
-        $invoice = new Invoice($user, $chargebeeInvoice);
-
-        $this->assertTrue($invoice->isTaxExempt());
-    }
-
-    public function skip_test_it_can_determine_if_reverse_charge_applies()
-    {
-        $chargebeeInvoice = new ChargeBeeInvoice([
-            'customerId' => 'foo',
-            'currencyCode' => config('cashier.currency'),
-            'total' => 1000,
-        ]);
-
-        $user = new User();
-        $user->chargebee_id = 'foo';
-
-        $invoice = new Invoice($user, $chargebeeInvoice);
-
-        $this->assertTrue($invoice->reverseChargeApplies());
     }
 }

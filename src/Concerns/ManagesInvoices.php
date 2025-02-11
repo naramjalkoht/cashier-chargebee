@@ -4,54 +4,44 @@ namespace Laravel\CashierChargebee\Concerns;
 
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\Estimate as ChargeBeeEstimate;
+use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use Laravel\CashierChargebee\Exceptions\InvalidInvoice;
-use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
-use Laravel\CashierChargebee\Invoice;
+use Laravel\CashierChargebee\ChargebeePaginator;
 use Laravel\CashierChargebee\Estimate;
+use Laravel\CashierChargebee\Exceptions\InvalidInvoice;
+use Laravel\CashierChargebee\Invoice;
 use Laravel\CashierChargebee\InvoiceBuilder;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 trait ManagesInvoices
 {
-
-
     public function newInvoice()
     {
         $this->assertCustomerExists();
-        return new InvoiceBuilder($this);
 
+        return new InvoiceBuilder($this);
     }
 
     /**
      * Get the customer's upcoming invoice.
      *
      * @param  array  $options
-     * @return \Laravel\CashierChargebee\Invoice|null
+     * @return \Laravel\CashierChargebee\Estimate|null
      */
     public function upcomingInvoice(array $options = [])
     {
-        if (!$this->hasChargebeeId()) {
+        if (! $this->hasChargebeeId()) {
             return;
         }
 
         try {
+            $chargebeeEstimate = ChargeBeeEstimate::upcomingInvoicesEstimate($this->chargebeeId());
 
-            if (Arr::has($options, 'subscription')) {
-                $chargebeeEstimate = ChargeBeeEstimate::advanceInvoiceEstimate(
-                    $options['subscription'],
-                    ['customerId' => $this->chargebeeId()] + $options
-                );
-            } else {
-                $chargebeeEstimate = ChargeBeeEstimate::upcomingInvoicesEstimate($this->chargebeeId());
-            }
-
-            return new Estimate($this, $chargebeeEstimate->estimate());
+            return new Estimate($this, $chargebeeEstimate->estimate()->invoiceEstimates[0]);
         } catch (InvalidRequestException $exception) {
             //
         }
@@ -124,7 +114,7 @@ trait ManagesInvoices
      */
     public function invoices($includePending = false, $parameters = [])
     {
-        if (!$this->hasChargebeeId()) {
+        if (! $this->hasChargebeeId()) {
             return new Collection();
         }
 
@@ -132,12 +122,19 @@ trait ManagesInvoices
 
         $parameters = array_merge(['limit' => 24], $parameters);
 
-        $chargebeeInvoices = ChargeBeeInvoice::all(['customerId' => $this->chargebeeId()] + $parameters);
+        $chargebeeInvoices = ChargeBeeInvoice::all(
+            ['customerId[is]' => $this->chargebeeId()] + $parameters
+        );
 
-        if (!is_null($chargebeeInvoices)) {
-            foreach ($chargebeeInvoices->invoices() as $invoice) {
+        if (! is_null($chargebeeInvoices)) {
+            foreach ($chargebeeInvoices as $chargebeeInvoice) {
+                $invoice = $chargebeeInvoice->invoice();
                 if ($invoice->status == 'paid' || $includePending) {
-                    $invoices[] = new Invoice($this, $invoice);
+                    $invoices[] = new Invoice(
+                        $this,
+                        $invoice,
+                        $chargebeeInvoices->nextOffset()
+                    );
                 }
             }
         }
@@ -163,30 +160,34 @@ trait ManagesInvoices
      * @param  array  $parameters
      * @param  string  $cursorName
      * @param  \Illuminate\Pagination\Cursor|string|null  $cursor
-     * @return \Illuminate\Contracts\Pagination\CursorPaginator
+     * @return \Laravel\CashierChargebee\ChargebeePaginator
      */
     public function cursorPaginateInvoices($perPage = 24, array $parameters = [], $cursorName = 'cursor', $cursor = null)
     {
-        if (!$cursor instanceof Cursor) {
+        if (! $cursor instanceof Cursor) {
             $cursor = is_string($cursor)
                 ? Cursor::fromEncoded($cursor)
                 : CursorPaginator::resolveCurrentCursor($cursorName, $cursor);
         }
 
-        if (!is_null($cursor)) {
+        if (! is_null($cursor)) {
             $parameters['offset'] = $cursor->parameter('next_offset');
         }
 
-        $invoices = $this->invoices(true, array_merge($parameters, ['limit' => $perPage + 1]));
+        $invoices = $this->invoices(true, array_merge($parameters, ['limit' => $perPage]));
 
-        if (!is_null($cursor) && $cursor->pointsToPreviousItems()) {
-            $invoices = $invoices->reverse();
-        }
+        $hasMore = count($invoices) ? $invoices[0]->next_offset != null : false;
 
-        return new CursorPaginator($invoices, $perPage, $cursor, array_merge([
-            'path' => Paginator::resolveCurrentPath(),
-            'cursorName' => $cursorName,
-            'parameters' => ['next_offset'],
-        ]));
+        return new ChargebeePaginator(
+            $invoices,
+            $perPage,
+            $cursor,
+            $hasMore,
+            array_merge([
+                'path' => Paginator::resolveCurrentPath(),
+                'cursorName' => $cursorName,
+                'parameters' => ['next_offset'],
+            ])
+        );
     }
 }

@@ -17,7 +17,7 @@ abstract class FeatureTestCase extends TestCase
 
     protected function setUp(): void
     {
-        if (!getenv('CHARGEBEE_SITE') || !getenv('CHARGEBEE_API_KEY')) {
+        if (! getenv('CHARGEBEE_SITE') || ! getenv('CHARGEBEE_API_KEY')) {
             $this->markTestSkipped('Chargebee site or API key not set.');
         }
 
@@ -38,7 +38,7 @@ abstract class FeatureTestCase extends TestCase
     protected function createPrice($price, $amount): ItemPrice
     {
         $ts = now()->timestamp;
-        $id = strtolower(str_replace(" ", "_", $price)) . "-" . $ts;
+        $id = strtolower(str_replace(' ', '_', $price)).'-'.$ts;
         $itemFamily = ItemFamily::create([
             'id' => $id,
             'name' => "$price-$ts",

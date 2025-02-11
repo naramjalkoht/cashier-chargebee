@@ -3,11 +3,10 @@
 namespace Laravel\CashierChargebee;
 
 use Carbon\Carbon;
+use ChargeBee\ChargeBee\Models\InvoiceLineItem as ChargeBeeInvoiceLineItem;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
-use Illuminate\Support\Collection;
 use JsonSerializable;
-use ChargeBee\ChargeBee\Models\InvoiceLineItem as ChargeBeeInvoiceLineItem;
 
 class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
 {
@@ -76,7 +75,6 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
     public function exclusiveTaxPercentage()
     {
         return $this->invoice->priceType == 'tax_exclusive' ? $this->taxRate : 0;
-
     }
 
     /**
@@ -86,7 +84,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      */
     public function hasTaxRates()
     {
-        return !empty($this->item->taxRate);
+        return ! empty($this->item->taxRate);
     }
 
     /**
@@ -144,7 +142,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      */
     public function hasPeriod()
     {
-        return !is_null($this->item->dateFrom) && !is_null($this->item->dateTo);
+        return ! is_null($this->item->dateFrom) && ! is_null($this->item->dateTo);
     }
 
     /**

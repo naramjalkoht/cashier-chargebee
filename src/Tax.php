@@ -2,8 +2,6 @@
 
 namespace Laravel\CashierChargebee;
 
-use \ChargeBee\ChargeBee\Models\InvoiceTax as ChargeBeeTaxRate;
-
 class Tax
 {
     /**
@@ -21,7 +19,7 @@ class Tax
     protected $currency;
 
     /**
-     * The Chargebee TaxRate
+     * The Chargebee TaxRate.
      *
      * @var float
      */
@@ -32,7 +30,7 @@ class Tax
      *
      * @param  int  $amount
      * @param  string  $currency
-     * @param  float $taxRate
+     * @param  float  $taxRate
      * @return void
      */
     public function __construct($amount, $currency, $taxRate)
@@ -82,7 +80,6 @@ class Tax
     {
         return Cashier::formatAmount($amount, $this->currency);
     }
-
 
     /**
      * @return float

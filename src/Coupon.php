@@ -19,7 +19,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
     /**
      * Create a new Coupon instance.
      *
-     * @param  \ChargeBee\ChargeBee\Models\Coupon $coupon
+     * @param  \ChargeBee\ChargeBee\Models\Coupon  $coupon
      * @return void
      */
     public function __construct(ChargebeeCoupon $coupon)
@@ -64,7 +64,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      */
     public function amountOff()
     {
-        if (!is_null($this->coupon->discountAmount)) {
+        if (! is_null($this->coupon->discountAmount)) {
             return $this->formatAmount($this->rawAmountOff());
         }
     }

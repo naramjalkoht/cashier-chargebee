@@ -3,10 +3,10 @@
 namespace Laravel\CashierChargebee;
 
 use Carbon\Carbon;
+use ChargeBee\ChargeBee\Models\Discount as ChargeBeeDiscount;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use JsonSerializable;
-use \ChargeBee\ChargeBee\Models\Discount as ChargeBeeDiscount;
 
 class Discount implements Arrayable, Jsonable, JsonSerializable
 {
@@ -55,7 +55,7 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
      */
     public function end()
     {
-        if (!is_null($this->discount->end)) {
+        if (! is_null($this->discount->end)) {
             return Carbon::createFromTimestamp($this->discount->end);
         }
     }

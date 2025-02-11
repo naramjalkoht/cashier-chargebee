@@ -4,35 +4,31 @@ declare(strict_types=1);
 
 namespace Laravel\CashierChargebee\Tests\Unit;
 
+use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
+use ChargeBee\ChargeBee\Models\InvoiceLineItem as ChargeBeeInvoiceLineItem;
 use Laravel\CashierChargebee\Invoice;
 use Laravel\CashierChargebee\InvoiceLineItem;
-use PHPUnit\Framework\TestCase;
-use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
-use ChargeBee\ChargeBee\Models\InvoiceLineItem as ChargeBeeInvoiceLineItem;
+use PHPUnit\Framework\TestCase;
 
 class InvoiceLineItemTest extends TestCase
 {
     public function test_we_can_calculate_the_inclusive_tax_percentage()
     {
-
         $chargebeeInvoice = new ChargeBeeInvoice([
             'customerId' => 'foo',
             'date' => 1560541724,
-            'priceType' => 'tax_inclusive'
+            'priceType' => 'tax_inclusive',
         ]);
-
 
         $user = new User();
         $user->chargebee_id = 'foo';
 
-
         $invoice = new Invoice($user, $chargebeeInvoice);
 
         $chargebeeInvoiceLineItem = new ChargeBeeInvoiceLineItem([
-            'taxRate' => 20.0
+            'taxRate' => 20.0,
         ]);
-
 
         $item = new InvoiceLineItem($invoice, $chargebeeInvoiceLineItem);
         $result = $item->inclusiveTaxPercentage();
@@ -41,27 +37,48 @@ class InvoiceLineItemTest extends TestCase
 
     public function test_we_can_calculate_the_exclusive_tax_percentage()
     {
-
         $chargebeeInvoice = new ChargeBeeInvoice([
             'customerId' => 'foo',
             'date' => 1560541724,
-            'priceType' => 'tax_exclusive'
+            'priceType' => 'tax_exclusive',
         ]);
-
 
         $user = new User();
         $user->chargebee_id = 'foo';
 
-
         $invoice = new Invoice($user, $chargebeeInvoice);
 
         $chargebeeInvoiceLineItem = new ChargeBeeInvoiceLineItem([
-            'taxRate' => 20.0
+            'taxRate' => 20.0,
         ]);
-
 
         $item = new InvoiceLineItem($invoice, $chargebeeInvoiceLineItem);
         $result = $item->exclusiveTaxPercentage();
         $this->assertSame(20.0, $result);
+    }
+
+    public function test_can_get_period()
+    {
+        $chargebeeInvoice = new ChargeBeeInvoice([
+            'customerId' => 'foo',
+            'date' => now()->getTimestamp(),
+            'priceType' => 'tax_exclusive',
+        ]);
+
+        $user = new User();
+        $user->chargebee_id = 'foo';
+
+        $invoice = new Invoice($user, $chargebeeInvoice);
+
+        $chargebeeInvoiceLineItem = new ChargeBeeInvoiceLineItem([
+            'taxRate' => 20.0,
+            'dateFrom' => now()->addDay()->getTimestamp(),
+            'dateTo' => now()->addDays(30)->getTimestamp(),
+        ]);
+
+        $item = new InvoiceLineItem($invoice, $chargebeeInvoiceLineItem);
+
+        $this->assertNotNull($item->startDate());
+        $this->assertNotNull($item->endDate());
     }
 }

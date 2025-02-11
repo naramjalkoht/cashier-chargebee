@@ -2,7 +2,6 @@
 
 namespace Laravel\CashierChargebee\Invoices;
 
-use ChargeBee\ChargeBee\Models\Invoice as ModelsInvoice;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Laravel\CashierChargebee\Contracts\InvoiceRenderer;
@@ -15,7 +14,7 @@ class DompdfInvoiceRenderer implements InvoiceRenderer
      */
     public function render(Invoice $invoice, array $data = [], array $options = []): string
     {
-        if (!defined('DOMPDF_ENABLE_AUTOLOAD')) {
+        if (! defined('DOMPDF_ENABLE_AUTOLOAD')) {
             define('DOMPDF_ENABLE_AUTOLOAD', false);
         }
 

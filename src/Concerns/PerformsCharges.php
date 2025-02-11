@@ -3,6 +3,7 @@
 namespace Laravel\CashierChargebee\Concerns;
 
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
+use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
 use ChargeBee\ChargeBee\Models\PaymentIntent;
 use Illuminate\Support\Arr;
 use Laravel\CashierChargebee\Checkout;
@@ -60,6 +61,18 @@ trait PerformsCharges
             }
             throw $exception;
         }
+    }
+
+    /**
+     * Refund a customer for a charge.
+     *
+     * @param  string  $invoiceId
+     * @param  array  $options
+     * @return \ChargeBee\ChargeBee\Result
+     */
+    public function refund($invoiceId, array $options = [])
+    {
+        return ChargeBeeInvoice::refund($invoiceId, $options);
     }
 
     /**

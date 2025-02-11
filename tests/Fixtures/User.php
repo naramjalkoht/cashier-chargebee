@@ -34,6 +34,7 @@ class User extends Model
     {
         return config('cashier.currency');
     }
+
     /**
      * Create a new factory instance for the model.
      */

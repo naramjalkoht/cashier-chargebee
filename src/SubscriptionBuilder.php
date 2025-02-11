@@ -96,7 +96,7 @@ class SubscriptionBuilder
 
         $quantity = $price['quantity'] ?? $quantity;
 
-        if (!is_null($quantity)) {
+        if (! is_null($quantity)) {
             $options['quantity'] = $quantity;
         }
 
@@ -220,7 +220,7 @@ class SubscriptionBuilder
 
     /**
      * Create the Eloquent Subscription.
-     * 
+     *
      * @todo Consult chargebee_id on item
      */
     protected function createSubscription(ChargebeeSubscription $chargebeeSubscription): Subscription
@@ -238,7 +238,7 @@ class SubscriptionBuilder
             'chargebee_status' => $chargebeeSubscription->status,
             'chargebee_price' => $isSinglePrice ? $firstItem->itemPriceId : null,
             'quantity' => $isSinglePrice ? ($firstItem->quantity ?? null) : null,
-            'trial_ends_at' => !$this->skipTrial ? $this->trialExpires : null,
+            'trial_ends_at' => ! $this->skipTrial ? $this->trialExpires : null,
             'ends_at' => null,
         ]);
 
@@ -271,7 +271,7 @@ class SubscriptionBuilder
 
     /**
      * Build the payload for subscription creation.
-     * 
+     *
      * @todo Clarify startDate
      */
     protected function buildPayload(): array
@@ -327,7 +327,7 @@ class SubscriptionBuilder
             throw new Exception('At least one price is required when starting subscriptions.');
         }
 
-        if (!$this->skipTrial && $this->trialExpires) {
+        if (! $this->skipTrial && $this->trialExpires) {
             $minimumTrialPeriod = Carbon::now()->addHours(48)->addSeconds(10);
 
             $trialEnd = $this->trialExpires->gt($minimumTrialPeriod) ? $this->trialExpires : $minimumTrialPeriod;

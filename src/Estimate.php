@@ -1,17 +1,13 @@
 <?php
 
 namespace Laravel\CashierChargebee;
-use Carbon\Carbon;
-use ChargeBee\ChargeBee\Models\Estimate as ChargeBeeEstimate;
+
+use ChargeBee\ChargeBee\Models\InvoiceEstimate as ChargeBeeEstimate;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\View;
-use Illuminate\Support\Str;
 use JsonSerializable;
 use Laravel\CashierChargebee\Exceptions\InvalidInvoice;
-use Symfony\Component\HttpFoundation\Response;
+
 class Estimate implements Arrayable, Jsonable, JsonSerializable
 {
     /**
@@ -32,14 +28,13 @@ class Estimate implements Arrayable, Jsonable, JsonSerializable
      * Create a new estimate instance.
      *
      * @param  \Illuminate\Database\Eloquent\Model  $owner
-     * @param  \ChargeBee\ChargeBee\Models\Estimate  $estimate
+     * @param  \ChargeBee\ChargeBee\Models\InvoiceEstimate  $estimate
      * @return void
      *
      * @throws \Laravel\CashierChargebee\Exceptions\InvalidInvoice
      */
     public function __construct($owner, ChargeBeeEstimate $estimate)
     {
-        dd($estimate);
         if ($owner->chargebee_id !== $estimate->customerId) {
             throw InvalidInvoice::invalidOwner($invoice, $owner);
         }
@@ -61,7 +56,7 @@ class Estimate implements Arrayable, Jsonable, JsonSerializable
     /**
      * Get the Chargebee estimate instance.
      *
-     * @return \ChargeBee\ChargeBee\Models\Estimate
+     * @return \ChargeBee\ChargeBee\Models\InvoiceEstimate
      */
     public function asChargebeeEstimate()
     {

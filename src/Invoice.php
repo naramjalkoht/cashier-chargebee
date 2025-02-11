@@ -1,6 +1,7 @@
 <?php
 
 namespace Laravel\CashierChargebee;
+
 use Carbon\Carbon;
 use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
 use Illuminate\Contracts\Support\Arrayable;
@@ -13,6 +14,7 @@ use JsonSerializable;
 use Laravel\CashierChargebee\Contracts\InvoiceRenderer;
 use Laravel\CashierChargebee\Exceptions\InvalidInvoice;
 use Symfony\Component\HttpFoundation\Response;
+
 class Invoice implements Arrayable, Jsonable, JsonSerializable
 {
     /**
@@ -37,19 +39,9 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     protected $items;
 
     /**
-     * The taxes applied to the invoice.
-     *
-     * @var array[]
+     * @var string
      */
-    protected $taxes;
-
-    /**
-     * The discounts applied to the invoice.
-     *
-     * @var array[]
-     */
-    protected $discounts;
-
+    protected $nextOffset;
 
     /**
      * Create a new invoice instance.
@@ -61,7 +53,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @throws \Laravel\CashierChargebee\Exceptions\InvalidInvoice
      */
-    public function __construct($owner, ChargeBeeInvoice $invoice)
+    public function __construct($owner, ChargeBeeInvoice $invoice, $nextOffset = null)
     {
         if ($owner->chargebee_id !== $invoice->customerId) {
             throw InvalidInvoice::invalidOwner($invoice, $owner);
@@ -69,6 +61,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
 
         $this->owner = $owner;
         $this->invoice = $invoice;
+        $this->nextOffset = $nextOffset;
     }
 
     /**
@@ -206,7 +199,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      */
     public function hasEndingBalance()
     {
-        return !is_null($this->invoice->ending_balance);
+        return ! is_null($this->invoice->ending_balance);
     }
 
     /**
@@ -280,10 +273,6 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      */
     public function discounts()
     {
-        if (!is_null($this->discounts)) {
-            return $this->discounts;
-        }
-
         return Collection::make($this->invoice->discounts)
             ->mapInto(Discount::class)
             ->all();
@@ -297,7 +286,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      */
     public function discountFor(Discount $discount)
     {
-        if (!is_null($discountAmount = $this->rawDiscountFor($discount))) {
+        if (! is_null($discountAmount = $this->rawDiscountFor($discount))) {
             return $this->formatAmount($discountAmount);
         }
     }
@@ -374,16 +363,12 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      */
     public function taxes()
     {
-        if (!is_null($this->taxes)) {
-            return $this->taxes;
-        }
-
-        return $this->taxes = Collection::make($this->invoice->lineItemTaxes)
-            ->map(function (object $taxAmount) {
+        return Collection::make($this->invoice->lineItemTaxes)
+            ->map(function ($lineItemTax) {
                 return new Tax(
-                    $taxAmount->taxAmount,
+                    $lineItemTax->taxAmount,
                     $this->invoice->currencyCode,
-                    $taxAmount->taxRate
+                    $lineItemTax->taxRate
                 );
             })
             ->all();
@@ -460,7 +445,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      */
     public function invoiceLineItems()
     {
-        if (!is_null($this->items)) {
+        if (! is_null($this->items)) {
             return $this->items;
         }
 
@@ -487,7 +472,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     {
         $item = ChargeBeeInvoice::addCharge($this->invoice->id, array_merge($options, [
             'amount' => $amount,
-            'description' => $description
+            'description' => $description,
         ]));
 
         $this->invoice = $item->invoice();
@@ -506,8 +491,10 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     public function tabPrice($price, $quantity = 1, array $options = [])
     {
         $item = ChargeBeeInvoice::addChargeItem($this->invoice->id, array_merge($options, [
-            'itemPriceId' => $price,
-            'quantity' => $$quantity
+            'itemPrice' => [
+                'itemPriceId' => $price,
+                'quantity' => $quantity,
+            ],
         ]));
 
         $this->invoice = $item->invoice();
@@ -541,7 +528,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     /**
      * Return the Tax Ids of the account.
      *
-     * @return \Stripe\TaxId[]
+     * @return array
      */
     public function accountTaxIds()
     {
@@ -567,7 +554,12 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     public function pay(array $options = [])
     {
         if (Arr::get($options, 'off_session', true)) {
-            $this->invoice = ChargeBeeInvoice::recordPayment($this->invoice->id, $options)->invoice();
+            $this->invoice = ChargeBeeInvoice::recordPayment($this->invoice->id, array_merge([
+                'transaction' => [
+                    'paymentMethod' => 'other',
+                ],
+                $options,
+            ]))->invoice();
         } else {
             $this->invoice = ChargeBeeInvoice::collectPayment($this->invoice->id, $options)->invoice();
         }
@@ -576,14 +568,14 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
-     * Void the Chargebee invoice. 
+     * Void the Chargebee invoice.
      *
      * @param  array  $options
      * @return $this
      */
     public function void(array $options = [])
     {
-        $this->invoice = $this->invoice->voidInvoice($options);
+        $this->invoice = ChargeBeeInvoice::voidInvoice($this->invoice->id, $options)->invoice();
 
         return $this;
     }
@@ -596,7 +588,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      */
     public function delete(array $options = [])
     {
-        $this->invoice = $this->invoice->delete($options);
+        $this->invoice = ChargeBeeInvoice::delete($this->invoice->id, $options)->invoice();
 
         return $this;
     }
@@ -682,7 +674,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     public function download(array $data = [])
     {
         $filename = $data['product'] ?? Str::slug(config('app.name'));
-        $filename .= '_' . $this->date()->month . '_' . $this->date()->year;
+        $filename .= '_'.$this->date()->month.'_'.$this->date()->year;
 
         return $this->downloadAs($filename, $data);
     }
@@ -698,7 +690,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     {
         return new Response($this->pdf($data), 200, [
             'Content-Description' => 'File Transfer',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '.pdf"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'.pdf"',
             'Content-Transfer-Encoding' => 'binary',
             'Content-Type' => 'application/pdf',
             'X-Vapor-Base64-Encode' => 'True',
@@ -765,6 +757,6 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      */
     public function __get($key)
     {
-        return $this->invoice->{$key};
+        return $key == 'next_offset' ? $this->nextOffset : $this->invoice->{$key};
     }
 }

@@ -13,7 +13,7 @@ use Laravel\CashierChargebee\Database\Factories\SubscriptionItemFactory;
 class SubscriptionItem extends Model
 {
     use HasFactory, Prorates;
-    
+
     /**
      * The attributes that aren't mass assignable.
      *

@@ -42,19 +42,19 @@ class SubscriptionTest extends FeatureTestCase
     {
         parent::setUp();
 
-        static::$itemFamilyId = ItemFamily::create(array(
+        static::$itemFamilyId = ItemFamily::create([
             'id' => Str::random(40),
             'name' => Str::random(40),
-        ))->itemFamily()->id;
+        ])->itemFamily()->id;
 
-        static::$itemId = Item::create(array(
+        static::$itemId = Item::create([
             'id' => Str::random(40),
             'name' => Str::random(40),
             'type' => 'plan',
             'itemFamilyId' => static::$itemFamilyId,
-        ))->item()->id;
+        ])->item()->id;
 
-        static::$euroPriceId = ItemPrice::create(array(
+        static::$euroPriceId = ItemPrice::create([
             'id' => Str::random(40),
             'itemId' => static::$itemId,
             'name' => Str::random(40),
@@ -64,9 +64,9 @@ class SubscriptionTest extends FeatureTestCase
             'periodUnit' => 'month',
             'period' => 1,
             'currencyCode' => 'EUR',
-        ))->itemPrice()->id;
+        ])->itemPrice()->id;
 
-        static::$usdPriceId = ItemPrice::create(array(
+        static::$usdPriceId = ItemPrice::create([
             'id' => Str::random(40),
             'itemId' => static::$itemId,
             'name' => Str::random(40),
@@ -76,9 +76,9 @@ class SubscriptionTest extends FeatureTestCase
             'periodUnit' => 'month',
             'period' => 1,
             'currencyCode' => 'USD',
-        ))->itemPrice()->id;
+        ])->itemPrice()->id;
 
-        static::$yearlyPriceId = ItemPrice::create(array(
+        static::$yearlyPriceId = ItemPrice::create([
             'id' => Str::random(40),
             'itemId' => static::$itemId,
             'name' => Str::random(40),
@@ -88,7 +88,7 @@ class SubscriptionTest extends FeatureTestCase
             'periodUnit' => 'year',
             'period' => 1,
             'currencyCode' => 'EUR',
-        ))->itemPrice()->id;
+        ])->itemPrice()->id;
     }
 
     public function test_subscription_can_be_created_and_status_synced(): void
@@ -124,12 +124,12 @@ class SubscriptionTest extends FeatureTestCase
                     'itemPriceId' => static::$euroPriceId,
                     'quantity' => 4,
                     'unitPrice' => 2000,
-                ]
+                ],
             ],
         ];
 
         $updatedSubscription = $subscription->updateChargebeeSubscription($updateOptions);
-        
+
         $this->assertSame(static::$euroPriceId, $updatedSubscription->subscriptionItems[0]->itemPriceId);
         $this->assertSame(4, $updatedSubscription->subscriptionItems[0]->quantity);
         $this->assertSame(2000, $updatedSubscription->subscriptionItems[0]->unitPrice);
@@ -143,7 +143,7 @@ class SubscriptionTest extends FeatureTestCase
 
         $subscription = $user->newSubscription('main', static::$euroPriceId)
             ->create($paymentSource);
-        
+
         $this->assertSame('active', $subscription->chargebee_status);
 
         $subscription->cancel();
@@ -162,7 +162,7 @@ class SubscriptionTest extends FeatureTestCase
 
         $subscription = $user->newSubscription('main', static::$euroPriceId)
             ->create($paymentSource);
-        
+
         $this->assertSame('active', $subscription->chargebee_status);
 
         $subscription->cancelAt(Carbon::now()->addDay());
@@ -181,7 +181,7 @@ class SubscriptionTest extends FeatureTestCase
 
         $subscription = $user->newSubscription('main', static::$euroPriceId)
             ->create($paymentSource);
-        
+
         $this->assertSame('active', $subscription->chargebee_status);
 
         $subscription->cancelNow();
@@ -201,7 +201,7 @@ class SubscriptionTest extends FeatureTestCase
 
         $subscription = $user->newSubscription('main', static::$euroPriceId)
             ->create($paymentSource);
-        
+
         $this->assertSame('active', $subscription->chargebee_status);
 
         $subscription->cancelNowAndInvoice();
@@ -223,7 +223,7 @@ class SubscriptionTest extends FeatureTestCase
             ->create($paymentSource);
 
         ChargebeeSubscription::pause($subscription->chargebee_id, [
-            "pauseOption" => "immediately"
+            'pauseOption' => 'immediately',
         ])->subscription();
 
         $subscription->syncChargebeeStatus();

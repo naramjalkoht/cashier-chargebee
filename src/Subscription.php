@@ -6,20 +6,16 @@ use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use ChargeBee\ChargeBee\Models\Subscription as ChargebeeSubscription;
 use DateTimeInterface;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Collection;
 use InvalidArgumentException;
-use Laravel\CashierChargebee\Cashier;
 use Laravel\CashierChargebee\Concerns\AllowsCoupons;
 use Laravel\CashierChargebee\Concerns\Prorates;
 use Laravel\CashierChargebee\Database\Factories\SubscriptionFactory;
-use Laravel\CashierChargebee\Payment;
-use Laravel\CashierChargebee\SubscriptionItem;
 use LogicException;
 
 class Subscription extends Model
@@ -320,9 +316,9 @@ class Subscription extends Model
         }
 
         $updateData = ['trialEnd' => 0];
-    
+
         $prorateBehavior = $this->prorateBehavior();
-        if (!is_null($prorateBehavior)) {
+        if (! is_null($prorateBehavior)) {
             $updateData['prorate'] = $prorateBehavior;
         }
 
@@ -344,9 +340,9 @@ class Subscription extends Model
         }
 
         $updateData = ['trialEnd' => $date->getTimestamp()];
-    
+
         $prorateBehavior = $this->prorateBehavior();
-        if (!is_null($prorateBehavior)) {
+        if (! is_null($prorateBehavior)) {
             $updateData['prorate'] = $prorateBehavior;
         }
 
@@ -388,7 +384,7 @@ class Subscription extends Model
 
     /**
      * Cancel the subscription at a specific moment in time.
-     * 
+     *
      * @todo creditOptionForCurrentTermCharges
      */
     public function cancelAt(DateTimeInterface|int $endsAt): self
@@ -467,7 +463,7 @@ class Subscription extends Model
         }
 
         $chargebeeSubscription = ChargebeeSubscription::resume($this->chargebee_id, [
-            "resumeOption" => "immediately",
+            'resumeOption' => 'immediately',
         ])->subscription();
 
         $this->fill([
@@ -506,11 +502,11 @@ class Subscription extends Model
         if ($prorateBehavior === true) {
             return 'prorate';
         }
-        
+
         if ($prorateBehavior === false) {
             return 'full';
         }
-        
+
         return 'none';
     }
 

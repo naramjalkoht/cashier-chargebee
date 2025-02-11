@@ -1,12 +1,11 @@
 <?php
 
 namespace Laravel\CashierChargebee;
-use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
 
+use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
 
 class InvoiceBuilder
 {
-
     /**
      * The model that is subscribing.
      *
@@ -64,8 +63,8 @@ class InvoiceBuilder
     public function tabPrice($price, $quantity = 1, array $tabOptions = [])
     {
         $this->itemPrices[] = array_merge([
-            'item_price_id' => $price,
-            'quantity' => $quantity
+            'itemPriceId' => $price,
+            'quantity' => $quantity,
         ], $tabOptions);
 
         return $this;
@@ -80,20 +79,15 @@ class InvoiceBuilder
      */
     public function invoice(?array $options = [])
     {
-
         $data = array_filter(array_merge([
             'customerId' => $this->owner->chargebeeId(),
             'currencyCode' => $this->owner->preferredCurrency(),
             'charges' => $this->charges,
-            'itemPrices' => $this->itemPrices
+            'itemPrices' => $this->itemPrices,
         ], $options));
 
-        $response = ChargeBeeInvoice::createForChargeItemsAndCharges(
-            $data
-        );
+        $response = ChargeBeeInvoice::createForChargeItemsAndCharges($data);
 
         return new Invoice($this->owner, $response->invoice());
     }
-
-
 }
