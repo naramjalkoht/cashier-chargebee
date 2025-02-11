@@ -102,13 +102,4 @@ class SubscriptionBuilderTest extends TestCase
 
         $this->assertSame($metadata, $this->getProtectedProperty($builder, 'metadata'));
     }
-
-    private function getProtectedProperty($object, string $property)
-    {
-        $reflection = new \ReflectionClass($object);
-        $property = $reflection->getProperty($property);
-        $property->setAccessible(true);
-
-        return $property->getValue($object);
-    }
 }

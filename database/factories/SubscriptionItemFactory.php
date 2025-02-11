@@ -25,7 +25,6 @@ class SubscriptionItemFactory extends Factory
     {
         return [
             'subscription_id' => Subscription::factory(),
-            'chargebee_id' => 'si_'.Str::random(40),
             'chargebee_product' => 'prod_'.Str::random(40),
             'chargebee_price' => 'price_'.Str::random(40),
             'quantity' => null,

@@ -275,4 +275,12 @@ class SubscriptionTest extends TestCase
 
         $subscription->guardAgainstMultiplePrices();
     }
+
+    public function test_anchor_billing_cycle_on(): void
+    {
+        $billingCycleAnchor = time();
+        $subscription = Subscription::factory()->create()->anchorBillingCycleOn($billingCycleAnchor);
+
+        $this->assertSame($billingCycleAnchor, $this->getProtectedProperty($subscription, 'billingCycleAnchor'));
+    }
 }

@@ -245,7 +245,6 @@ class SubscriptionBuilder
         foreach ($chargebeeSubscription->subscriptionItems as $item) {
             $price = ItemPrice::retrieve($item->itemPriceId)->itemPrice();
             $subscription->items()->create([
-                'chargebee_id' => $price->itemId,
                 'chargebee_product' => $price->itemId,
                 'chargebee_price' => $item->itemPriceId,
                 'quantity' => $item->quantity ?? null,

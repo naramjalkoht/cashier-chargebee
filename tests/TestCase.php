@@ -31,4 +31,12 @@ abstract class TestCase extends OrchestraTestCase
             $config->set('cashier.currency', env('CASHIER_CURRENCY', 'USD'));
         });
     }
+    
+    protected function getProtectedProperty($object, string $property): mixed
+    {
+        $reflection = new \ReflectionClass($object);
+        $property = $reflection->getProperty($property);
+        $property->setAccessible(true);
+        return $property->getValue($object);
+    }
 }
