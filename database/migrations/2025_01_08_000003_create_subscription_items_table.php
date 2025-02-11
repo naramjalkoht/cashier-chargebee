@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('subscription_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('subscription_id');
-            $table->string('chargebee_id')->unique();
             $table->string('chargebee_product');
             $table->string('chargebee_price');
             $table->integer('quantity')->nullable();

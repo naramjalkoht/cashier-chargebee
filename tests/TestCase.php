@@ -23,4 +23,12 @@ abstract class TestCase extends OrchestraTestCase
 
         Cashier::useCustomerModel(User::class);
     }
+
+    protected function getProtectedProperty($object, string $property): mixed
+    {
+        $reflection = new \ReflectionClass($object);
+        $property = $reflection->getProperty($property);
+        $property->setAccessible(true);
+        return $property->getValue($object);
+    }
 }
