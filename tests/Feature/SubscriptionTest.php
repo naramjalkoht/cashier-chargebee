@@ -35,6 +35,11 @@ class SubscriptionTest extends FeatureTestCase
     /**
      * @var string
      */
+    protected static $thirdItemId;
+
+    /**
+     * @var string
+     */
     protected static $firstMeteredItemId;
 
     /**
@@ -51,6 +56,11 @@ class SubscriptionTest extends FeatureTestCase
      * @var string
      */
     protected static $secondPriceId;
+
+    /**
+     * @var string
+     */
+    protected static $thirdPriceId;
 
     /**
      * @var string
@@ -109,6 +119,25 @@ class SubscriptionTest extends FeatureTestCase
             'pricingModel' => 'per_unit',
             'price' => 2000,
             'externalName' => 'Test ItemPrice 2',
+            'periodUnit' => 'month',
+            'period' => 1,
+            'currencyCode' => 'EUR',
+        ))->itemPrice()->id;
+
+        static::$thirdItemId = Item::create(array(
+            'id' => Str::random(40),
+            'name' => Str::random(40),
+            'type' => 'plan',
+            'itemFamilyId' => static::$itemFamilyId,
+        ))->item()->id;
+
+        static::$thirdPriceId = ItemPrice::create(array(
+            'id' => Str::random(40),
+            'itemId' => static::$thirdItemId,
+            'name' => Str::random(40),
+            'pricingModel' => 'per_unit',
+            'price' => 3000,
+            'externalName' => 'Test ItemPrice 3',
             'periodUnit' => 'month',
             'period' => 1,
             'currencyCode' => 'EUR',
@@ -595,6 +624,110 @@ class SubscriptionTest extends FeatureTestCase
 
         $this->assertEquals(1, $chargebeeFirstItem->quantity);
         $this->assertEquals(3, $chargebeeSecondItem->quantity);
+    }
+
+    public function test_swapping_subscription_and_preserving_quantity()
+    {
+        $user = $this->createCustomer('test_swapping_subscription');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->quantity(5, static::$firstPriceId)
+            ->create($paymentSource);
+
+        $subscription = $subscription->swap(static::$thirdPriceId);
+
+        $this->assertCount(1, $subscription->items);
+        $this->assertEquals(static::$thirdPriceId, $subscription->chargebee_price);
+        $this->assertEquals(5, $subscription->quantity);
+
+        $item = $subscription->items->first();
+
+        $this->assertEquals(static::$thirdPriceId, $item->chargebee_price);
+        $this->assertEquals(5, $item->quantity);
+
+        $chargebeeItem = $subscription->items->first()->asChargebeeSubscriptionItem();
+
+        $this->assertEquals(static::$thirdPriceId, $chargebeeItem->itemPriceId);
+        $this->assertEquals(5, $chargebeeItem->quantity);
+    }
+
+    public function test_swapping_subscription_and_adopting_new_quantity()
+    {
+        $user = $this->createCustomer('test_swapping_subscription');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->quantity(5, static::$firstPriceId)
+            ->create($paymentSource);
+
+        $subscription = $subscription->swap([static::$thirdPriceId => ['quantity' => 3]]);
+
+        $this->assertCount(1, $subscription->items);
+        $this->assertEquals(static::$thirdPriceId, $subscription->chargebee_price);
+        $this->assertEquals(3, $subscription->quantity);
+
+        $item = $subscription->items->first();
+
+        $this->assertEquals(static::$thirdPriceId, $item->chargebee_price);
+        $this->assertEquals(3, $item->quantity);
+
+        $chargebeeItem = $subscription->items->first()->asChargebeeSubscriptionItem();
+
+        $this->assertEquals(static::$thirdPriceId, $chargebeeItem->itemPriceId);
+        $this->assertEquals(3, $chargebeeItem->quantity);
+    }
+
+    public function test_swapping_subscription_item_and_preserving_quantity()
+    {
+        $user = $this->createCustomer('test_swapping_subscription_item');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->quantity(5, static::$firstPriceId)
+            ->create($paymentSource);
+
+        $item = $subscription->items->first()->swap(static::$thirdPriceId);
+        $subscription->refresh();
+
+        $this->assertCount(1, $subscription->items);
+        $this->assertEquals(static::$thirdPriceId, $subscription->chargebee_price);
+        $this->assertEquals(5, $subscription->quantity);
+        $this->assertEquals(static::$thirdPriceId, $item->chargebee_price);
+        $this->assertEquals(5, $item->quantity);
+
+        $chargebeeItem = $subscription->items->first()->asChargebeeSubscriptionItem();
+
+        $this->assertEquals(static::$thirdPriceId, $chargebeeItem->itemPriceId);
+        $this->assertEquals(5, $chargebeeItem->quantity);
+    }
+
+    public function test_swapping_subscription_item_and_adopting_new_quantity()
+    {
+        $user = $this->createCustomer('test_swapping_subscription_item');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->quantity(5, static::$firstPriceId)
+            ->create($paymentSource);
+
+        $item = $subscription->items->first()->swap(static::$thirdPriceId, ['quantity' => 3]);
+        $subscription->refresh();
+
+        $this->assertCount(1, $subscription->items);
+        $this->assertEquals(static::$thirdPriceId, $subscription->chargebee_price);
+        $this->assertEquals(3, $subscription->quantity);
+        $this->assertEquals(static::$thirdPriceId, $item->chargebee_price);
+        $this->assertEquals(3, $item->quantity);
+
+        $chargebeeItem = $subscription->items->first()->asChargebeeSubscriptionItem();
+
+        $this->assertEquals(static::$thirdPriceId, $chargebeeItem->itemPriceId);
+        $this->assertEquals(3, $chargebeeItem->quantity);
     }
 
     private function createCard(Model $user): ?PaymentSource
