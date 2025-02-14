@@ -98,30 +98,19 @@ class SubscriptionItem extends Model
         $itemOptions = array_merge($item, $itemOptions);
 
         if (! is_null($this->prorateBehavior())) {
-            $subscriptionOptions = array_merge(['prorate' => $this->prorateBehavior()], $subscriptionOptions);
+            $subscriptionOptions['prorate'] = $this->prorateBehavior();
         }
 
         $chargebeeSubscriptionItem = $this->updateChargebeeSubscriptionItem($itemOptions, $subscriptionOptions);
 
-        $priceDetails = ItemPrice::retrieve($price)->itemPrice();
         $this->fill([
-            'chargebee_product' => $priceDetails->itemId,
+            'chargebee_product' => ItemPrice::retrieve($price)->itemPrice()->itemId,
             'chargebee_price' => $chargebeeSubscriptionItem->itemPriceId,
             'quantity' => $chargebeeSubscriptionItem->quantity,
         ])->save();
 
-        if ($this->subscription->hasSinglePrice()) {
-            $this->subscription->fill([
-                'chargebee_price' => $price,
-                'quantity' => $chargebeeSubscriptionItem->quantity,
-            ]);
-        }
-
         $chargebeeSubscription = $this->subscription->asChargebeeSubscription();
-
-        $this->subscription->fill([
-            'chargebee_status' => $chargebeeSubscription->status,
-        ])->save();
+        $this->subscription->refreshSubscriptionAttributes($chargebeeSubscription);
 
         return $this;
     }
@@ -182,6 +171,8 @@ class SubscriptionItem extends Model
 
     /**
      * Get the subscription item as a Chargebee SubscriptionSubscriptionItem object.
+     * 
+     * @throws ModelNotFoundException
      */
     public function asChargebeeSubscriptionItem(): SubscriptionSubscriptionItem
     {

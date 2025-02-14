@@ -41,6 +41,14 @@ class WebhookTest extends FeatureTestCase
             ->assertSee('Unauthorized');
     }
 
+    public function test_no_credentials_result_in_http_401_response(): void
+    {
+        $response = $this->postJson($this->webhookUrl, ['event' => 'invalid_event']);
+
+        $response->assertStatus(Response::HTTP_UNAUTHORIZED)
+            ->assertSee('Unauthorized');
+    }
+
     public function test_valid_webhook_events_trigger_appropriate_handlers(): void
     {
         $this->withValidCredentials();

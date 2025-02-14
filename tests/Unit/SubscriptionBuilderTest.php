@@ -3,6 +3,8 @@
 namespace Laravel\CashierChargebee\Tests\Unit;
 
 use Carbon\Carbon;
+use DateTimeImmutable;
+use Exception;
 use Laravel\CashierChargebee\SubscriptionBuilder;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
 use Laravel\CashierChargebee\Tests\TestCase;
@@ -24,6 +26,25 @@ class SubscriptionBuilderTest extends TestCase
             'price_bar' => ['itemPriceId' => 'price_bar', 'quantity' => 1],
             'price_baz' => ['itemPriceId' => 'price_baz', 'quantity' => 2],
         ], $builder->getItems());
+    }
+
+    public function test_create_without_price_throws_exception(): void
+    {
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage('At least one price is required when starting subscriptions.');
+
+        $builder = new SubscriptionBuilder(new User, 'default');
+        $builder->create();
+    }
+
+    public function test_price_must_include_item_price_id(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Each price must include an "itemPriceId" key.');
+
+        new SubscriptionBuilder(new User, 'default', [
+            ['quantity' => 3],
+        ]);
     }
 
     public function test_price(): void
@@ -54,6 +75,15 @@ class SubscriptionBuilderTest extends TestCase
         $this->assertSame([
             'price_123' => ['itemPriceId' => 'price_123', 'quantity' => 5],
         ], $builder->getItems());
+    }
+
+    public function test_quantity_with_no_price_and_multiple_items(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Price is required when creating subscriptions with multiple prices.');
+
+        $builder = new SubscriptionBuilder(new User, 'default', ['price_123', 'price_321']);
+        $builder->quantity(5);
     }
 
     public function test_trial_days(): void
@@ -92,6 +122,11 @@ class SubscriptionBuilderTest extends TestCase
         $builder->anchorBillingCycleOn($date);
 
         $this->assertSame($date, $this->getProtectedProperty($builder, 'billingCycleAnchor'));
+
+        $newDate = new DateTimeImmutable('2025-03-15 12:00:00');
+        $builder->anchorBillingCycleOn($newDate);
+
+        $this->assertSame($newDate->getTimestamp(), $this->getProtectedProperty($builder, 'billingCycleAnchor'));
     }
 
     public function test_with_metadata(): void

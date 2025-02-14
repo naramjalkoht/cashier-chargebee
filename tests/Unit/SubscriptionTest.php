@@ -3,6 +3,7 @@
 namespace Laravel\CashierChargebee\Tests\Unit;
 
 use Carbon\Carbon;
+use DateTimeImmutable;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use InvalidArgumentException;
 use Laravel\CashierChargebee\Subscription;
@@ -281,5 +282,10 @@ class SubscriptionTest extends FeatureTestCase
         $subscription = Subscription::factory()->create()->anchorBillingCycleOn($billingCycleAnchor);
 
         $this->assertSame($billingCycleAnchor, $this->getProtectedProperty($subscription, 'billingCycleAnchor'));
+
+        $newDate = new DateTimeImmutable('2025-03-15 12:00:00');
+        $subscription->anchorBillingCycleOn($newDate);
+
+        $this->assertSame($newDate->getTimestamp(), $this->getProtectedProperty($subscription, 'billingCycleAnchor'));
     }
 }

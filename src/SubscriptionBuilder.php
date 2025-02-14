@@ -100,11 +100,11 @@ class SubscriptionBuilder
             $options['quantity'] = $quantity;
         }
 
-        if (isset($options['itemPriceId'])) {
-            $this->items[$options['itemPriceId']] = $options;
-        } else {
-            $this->items[] = $options;
+        if (! isset($options['itemPriceId'])) {
+            throw new \InvalidArgumentException('Each price must include an "itemPriceId" key.');
         }
+
+        $this->items[$options['itemPriceId']] = $options;
 
         return $this;
     }
@@ -220,8 +220,6 @@ class SubscriptionBuilder
 
     /**
      * Create the Eloquent Subscription.
-     * 
-     * @todo Consult chargebee_id on item
      */
     protected function createSubscription(ChargebeeSubscription $chargebeeSubscription): Subscription
     {
@@ -243,9 +241,8 @@ class SubscriptionBuilder
         ]);
 
         foreach ($chargebeeSubscription->subscriptionItems as $item) {
-            $price = ItemPrice::retrieve($item->itemPriceId)->itemPrice();
             $subscription->items()->create([
-                'chargebee_product' => $price->itemId,
+                'chargebee_product' => ItemPrice::retrieve($item->itemPriceId)->itemPrice()->itemId,
                 'chargebee_price' => $item->itemPriceId,
                 'quantity' => $item->quantity ?? null,
             ]);

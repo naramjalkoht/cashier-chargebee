@@ -55,10 +55,8 @@ class Subscription extends Model
 
     /**
      * The date on which the billing cycle should be anchored.
-     *
-     * @var string|null
      */
-    protected $billingCycleAnchor = null;
+    protected ?int $billingCycleAnchor = null;
 
     /**
      * Get the user that owns the subscription.
@@ -117,13 +115,9 @@ class Subscription extends Model
      */
     public function hasPrice(string $price): bool
     {
-        if ($this->hasMultiplePrices()) {
-            return $this->items->contains(function (SubscriptionItem $item) use ($price) {
-                return $item->chargebee_price === $price;
-            });
-        }
-
-        return $this->chargebee_price === $price;
+        return $this->hasMultiplePrices()
+            ? $this->items->containsStrict('chargebee_price', $price)
+            : $this->chargebee_price === $price;
     }
 
     /**
@@ -134,6 +128,21 @@ class Subscription extends Model
     public function findItemOrFail(string $price): SubscriptionItem
     {
         return $this->items()->where('chargebee_price', $price)->firstOrFail();
+    }
+
+    /**
+     * Retrieve the subscription item by price or ensure there is only one item before returning it.
+     *
+     * @throws \InvalidArgumentException If the subscription has multiple items and no price is specified.
+     */
+    protected function findItemWithValidation(?string $price): SubscriptionItem
+    {
+        if ($price) {
+            return $this->findItemOrFail($price);
+        }
+
+        $this->guardAgainstMultiplePrices();
+        return $this->items()->first();
     }
 
     /**
@@ -307,19 +316,14 @@ class Subscription extends Model
      */
     public function incrementQuantity(int $count = 1, ?string $price = null, bool $invoiceImmediately = false): static
     {
-        // Find the SubscriptionItem by price or get the only one if no price is specified
-        if ($price) {
-            $subscriptionItem = $this->findItemOrFail($price);
-        } else {
-            $this->guardAgainstMultiplePrices();
-            $subscriptionItem = $this->items()->first();
-        }
+        $subscriptionItem = $this->findItemWithValidation($price);
 
         return $this->updateQuantity($subscriptionItem->quantity + $count, $price, $invoiceImmediately);
     }
 
     /**
      *  Increment the quantity of the subscription, and invoice immediately.
+     * 
      * @throws \InvalidArgumentException
      */
     public function incrementAndInvoice(int $count = 1, ?string $price = null): static
@@ -334,13 +338,7 @@ class Subscription extends Model
      */
     public function decrementQuantity(int $count = 1, ?string $price = null): static
     {
-        // Find the SubscriptionItem by price or get the only one if no price is specified
-        if ($price) {
-            $subscriptionItem = $this->findItemOrFail($price);
-        } else {
-            $this->guardAgainstMultiplePrices();
-            $subscriptionItem = $this->items()->first();
-        }
+        $subscriptionItem = $this->findItemWithValidation($price);
 
         return $this->updateQuantity(max(1, $subscriptionItem->quantity - $count), $price);
     }
@@ -352,13 +350,7 @@ class Subscription extends Model
      */
     public function updateQuantity(int $quantity, ?string $price = null, bool $invoiceImmediately = false): static
     {
-        // Find the SubscriptionItem by price or get the only one if no price is specified
-        if ($price) {
-            $subscriptionItem = $this->findItemOrFail($price);
-        } else {
-            $this->guardAgainstMultiplePrices();
-            $subscriptionItem = $this->items()->first();
-        }
+        $subscriptionItem = $this->findItemWithValidation($price);
 
         // Retrieve subscription items from Chargebee and update the quantity of the specified item
         $chargebeeSubscription = $this->asChargebeeSubscription();
@@ -504,6 +496,11 @@ class Subscription extends Model
             throw new InvalidArgumentException("Extending a subscription's trial requires a date in the future.");
         }
 
+        $chargebeeSubscription = $this->asChargebeeSubscription();
+        if (! in_array($chargebeeSubscription->status, ['future', 'in_trial', 'cancelled'])) {
+            throw new SubscriptionUpdateFailure("Cannot extend trial for a subscription with status '{$chargebeeSubscription->status}'.");
+        }
+
         $updateData = ['trialEnd' => $date->getTimestamp()];
 
         if (! is_null($this->prorateBehavior())) {
@@ -513,7 +510,6 @@ class Subscription extends Model
         $this->updateChargebeeSubscription($updateData);
 
         $this->trial_ends_at = $date;
-
         $this->save();
 
         return $this;
@@ -530,10 +526,21 @@ class Subscription extends Model
             throw new InvalidArgumentException('Please provide at least one price when swapping.');
         }
 
-        $items = $this->parseSwapPrices($prices);
+        $chargebeeSubscription = $this->updateChargebeeSubscription(
+            $this->getSwapOptions($this->parseSwapPrices($prices), $options)
+        );
 
-        $chargebeeSubscription = $this->updateChargebeeSubscription($this->getSwapOptions($items, $options));
+        $this->refreshSubscriptionAttributes($chargebeeSubscription);
+        $this->refreshSubscriptionItems($chargebeeSubscription);
 
+        return $this;
+    }
+
+    /**
+     * Updates the subscription model attributes using data from Chargebee.
+     */
+    public function refreshSubscriptionAttributes(ChargebeeSubscription $chargebeeSubscription): void
+    {
         $firstItem = $chargebeeSubscription->subscriptionItems[0];
         $isSinglePrice = count($chargebeeSubscription->subscriptionItems) === 1;
 
@@ -541,27 +548,29 @@ class Subscription extends Model
             'chargebee_status' => $chargebeeSubscription->status,
             'chargebee_price' => $isSinglePrice ? $firstItem->itemPriceId : null,
             'quantity' => $isSinglePrice ? ($firstItem->quantity ?? null) : null,
-            'ends_at' => null,
         ])->save();
+    }
 
+    /**
+     * Updates subscription items using data from Chargebee.
+     */
+    public function refreshSubscriptionItems(ChargebeeSubscription $chargebeeSubscription): void
+    {
         $subscriptionItemPriceIds = [];
+
         foreach ($chargebeeSubscription->subscriptionItems as $item) {
             $subscriptionItemPriceIds[] = $item->itemPriceId;
-            $priceDetails = ItemPrice::retrieve($item->itemPriceId)->itemPrice();
-
-            $this->items()->updateOrCreate([
-                'chargebee_price' => $item->itemPriceId,
-            ], [
-                'chargebee_product' => $priceDetails->itemId,
-                'quantity' => $item->quantity ?? null,
-            ]);
+            $this->items()->updateOrCreate(
+                ['chargebee_price' => $item->itemPriceId],
+                [
+                    'chargebee_product' => ItemPrice::retrieve($item->itemPriceId)->itemPrice()->itemId, 
+                    'quantity' => $item->quantity ?? null
+                ]
+            );
         }
 
         $this->items()->whereNotIn('chargebee_price', $subscriptionItemPriceIds)->delete();
-
         $this->unsetRelation('items');
-
-        return $this;
     }
 
     /**
@@ -608,11 +617,8 @@ class Subscription extends Model
             'replaceItemsList' => true,
             'couponIds' => $this->couponIds,
             'trialEnd' => $this->trialExpires ? $this->trialExpires->getTimestamp() : 0,
-        ]);
-
-        if (! is_null($this->prorateBehavior())) {
-            $payload['prorate'] = $this->prorateBehavior();
-        }
+            'prorate' => $this->prorateBehavior(),
+        ], fn($value) => !is_null($value));
 
         $payload = array_merge($payload, $options);
 
@@ -643,25 +649,14 @@ class Subscription extends Model
             'prorate' => $this->prorateBehavior(),
         ], $options)), fn($value) => !is_null($value));
 
-        $priceDetails = ItemPrice::retrieve($price)->itemPrice();
         $this->items()->create([
-            'chargebee_product' => $priceDetails->itemId,
+            'chargebee_product' => ItemPrice::retrieve($price)->itemPrice()->itemId,
             'chargebee_price' => $price,
             'quantity' => $quantity,
         ]);
-
         $this->unsetRelation('items');
 
-        if ($this->hasSinglePrice()) {
-            $this->fill([
-                'chargebee_price' => null,
-                'quantity' => null,
-            ]);
-        }
-
-        $this->fill([
-            'chargebee_status' => $chargebeeSubscription->status,
-        ])->save();
+        $this->refreshSubscriptionAttributes($chargebeeSubscription);
 
         return $this;
     }
@@ -695,6 +690,8 @@ class Subscription extends Model
      */
     public function addMeteredPriceAndInvoice(string $price, array $options = []): self
     {
+        $options['invoiceImmediately'] = true;
+
         return $this->addPriceAndInvoice($price, null, $options);
     }
 
@@ -711,7 +708,6 @@ class Subscription extends Model
 
         $chargebeeSubscription = $this->asChargebeeSubscription();
 
-
         $subscriptionItems = array_filter($chargebeeSubscription->subscriptionItems, function ($item) use ($price) {
             return $item->itemPriceId !== $price;
         });
@@ -727,20 +723,12 @@ class Subscription extends Model
             $updateData['prorate'] = $this->prorateBehavior();
         }
 
-        $this->updateChargebeeSubscription($updateData);
+        $updatedChargebeeSubscription = $this->updateChargebeeSubscription($updateData);
 
         $this->items()->where('chargebee_price', $price)->delete();
-
         $this->unsetRelation('items');
 
-        if ($this->items()->count() === 1) {
-            $item = $this->items()->first();
-
-            $this->fill([
-                'chargebee_price' => $item->chargebee_price,
-                'quantity' => $item->quantity,
-            ])->save();
-        }
+        $this->refreshSubscriptionAttributes($updatedChargebeeSubscription);
 
         return $this;
     }
@@ -788,7 +776,6 @@ class Subscription extends Model
         ])->subscription();
 
         $this->chargebee_status = $chargebeeSubscription->status;
-
         $this->ends_at = Carbon::createFromTimestamp($chargebeeSubscription->cancelledAt);
 
         $this->save();
@@ -851,7 +838,7 @@ class Subscription extends Model
         }
 
         $chargebeeSubscription = ChargebeeSubscription::resume($this->chargebee_id, [
-            "resumeOption" => "immediately",
+            'resumeOption' => 'immediately',
         ])->subscription();
 
         $this->fill([
@@ -866,12 +853,8 @@ class Subscription extends Model
      */
     public function applyCoupon(string|array $coupons): void
     {
-        if (! is_array($coupons)) {
-            $coupons = array($coupons);
-        }
-
         $this->updateChargebeeSubscription([
-            'couponIds' => $coupons,
+            'couponIds' => is_array($coupons) ? $coupons : array($coupons),
         ]);
     }
 
@@ -916,7 +899,7 @@ class Subscription extends Model
 
         $subscriptionItems = array_map(function ($item) use ($price, $itemOptions) {
             if ($item->itemPriceId === $price) {
-                return array_merge($item->getValues(), $itemOptions);
+                return $itemOptions;
             }
             return $item->getValues();
         }, $chargebeeSubscription->subscriptionItems);
