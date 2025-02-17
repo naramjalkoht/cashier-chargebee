@@ -101,9 +101,10 @@ class ManagesSubscriptionsTest extends FeatureTestCase
     public function test_customer_subscribed_to_product(): void
     {
         $user = User::factory()->create();
-        Subscription::factory()->create(['user_id' => $user->id]);
-
-        $this->assertFalse($user->subscribedToProduct('product_123'));
+        $subscription = Subscription::factory()->create(['user_id' => $user->id]);
+        SubscriptionItem::factory()->create(['subscription_id' => $subscription->id, 'chargebee_product' => 'product_123']);
+        
+        $this->assertTrue($user->subscribedToProduct('product_123'));
     }
 
     public function test_customer_not_subscribed_to_product(): void

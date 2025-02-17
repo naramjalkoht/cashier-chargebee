@@ -256,7 +256,6 @@ class InvoiceTest extends TestCase
         $user->chargebee_id = 'foo';
 
         $invoice = new Invoice($user, $chargebeeInvoice);
-
         $this->assertTrue($invoice->hasDiscount());
         $this->assertNotNull($invoice->discounts());
         $this->assertSame('$1.50', $invoice->discount());

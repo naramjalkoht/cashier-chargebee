@@ -5,15 +5,21 @@ namespace Laravel\CashierChargebee\Tests\Feature;
 use Carbon\Carbon;
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\Coupon;
+use ChargeBee\ChargeBee\Models\Invoice;
 use ChargeBee\ChargeBee\Models\Item;
 use ChargeBee\ChargeBee\Models\ItemFamily;
 use ChargeBee\ChargeBee\Models\ItemPrice;
 use ChargeBee\ChargeBee\Models\PaymentSource;
 use ChargeBee\ChargeBee\Models\Subscription as ChargebeeSubscription;
+use ChargeBee\ChargeBee\Models\UnbilledCharge;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Laravel\CashierChargebee\Exceptions\SubscriptionUpdateFailure;
+use Laravel\CashierChargebee\Subscription;
+use Laravel\CashierChargebee\SubscriptionBuilder;
 
 class SubscriptionTest extends FeatureTestCase
 {
@@ -35,6 +41,11 @@ class SubscriptionTest extends FeatureTestCase
     /**
      * @var string
      */
+    protected static $thirdItemId;
+
+    /**
+     * @var string
+     */
     protected static $firstMeteredItemId;
 
     /**
@@ -51,6 +62,11 @@ class SubscriptionTest extends FeatureTestCase
      * @var string
      */
     protected static $secondPriceId;
+
+    /**
+     * @var string
+     */
+    protected static $thirdPriceId;
 
     /**
      * @var string
@@ -114,6 +130,25 @@ class SubscriptionTest extends FeatureTestCase
             'currencyCode' => 'EUR',
         ))->itemPrice()->id;
 
+        static::$thirdItemId = Item::create(array(
+            'id' => Str::random(40),
+            'name' => Str::random(40),
+            'type' => 'plan',
+            'itemFamilyId' => static::$itemFamilyId,
+        ))->item()->id;
+
+        static::$thirdPriceId = ItemPrice::create(array(
+            'id' => Str::random(40),
+            'itemId' => static::$thirdItemId,
+            'name' => Str::random(40),
+            'pricingModel' => 'per_unit',
+            'price' => 3000,
+            'externalName' => 'Test ItemPrice 3',
+            'periodUnit' => 'month',
+            'period' => 1,
+            'currencyCode' => 'EUR',
+        ))->itemPrice()->id;
+
         static::$firstMeteredItemId = Item::create(array(
             'id' => Str::random(40),
             'name' => Str::random(40),
@@ -172,7 +207,7 @@ class SubscriptionTest extends FeatureTestCase
 
     public function test_subscription_can_be_created_and_status_synced(): void
     {
-        $user = $this->createCustomer('subscription_can_be_created');
+        $user = $this->createCustomer('test_subscription_can_be_created');
         $user->createAsChargebeeCustomer();
         $paymentSource = $this->createCard($user);
 
@@ -194,8 +229,7 @@ class SubscriptionTest extends FeatureTestCase
     {
         $user = $this->createCustomer('subscriptions_can_be_updated');
 
-        $subscription = $user->newSubscription('main', static::$firstPriceId)
-            ->add();
+        $subscription = $user->newSubscription('main', static::$firstPriceId)->add();
 
         $updateOptions = [
             'subscriptionItems' => [
@@ -216,7 +250,7 @@ class SubscriptionTest extends FeatureTestCase
 
     public function test_subscription_can_be_cancelled_at_the_end_of_the_billing_period(): void
     {
-        $user = $this->createCustomer('subscription_can_be_cancelled');
+        $user = $this->createCustomer('test_subscription_can_be_cancelled');
         $user->createAsChargebeeCustomer();
         $paymentSource = $this->createCard($user);
 
@@ -235,7 +269,7 @@ class SubscriptionTest extends FeatureTestCase
 
     public function test_subscription_can_be_cancelled_at_specific_date(): void
     {
-        $user = $this->createCustomer('subscription_can_be_cancelled');
+        $user = $this->createCustomer('test_subscription_can_be_cancelled');
         $user->createAsChargebeeCustomer();
         $paymentSource = $this->createCard($user);
 
@@ -254,7 +288,7 @@ class SubscriptionTest extends FeatureTestCase
 
     public function test_subscription_can_be_cancelled_now(): void
     {
-        $user = $this->createCustomer('subscription_can_be_cancelled');
+        $user = $this->createCustomer('test_subscription_can_be_cancelled');
         $user->createAsChargebeeCustomer();
         $paymentSource = $this->createCard($user);
 
@@ -274,7 +308,7 @@ class SubscriptionTest extends FeatureTestCase
 
     public function test_subscription_can_be_cancelled_now_and_invoiced(): void
     {
-        $user = $this->createCustomer('subscription_can_be_cancelled');
+        $user = $this->createCustomer('test_subscription_can_be_cancelled');
         $user->createAsChargebeeCustomer();
         $paymentSource = $this->createCard($user);
 
@@ -294,7 +328,7 @@ class SubscriptionTest extends FeatureTestCase
 
     public function test_subscription_can_be_resumed(): void
     {
-        $user = $this->createCustomer('subscription_can_be_resumed');
+        $user = $this->createCustomer('test_subscription_can_be_resumed');
         $user->createAsChargebeeCustomer();
         $paymentSource = $this->createCard($user);
 
@@ -348,6 +382,26 @@ class SubscriptionTest extends FeatureTestCase
         $this->assertSame('in_trial', $subscription->asChargebeeSubscription()->status);
         $this->assertTrue($trialEndsAt->equalTo($subscription->trial_ends_at));
         $this->assertEquals($subscription->asChargebeeSubscription()->trialEnd, $trialEndsAt->getTimestamp());
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Extending a subscription's trial requires a date in the future.");
+
+        $subscription->extendTrial($trialEndsAt = now()->subDays(8)->floor());
+    }
+
+    public function test_cannot_extend_trial_for_active_subscription(): void
+    {
+        $user = $this->createCustomer('test_cannot_extend_trial_for_active_subscription');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->create($paymentSource);
+
+        $this->expectException(SubscriptionUpdateFailure::class);
+        $this->expectExceptionMessage("Cannot extend trial for a subscription with status 'active'.");
+
+        $subscription->extendTrial(now()->addDays(7));
     }
 
     public function test_trial_can_be_ended(): void
@@ -368,9 +422,21 @@ class SubscriptionTest extends FeatureTestCase
         $this->assertSame('active', $subscription->asChargebeeSubscription()->status);
     }
 
+    public function test_end_trial_does_nothing_if_not_on_trial(): void
+    {
+        $subscription = Subscription::factory()->create();
+
+        $this->assertNull($subscription->trial_ends_at);
+
+        $returnedSubscription = $subscription->endTrial();
+
+        $this->assertSame($subscription, $returnedSubscription);
+        $this->assertNull($subscription->trial_ends_at);
+    }
+
     public function test_price_can_be_added_and_removed(): void
     {
-        $user = $this->createCustomer('price_can_be_added_and_removed');
+        $user = $this->createCustomer('test_price_can_be_added_and_removed');
         $user->createAsChargebeeCustomer();
         $paymentSource = $this->createCard($user);
 
@@ -394,6 +460,16 @@ class SubscriptionTest extends FeatureTestCase
         $this->assertNotNull($secondPriceItem);
         $this->assertEquals(1, $secondPriceItem->quantity);
 
+        // Test adding the same price second time (should throw an exception)
+        try {
+            $subscription->addPrice(static::$secondPriceId);
+        } catch (Exception $e) {
+            $this->assertInstanceOf(SubscriptionUpdateFailure::class, $e);
+            $this->assertSame(
+                "The price \"$secondPriceItem->itemPriceId\" is already attached to subscription \"{$subscription->chargebee_id}\".", $e->getMessage()
+            );
+        }
+
         // Test removing price
         $subscription->removePrice(static::$secondPriceId);
         $chargebeeSubscription = $subscription->asChargebeeSubscription();
@@ -403,6 +479,16 @@ class SubscriptionTest extends FeatureTestCase
 
         $this->assertCount(1, $chargebeeSubscription->subscriptionItems);
         $this->assertEquals(static::$firstPriceId, $chargebeeSubscription->subscriptionItems[0]->itemPriceId);
+
+        // Test removing last price (should throw an exception)
+        try {
+            $subscription->removePrice(static::$firstPriceId);
+        } catch (Exception $e) {
+            $this->assertInstanceOf(SubscriptionUpdateFailure::class, $e);
+            $this->assertSame(
+                "The price on subscription \"{$subscription->chargebee_id}\" cannot be removed because it is the last one.", $e->getMessage()
+            );
+        }
     }
 
     public function test_metered_price_can_be_added_and_removed(): void
@@ -475,6 +561,16 @@ class SubscriptionTest extends FeatureTestCase
         } catch (Exception $e) {
             $this->assertInstanceOf(InvalidRequestException::class, $e);
         }
+
+        try {
+            $subscription->usageRecords();
+        } catch (Exception $e) {
+            $this->assertInstanceOf(InvalidArgumentException::class, $e);
+
+            $this->assertSame(
+                'This method requires a price argument since the subscription has multiple prices.', $e->getMessage()
+            );
+        }
     }
 
     public function test_coupon_can_be_applied(): void
@@ -493,6 +589,381 @@ class SubscriptionTest extends FeatureTestCase
 
         $this->assertCount(1, $coupons);
         $this->assertEquals(static::$couponId, $coupons[0]->couponId);
+    }
+
+    public function test_item_quantity_can_be_updated_from_subscription(): void
+    {
+        $user = $this->createCustomer('test_item_quantity_can_be_updated');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main')
+            ->price(static::$firstPriceId, 2)
+            ->create($paymentSource);
+
+        // Initial quantity = 2
+        $this->assertCount(1, $subscription->items);
+        $this->assertEquals(2, $subscription->items->first()->quantity);
+        $this->assertEquals(2, $subscription->quantity);
+
+        // Decrement quantity by 1
+        $subscription->decrementQuantity(1);
+        $subscription->refresh();
+
+        $this->assertEquals(1, $subscription->items->first()->quantity);
+        $this->assertEquals(1, $subscription->quantity); 
+
+        $chargebeeSubscription = $subscription->asChargebeeSubscription();
+        $chargebeeItem = collect($chargebeeSubscription->subscriptionItems)->firstWhere('itemPriceId', static::$firstPriceId);
+        $this->assertEquals(1, $chargebeeItem->quantity);
+
+        // Add second price and increment its quantity by 2
+        $subscription->addPrice(static::$secondPriceId);
+        $subscription->incrementAndInvoice(2, static::$secondPriceId);
+        $subscription->refresh();
+
+        $this->assertCount(2, $subscription->items);
+
+        $firstItem = $subscription->items->firstWhere('chargebee_price', static::$firstPriceId);
+        $secondItem = $subscription->items->firstWhere('chargebee_price', static::$secondPriceId);
+
+        $this->assertEquals(1, $firstItem->quantity);
+        $this->assertEquals(3, $secondItem->quantity);
+        $this->assertNull($subscription->quantity);
+
+        $chargebeeSubscription = $subscription->asChargebeeSubscription();
+        $chargebeeFirstItem = collect($chargebeeSubscription->subscriptionItems)->firstWhere('itemPriceId', static::$firstPriceId);
+        $chargebeeSecondItem = collect($chargebeeSubscription->subscriptionItems)->firstWhere('itemPriceId', static::$secondPriceId);
+
+        $this->assertEquals(1, $chargebeeFirstItem->quantity);
+        $this->assertEquals(3, $chargebeeSecondItem->quantity);
+
+        // Now that there are two prices we can't use updateQuantity without $price parameter
+        $this->expectException(InvalidArgumentException::class);
+        $subscription->updateQuantity(1);
+    }
+
+    public function test_item_quantity_can_be_updated_from_subscription_item(): void
+    {
+        $user = $this->createCustomer('test_item_quantity_can_be_updated');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main')
+            ->price(static::$firstPriceId, 2)
+            ->create($paymentSource);
+
+        $firstItem = $subscription->items->first();
+
+        // Initial quantity = 2
+        $this->assertCount(1, $subscription->items);
+        $this->assertEquals(2, $firstItem->quantity);
+        $this->assertEquals(2, $subscription->quantity);
+
+        // Decrement quantity by 1
+        $firstItem->decrementQuantity(1);
+        $subscription->refresh();
+        $firstItem->refresh();
+
+        $this->assertEquals(1, $firstItem->quantity);
+        $this->assertEquals(1, $subscription->quantity);
+
+        $chargebeeSubscription = $subscription->asChargebeeSubscription();
+        $chargebeeItem = collect($chargebeeSubscription->subscriptionItems)->firstWhere('itemPriceId', static::$firstPriceId);
+        $this->assertEquals(1, $chargebeeItem->quantity);
+
+        // Add second price and increment its quantity by 2
+        $subscription->addPrice(static::$secondPriceId);
+
+        $secondItem = $subscription->items->firstWhere('chargebee_price', static::$secondPriceId);
+        $secondItem->incrementAndInvoice(2);
+        $subscription->refresh();
+        $secondItem->refresh();
+
+        $this->assertCount(2, $subscription->items);
+
+        $this->assertEquals(1, $firstItem->quantity);
+        $this->assertEquals(3, $secondItem->quantity);
+        $this->assertNull($subscription->quantity);
+
+        $chargebeeSubscription = $subscription->asChargebeeSubscription();
+        $chargebeeFirstItem = collect($chargebeeSubscription->subscriptionItems)->firstWhere('itemPriceId', static::$firstPriceId);
+        $chargebeeSecondItem = collect($chargebeeSubscription->subscriptionItems)->firstWhere('itemPriceId', static::$secondPriceId);
+
+        $this->assertEquals(1, $chargebeeFirstItem->quantity);
+        $this->assertEquals(3, $chargebeeSecondItem->quantity);
+    }
+
+    public function test_swapping_subscription_and_preserving_quantity()
+    {
+        $user = $this->createCustomer('test_swapping_subscription');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->quantity(5, static::$firstPriceId)
+            ->create($paymentSource);
+
+        $subscription = $subscription->swapAndInvoice(static::$thirdPriceId);
+
+        $this->assertCount(1, $subscription->items);
+        $this->assertEquals(static::$thirdPriceId, $subscription->chargebee_price);
+        $this->assertEquals(5, $subscription->quantity);
+
+        $item = $subscription->items->first();
+
+        $this->assertEquals(static::$thirdPriceId, $item->chargebee_price);
+        $this->assertEquals(5, $item->quantity);
+
+        $chargebeeItem = $subscription->items->first()->asChargebeeSubscriptionItem();
+
+        $this->assertEquals(static::$thirdPriceId, $chargebeeItem->itemPriceId);
+        $this->assertEquals(5, $chargebeeItem->quantity);
+    }
+
+    public function test_swapping_subscription_and_adopting_new_quantity()
+    {
+        $user = $this->createCustomer('test_swapping_subscription');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->quantity(5, static::$firstPriceId)
+            ->create($paymentSource);
+
+        $subscription = $subscription->swap([static::$thirdPriceId => ['quantity' => 3]]);
+
+        $this->assertCount(1, $subscription->items);
+        $this->assertEquals(static::$thirdPriceId, $subscription->chargebee_price);
+        $this->assertEquals(3, $subscription->quantity);
+
+        $item = $subscription->items->first();
+
+        $this->assertEquals(static::$thirdPriceId, $item->chargebee_price);
+        $this->assertEquals(3, $item->quantity);
+
+        $chargebeeItem = $subscription->items->first()->asChargebeeSubscriptionItem();
+
+        $this->assertEquals(static::$thirdPriceId, $chargebeeItem->itemPriceId);
+        $this->assertEquals(3, $chargebeeItem->quantity);
+    }
+
+    public function test_swapping_subscription_item_and_preserving_quantity()
+    {
+        $user = $this->createCustomer('test_swapping_subscription_item');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->quantity(5, static::$firstPriceId)
+            ->create($paymentSource);
+
+        $item = $subscription->items->first()->swap(static::$thirdPriceId);
+        $subscription->refresh();
+
+        $this->assertCount(1, $subscription->items);
+        $this->assertEquals(static::$thirdPriceId, $subscription->chargebee_price);
+        $this->assertEquals(5, $subscription->quantity);
+        $this->assertEquals(static::$thirdPriceId, $item->chargebee_price);
+        $this->assertEquals(5, $item->quantity);
+
+        $chargebeeItem = $subscription->items->first()->asChargebeeSubscriptionItem();
+
+        $this->assertEquals(static::$thirdPriceId, $chargebeeItem->itemPriceId);
+        $this->assertEquals(5, $chargebeeItem->quantity);
+    }
+
+    public function test_swapping_subscription_item_and_adopting_new_quantity()
+    {
+        $user = $this->createCustomer('test_swapping_subscription_item');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->quantity(5, static::$firstPriceId)
+            ->create($paymentSource);
+
+        $item = $subscription->items->first()->swap(static::$thirdPriceId, ['quantity' => 3]);
+        $subscription->refresh();
+
+        $this->assertCount(1, $subscription->items);
+        $this->assertEquals(static::$thirdPriceId, $subscription->chargebee_price);
+        $this->assertEquals(3, $subscription->quantity);
+        $this->assertEquals(static::$thirdPriceId, $item->chargebee_price);
+        $this->assertEquals(3, $item->quantity);
+
+        $chargebeeItem = $subscription->items->first()->asChargebeeSubscriptionItem();
+
+        $this->assertEquals(static::$thirdPriceId, $chargebeeItem->itemPriceId);
+        $this->assertEquals(3, $chargebeeItem->quantity);
+    }
+
+    public function test_swap_on_item_with_prorate(): void
+    {
+        $user = $this->createCustomer('test_swap_on_item_with_prorate');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->create($paymentSource);
+
+        $subscription->items->first()->prorate()->swapAndInvoice(static::$thirdPriceId);
+
+        $result = Invoice::all([
+            'subscriptionId[is]' => $subscription->chargebee_id,
+            'limit' => 1,
+            'sortBy[desc]' => 'date',
+        ]);
+
+        $latestInvoice = $result[0]->invoice();
+
+        $this->assertNotNull($latestInvoice);
+        $this->assertGreaterThan(0, count($latestInvoice->lineItems));
+
+        $hasProratedCharge = collect($latestInvoice->lineItems)->contains(function ($item) {
+            return str_contains(strtolower($item->description), 'prorated');
+        });
+
+        $this->assertTrue($hasProratedCharge);
+    }
+
+    public function test_swap_on_item_with_no_prorate(): void
+    {
+        $user = $this->createCustomer('test_swap_on_item_with_no_prorate');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->create($paymentSource);
+
+        $initialInvoiceCount = count(Invoice::all(['subscriptionId[is]' => $subscription->chargebee_id]));
+        $initialUnbilledCount = count(UnbilledCharge::all(['subscriptionId[is]' => $subscription->chargebee_id]));
+
+        $subscription->items->first()->noProrate()->swap(static::$thirdPriceId);
+
+        $finalInvoiceCount = count(Invoice::all(['subscriptionId[is]' => $subscription->chargebee_id]));
+        $finalUnbilledCount = count(UnbilledCharge::all(['subscriptionId[is]' => $subscription->chargebee_id]));
+
+        $this->assertEquals($initialInvoiceCount, $finalInvoiceCount);
+        $this->assertEquals($initialUnbilledCount, $finalUnbilledCount);
+    }
+
+    public function test_increment_quantity_with_prorate(): void
+    {
+        $user = $this->createCustomer('test_increment_quantity_with_prorate');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->create($paymentSource);
+
+        $subscription->prorate()->incrementAndInvoice(4, static::$firstPriceId);
+
+        $result = Invoice::all([
+            'subscriptionId[is]' => $subscription->chargebee_id,
+            'limit' => 1,
+            'sortBy[desc]' => 'date',
+        ]);
+
+        $latestInvoice = $result[0]->invoice();
+
+        $this->assertNotNull($latestInvoice);
+        $this->assertGreaterThan(0, count($latestInvoice->lineItems));
+
+        $hasProratedCharge = collect($latestInvoice->lineItems)->contains(function ($item) {
+            return str_contains(strtolower($item->description), 'prorated');
+        });
+
+        $this->assertTrue($hasProratedCharge);
+    }
+
+    public function test_increment_quantity_with_no_prorate(): void
+    {
+        $user = $this->createCustomer('test_increment_quantity_with_no_prorate');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->create($paymentSource);
+
+        $initialInvoiceCount = count(Invoice::all(['subscriptionId[is]' => $subscription->chargebee_id]));
+        $initialUnbilledCount = count(UnbilledCharge::all(['subscriptionId[is]' => $subscription->chargebee_id]));
+
+        $subscription->noProrate()->updateQuantity(5, static::$firstPriceId);
+
+        $finalInvoiceCount = count(Invoice::all(['subscriptionId[is]' => $subscription->chargebee_id]));
+        $finalUnbilledCount = count(UnbilledCharge::all(['subscriptionId[is]' => $subscription->chargebee_id]));
+
+        $this->assertEquals($initialInvoiceCount, $finalInvoiceCount);
+        $this->assertEquals($initialUnbilledCount, $finalUnbilledCount);
+    }
+
+    public function test_as_chargebee_subscription_item_throws_exception_when_not_found(): void
+    {
+        $user = $this->createCustomer('test_as_chargebee_subscription_item');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->create($paymentSource);
+
+        $subscription->items()->create([
+            'chargebee_product' => 'fake_product',
+            'chargebee_price' => static::$secondPriceId,
+            'quantity' => 1,
+        ]);
+
+        $this->expectException(ModelNotFoundException::class);
+        $this->expectExceptionMessage("Subscription item with price '" . static::$secondPriceId . "' not found in Chargebee.");
+
+        $subscription->findItemOrFail(static::$secondPriceId)->asChargebeeSubscriptionItem();
+    }
+
+    public function test_existing_subscription_is_returned_without_creating_new(): void
+    {
+        $user = $this->createCustomer('test_existing_subscription');
+
+        $existingSubscription = $user->subscriptions()->create([
+            'type' => 'main',
+            'chargebee_id' => 'test_chargebee_id_123',
+            'chargebee_status' => 'active',
+        ]);
+        
+        $mockChargebeeSubscription = new ChargebeeSubscription([
+            'id' => 'test_chargebee_id_123',
+            'status' => 'active',
+        ]);
+
+        $builder = $user->newSubscription('main', static::$firstPriceId);
+
+        $reflectedMethod = new \ReflectionMethod(
+            SubscriptionBuilder::class,
+            'createSubscription'
+        );
+
+        $retrievedSubscription = $reflectedMethod->invokeArgs($builder, [$mockChargebeeSubscription]);
+
+        $this->assertSame($existingSubscription->id, $retrievedSubscription->id);
+        $this->assertSame($existingSubscription->chargebee_id, $retrievedSubscription->chargebee_id);
+
+        $this->assertEquals(1, $user->subscriptions()->count());
+    }
+
+    public function test_skip_trial_and_swap(): void
+    {
+        $user = $this->createCustomer('test_skip_trial_and_swap');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->trialDays(5)
+            ->create($paymentSource);
+
+        $this->assertTrue($subscription->onTrial());
+
+        $subscription = $subscription->skipTrial()->swapAndInvoice(static::$thirdPriceId);
+
+        $this->assertFalse($subscription->onTrial());
     }
 
     private function createCard(Model $user): ?PaymentSource

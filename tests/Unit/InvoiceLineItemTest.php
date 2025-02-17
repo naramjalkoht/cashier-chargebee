@@ -81,4 +81,26 @@ class InvoiceLineItemTest extends TestCase
         $this->assertNotNull($item->startDate());
         $this->assertNotNull($item->endDate());
     }
+
+    public function test_can_determine_is_subscription()
+    {
+        $chargebeeInvoice = new ChargeBeeInvoice([
+            'customerId' => 'foo',
+            'date' => now()->getTimestamp(),
+            'priceType' => 'tax_exclusive',
+        ]);
+
+        $user = new User();
+        $user->chargebee_id = 'foo';
+
+        $invoice = new Invoice($user, $chargebeeInvoice);
+
+        $chargebeeInvoiceLineItem = new ChargeBeeInvoiceLineItem([
+            'subscriptionId' => 'foo'
+        ]);
+
+        $item = new InvoiceLineItem($invoice, $chargebeeInvoiceLineItem);
+
+        $this->assertTrue($item->isSubscription());
+    }
 }

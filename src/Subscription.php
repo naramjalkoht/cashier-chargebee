@@ -54,10 +54,8 @@ class Subscription extends Model
 
     /**
      * The date on which the billing cycle should be anchored.
-     *
-     * @var string|null
      */
-    protected $billingCycleAnchor = null;
+    protected ?int $billingCycleAnchor = null;
 
     /**
      * Get the user that owns the subscription.
@@ -116,13 +114,9 @@ class Subscription extends Model
      */
     public function hasPrice(string $price): bool
     {
-        if ($this->hasMultiplePrices()) {
-            return $this->items->contains(function (SubscriptionItem $item) use ($price) {
-                return $item->chargebee_price === $price;
-            });
-        }
-
-        return $this->chargebee_price === $price;
+        return $this->hasMultiplePrices()
+            ? $this->items->containsStrict('chargebee_price', $price)
+            : $this->chargebee_price === $price;
     }
 
     /**
@@ -133,6 +127,21 @@ class Subscription extends Model
     public function findItemOrFail(string $price): SubscriptionItem
     {
         return $this->items()->where('chargebee_price', $price)->firstOrFail();
+    }
+
+    /**
+     * Retrieve the subscription item by price or ensure there is only one item before returning it.
+     *
+     * @throws \InvalidArgumentException If the subscription has multiple items and no price is specified.
+     */
+    protected function findItemWithValidation(?string $price): SubscriptionItem
+    {
+        if ($price) {
+            return $this->findItemOrFail($price);
+        }
+
+        $this->guardAgainstMultiplePrices();
+        return $this->items()->first();
     }
 
     /**
@@ -299,99 +308,94 @@ class Subscription extends Model
         return $this->chargebee_status === 'paused';
     }
 
-    // /**
-    //  * Increment the quantity of the subscription.
-    //  *
-    //  * @throws \Laravel\CashierChargebee\Exceptions\SubscriptionUpdateFailure
-    //  */
-    // public function incrementQuantity(int $count = 1, ?string $price = null): static
-    // {
-    //     $this->guardAgainstIncomplete();
+    /**
+     * Increment the quantity of the subscription.
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function incrementQuantity(int $count = 1, ?string $price = null, bool $invoiceImmediately = false): static
+    {
+        $subscriptionItem = $this->findItemWithValidation($price);
 
-    //     if ($price) {
-    //         $this->findItemOrFail($price)
-    //             ->setPaymentBehavior($this->paymentBehavior)
-    //             ->setProrationBehavior($this->prorationBehavior)
-    //             ->incrementQuantity($count);
+        return $this->updateQuantity($subscriptionItem->quantity + $count, $price, $invoiceImmediately);
+    }
 
-    //         return $this->refresh();
-    //     }
+    /**
+     *  Increment the quantity of the subscription, and invoice immediately.
+     * 
+     * @throws \InvalidArgumentException
+     */
+    public function incrementAndInvoice(int $count = 1, ?string $price = null): static
+    {
+        return $this->incrementQuantity($count, $price, true);
+    }
 
-    //     $this->guardAgainstMultiplePrices();
+    /**
+     * Decrement the quantity of the subscription.
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function decrementQuantity(int $count = 1, ?string $price = null): static
+    {
+        $subscriptionItem = $this->findItemWithValidation($price);
 
-    //     return $this->updateQuantity($this->quantity + $count, $price);
-    // }
+        return $this->updateQuantity(max(1, $subscriptionItem->quantity - $count), $price);
+    }
 
-    // /**
-    //  *  Increment the quantity of the subscription, and invoice immediately.
-    //  *
-    //  * @throws \Laravel\CashierChargebee\Exceptions\IncompletePayment
-    //  * @throws \Laravel\CashierChargebee\Exceptions\SubscriptionUpdateFailure
-    //  */
-    // public function incrementAndInvoice(int $count = 1, ?string $price = null): static
-    // {
-    //     $this->guardAgainstIncomplete();
+    /**
+     * Update the quantity of the subscription.
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function updateQuantity(int $quantity, ?string $price = null, bool $invoiceImmediately = false): static
+    {
+        $subscriptionItem = $this->findItemWithValidation($price);
 
-    //     $this->alwaysInvoice();
+        // Retrieve subscription items from Chargebee and update the quantity of the specified item
+        $chargebeeSubscription = $this->asChargebeeSubscription();
 
-    //     return $this->incrementQuantity($count, $price);
-    // }
+        $subscriptionItems = array_map(function ($item) use ($subscriptionItem, $quantity) {
+            if ($item->itemPriceId === $subscriptionItem->chargebee_price) {
+                return array_merge($item->getValues(), ['quantity' => $quantity]);
+            }
+            return $item->getValues();
+        }, $chargebeeSubscription->subscriptionItems);
 
-    // /**
-    //  * Decrement the quantity of the subscription.
-    //  *
-    //  * @throws \Laravel\CashierChargebee\Exceptions\SubscriptionUpdateFailure
-    //  */
-    // public function decrementQuantity(int $count = 1, ?string $price = null): static
-    // {
-    //     $this->guardAgainstIncomplete();
+        // Prepare the data for $this->updateChargebeeSubscription
+        $updateData = [
+            'replaceItemsList' => true,
+            'subscriptionItems' => array_values($subscriptionItems),
+        ];
 
-    //     if ($price) {
-    //         $this->findItemOrFail($price)
-    //             ->setPaymentBehavior($this->paymentBehavior)
-    //             ->setProrationBehavior($this->prorationBehavior)
-    //             ->decrementQuantity($count);
+        if (! is_null($this->prorateBehavior())) {
+            $updateData['prorate'] = $this->prorateBehavior();
+        }
 
-    //         return $this->refresh();
-    //     }
+        if ($invoiceImmediately) {
+            $updateData['invoiceImmediately'] = true;
+        }
 
-    //     $this->guardAgainstMultiplePrices();
+        // Update subscription items in Chargebee
+        $updatedChargebeeSubscription = $this->updateChargebeeSubscription($updateData);
 
-    //     return $this->updateQuantity(max(1, $this->quantity - $count), $price);
-    // }
+        // Update the local Subscription model
+        $this->fill([
+            'chargebee_status' => $updatedChargebeeSubscription->status,
+        ])->save();
 
-    // /**
-    //  * Update the quantity of the subscription.
-    //  *
-    //  * @throws \Laravel\CashierChargebee\Exceptions\SubscriptionUpdateFailure
-    //  */
-    // public function updateQuantity(int $quantity, ?string $price = null): static
-    // {
-    //     if ($price) {
-    //         $this->findItemOrFail($price)
-    //             ->setProrationBehavior($this->prorationBehavior)
-    //             ->updateQuantity($quantity);
+        if ($this->hasSinglePrice()) {
+            $this->fill([
+                'quantity' => $quantity,
+            ])->save();
+        }
 
-    //         return $this->refresh();
-    //     }
+        // Update the local SubscriptionItem model
+        $subscriptionItem->update(['quantity' => $quantity]);
 
-    //     $this->guardAgainstMultiplePrices();
+        $this->refresh();
 
-    //     $chargebeeSubscription = $this->updateChargebeeSubscription([
-    //         'payment_behavior' => $this->paymentBehavior(),
-    //         'proration_behavior' => $this->prorateBehavior(),
-    //         'quantity' => $quantity,
-    //     ]);
-
-    //     $this->fill([
-    //         'chargebee_status' => $chargebeeSubscription->status,
-    //         'quantity' => $chargebeeSubscription->quantity,
-    //     ])->save();
-
-    //     $this->handlePaymentFailure($this);
-
-    //     return $this;
-    // }
+        return $this;
+    }
 
     /**
      * Report usage for a metered product.
@@ -470,9 +474,8 @@ class Subscription extends Model
 
         $updateData = ['trialEnd' => 0];
 
-        $prorateBehavior = $this->prorateBehavior();
-        if (! is_null($prorateBehavior)) {
-            $updateData['prorate'] = $prorateBehavior;
+        if (! is_null($this->prorateBehavior())) {
+            $updateData['prorate'] = $this->prorateBehavior();
         }
 
         $this->updateChargebeeSubscription($updateData);
@@ -492,170 +495,140 @@ class Subscription extends Model
             throw new InvalidArgumentException("Extending a subscription's trial requires a date in the future.");
         }
 
+        $chargebeeSubscription = $this->asChargebeeSubscription();
+        if (! in_array($chargebeeSubscription->status, ['future', 'in_trial', 'cancelled'])) {
+            throw new SubscriptionUpdateFailure("Cannot extend trial for a subscription with status '{$chargebeeSubscription->status}'.");
+        }
+
         $updateData = ['trialEnd' => $date->getTimestamp()];
 
+<<<<<<< HEAD
         $prorateBehavior = $this->prorateBehavior();
         if (! is_null($prorateBehavior)) {
             $updateData['prorate'] = $prorateBehavior;
+=======
+        if (! is_null($this->prorateBehavior())) {
+            $updateData['prorate'] = $this->prorateBehavior();
+>>>>>>> d3fd0ea68d2a1c5017b4f03eeffeadfe54fbaa17
         }
 
         $this->updateChargebeeSubscription($updateData);
 
         $this->trial_ends_at = $date;
-
         $this->save();
 
         return $this;
     }
 
-    // /**
-    //  * Swap the subscription to new Chargebee prices.
-    //  *
-    //  * @throws \Laravel\Cashier\Exceptions\IncompletePayment
-    //  * @throws \Laravel\Cashier\Exceptions\SubscriptionUpdateFailure
-    //  */
-    // public function swap(string|array $prices, array $options = []): self
-    // {
-    //     if (empty($prices = (array) $prices)) {
-    //         throw new InvalidArgumentException('Please provide at least one price when swapping.');
-    //     }
+    /**
+     * Swap the subscription to new Chargebee prices.
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function swap(string|array $prices, array $options = []): self
+    {
+        if (empty($prices = (array) $prices)) {
+            throw new InvalidArgumentException('Please provide at least one price when swapping.');
+        }
 
-    //     $this->guardAgainstIncomplete();
+        $chargebeeSubscription = $this->updateChargebeeSubscription(
+            $this->getSwapOptions($this->parseSwapPrices($prices), $options)
+        );
 
-    //     $items = $this->mergeItemsThatShouldBeDeletedDuringSwap(
-    //         $this->parseSwapPrices($prices)
-    //     );
+        $this->refreshSubscriptionAttributes($chargebeeSubscription);
+        $this->refreshSubscriptionItems($chargebeeSubscription);
 
-    //     $chargebeeSubscription = $this->owner->stripe()->subscriptions->update(
-    //         $this->chargebee_id, $this->getSwapOptions($items, $options)
-    //     );
+        return $this;
+    }
 
-    //     $firstItem = $chargebeeSubscription->items->first();
-    //     $isSinglePrice = $chargebeeSubscription->items->count() === 1;
+    /**
+     * Updates the subscription model attributes using data from Chargebee.
+     */
+    public function refreshSubscriptionAttributes(ChargebeeSubscription $chargebeeSubscription): void
+    {
+        $firstItem = $chargebeeSubscription->subscriptionItems[0];
+        $isSinglePrice = count($chargebeeSubscription->subscriptionItems) === 1;
 
-    //     $this->fill([
-    //         'chargebee_status' => $chargebeeSubscription->status,
-    //         'chargebee_price' => $isSinglePrice ? $firstItem->price->id : null,
-    //         'quantity' => $isSinglePrice ? ($firstItem->quantity ?? null) : null,
-    //         'ends_at' => null,
-    //     ])->save();
+        $this->fill([
+            'chargebee_status' => $chargebeeSubscription->status,
+            'chargebee_price' => $isSinglePrice ? $firstItem->itemPriceId : null,
+            'quantity' => $isSinglePrice ? ($firstItem->quantity ?? null) : null,
+        ])->save();
+    }
 
-    //     $subscriptionItemIds = [];
+    /**
+     * Updates subscription items using data from Chargebee.
+     */
+    public function refreshSubscriptionItems(ChargebeeSubscription $chargebeeSubscription): void
+    {
+        $subscriptionItemPriceIds = [];
 
-    //     foreach ($chargebeeSubscription->items as $item) {
-    //         $subscriptionItemIds[] = $item->id;
+        foreach ($chargebeeSubscription->subscriptionItems as $item) {
+            $subscriptionItemPriceIds[] = $item->itemPriceId;
+            $this->items()->updateOrCreate(
+                ['chargebee_price' => $item->itemPriceId],
+                [
+                    'chargebee_product' => ItemPrice::retrieve($item->itemPriceId)->itemPrice()->itemId, 
+                    'quantity' => $item->quantity ?? null
+                ]
+            );
+        }
 
-    //         $this->items()->updateOrCreate([
-    //             'chargebee_id' => $item->id,
-    //         ], [
-    //             'chargebee_product' => $item->price->product,
-    //             'chargebee_price' => $item->price->id,
-    //             'quantity' => $item->quantity ?? null,
-    //         ]);
-    //     }
+        $this->items()->whereNotIn('chargebee_price', $subscriptionItemPriceIds)->delete();
+        $this->unsetRelation('items');
+    }
 
-    //     // Delete items that aren't attached to the subscription anymore...
-    //     $this->items()->whereNotIn('chargebee_id', $subscriptionItemIds)->delete();
+    /**
+     * Swap the subscription to new Chargebee prices, and invoice immediately.
+     * @throws \InvalidArgumentException
+     */
+    public function swapAndInvoice(string|array $prices, array $options = []): self
+    {
+        $options['invoiceImmediately'] = true;
 
-    //     $this->unsetRelation('items');
+        return $this->swap($prices, $options);
+    }
 
-    //     $this->handlePaymentFailure($this);
+    /**
+     * Parse the given prices for a swap operation.
+     */
+    protected function parseSwapPrices(array $prices): Collection
+    {
+        $isSinglePriceSwap = $this->hasSinglePrice() && count($prices) === 1;
 
-    //     return $this;
-    // }
+        return collect($prices)->map(function ($options, $price) use ($isSinglePriceSwap) {
+            $price = is_string($options) ? $options : $price;
+            $options = is_string($options) ? [] : $options;
 
-    // /**
-    //  * Swap the subscription to new Chargebee prices, and invoice immediately.
-    //  *
-    //  * @throws \Laravel\Cashier\Exceptions\IncompletePayment
-    //  * @throws \Laravel\Cashier\Exceptions\SubscriptionUpdateFailure
-    //  */
-    // public function swapAndInvoice(string|array $prices, array $options = []): self
-    // {
-    //     $this->alwaysInvoice();
+            $payload = [
+                'itemPriceId' => $price,
+            ];
 
-    //     return $this->swap($prices, $options);
-    // }
+            if ($isSinglePriceSwap && ! is_null($this->quantity)) {
+                $payload['quantity'] = $this->quantity;
+            }
 
-    // /**
-    //  * Parse the given prices for a swap operation.
-    //  */
-    // protected function parseSwapPrices(array $prices): Collection
-    // {
-    //     $isSinglePriceSwap = $this->hasSinglePrice() && count($prices) === 1;
+            return array_merge($payload, $options);
+        });
+    }
 
-    //     return Collection::make($prices)->mapWithKeys(function ($options, $price) use ($isSinglePriceSwap) {
-    //         $price = is_string($options) ? $options : $price;
+    /**
+     * Get the options array for a swap operation.
+     */
+    protected function getSwapOptions(Collection $items, array $options = []): array
+    {
+        $payload = array_filter([
+            'subscriptionItems' => $items->values()->all(),
+            'replaceItemsList' => true,
+            'couponIds' => $this->couponIds,
+            'trialEnd' => $this->trialExpires ? $this->trialExpires->getTimestamp() : 0,
+            'prorate' => $this->prorateBehavior(),
+        ], fn($value) => !is_null($value));
 
-    //         $options = is_string($options) ? [] : $options;
+        $payload = array_merge($payload, $options);
 
-    //         $payload = [
-    //             'tax_rates' => $this->getPriceTaxRatesForPayload($price),
-    //         ];
-
-    //         if (! isset($options['price_data'])) {
-    //             $payload['price'] = $price;
-    //         }
-
-    //         if ($isSinglePriceSwap && ! is_null($this->quantity)) {
-    //             $payload['quantity'] = $this->quantity;
-    //         }
-
-    //         return [$price => array_merge($payload, $options)];
-    //     });
-    // }
-
-    // /**
-    //  * Merge the items that should be deleted during swap into the given items collection.
-    //  */
-    // protected function mergeItemsThatShouldBeDeletedDuringSwap(Collection $items): Collection
-    // {
-    //     foreach ($this->asChargebeeSubscription()->items->data as $chargebeeSubscriptionItem) {
-    //         $price = $chargebeeSubscriptionItem->price;
-
-    //         if (! $item = $items->get($price->id, [])) {
-    //             $item['deleted'] = true;
-
-    //             if ($price->recurring->usage_type == 'metered') {
-    //                 $item['clear_usage'] = true;
-    //             }
-    //         }
-
-    //         $items->put($price->id, $item + ['id' => $chargebeeSubscriptionItem->id]);
-    //     }
-
-    //     return $items;
-    // }
-
-    // /**
-    //  * Get the options array for a swap operation.
-    //  */
-    // protected function getSwapOptions(Collection $items, array $options = []): array
-    // {
-    //     $payload = array_filter([
-    //         'items' => $items->values()->all(),
-    //         'payment_behavior' => $this->paymentBehavior(),
-    //         'promotion_code' => $this->promotionCodeId,
-    //         'proration_behavior' => $this->prorateBehavior(),
-    //         'expand' => ['latest_invoice.payment_intent'],
-    //     ]);
-
-    //     if ($payload['payment_behavior'] !== ChargebeeSubscription::PAYMENT_BEHAVIOR_PENDING_IF_INCOMPLETE) {
-    //         $payload['cancel_at_period_end'] = false;
-    //     }
-
-    //     $payload = array_merge($payload, $options);
-
-    //     if (! is_null($this->billingCycleAnchor)) {
-    //         $payload['billing_cycle_anchor'] = $this->billingCycleAnchor;
-    //     }
-
-    //     $payload['trial_end'] = $this->onTrial()
-    //                     ? $this->trial_ends_at->getTimestamp()
-    //                     : 'now';
-
-    //     return $payload;
-    // }
+        return $payload;
+    }
 
     /**
      * Add a new Chargebee price to the subscription.
@@ -681,25 +654,14 @@ class Subscription extends Model
             'prorate' => $this->prorateBehavior(),
         ], $options)), fn($value) => !is_null($value));
 
-        $priceDetails = ItemPrice::retrieve($price)->itemPrice();
         $this->items()->create([
-            'chargebee_product' => $priceDetails->itemId,
+            'chargebee_product' => ItemPrice::retrieve($price)->itemPrice()->itemId,
             'chargebee_price' => $price,
             'quantity' => $quantity,
         ]);
-
         $this->unsetRelation('items');
 
-        if ($this->hasSinglePrice()) {
-            $this->fill([
-                'chargebee_price' => null,
-                'quantity' => null,
-            ]);
-        }
-
-        $this->fill([
-            'chargebee_status' => $chargebeeSubscription->status,
-        ])->save();
+        $this->refreshSubscriptionAttributes($chargebeeSubscription);
 
         return $this;
     }
@@ -711,9 +673,7 @@ class Subscription extends Model
      */
     public function addPriceAndInvoice(string $price, ?int $quantity = 1, array $options = []): self
     {
-        $options = array_merge($options, [
-            'invoiceImmediately' => true,
-        ]);
+        $options['invoiceImmediately'] = true;
 
         return $this->addPrice($price, $quantity, $options);
     }
@@ -735,6 +695,8 @@ class Subscription extends Model
      */
     public function addMeteredPriceAndInvoice(string $price, array $options = []): self
     {
+        $options['invoiceImmediately'] = true;
+
         return $this->addPriceAndInvoice($price, null, $options);
     }
 
@@ -751,7 +713,6 @@ class Subscription extends Model
 
         $chargebeeSubscription = $this->asChargebeeSubscription();
 
-
         $subscriptionItems = array_filter($chargebeeSubscription->subscriptionItems, function ($item) use ($price) {
             return $item->itemPriceId !== $price;
         });
@@ -763,25 +724,16 @@ class Subscription extends Model
             'subscriptionItems' => array_values($subscriptionItems),
         ];
 
-        $prorateBehavior = $this->prorateBehavior();
-        if (!is_null($prorateBehavior)) {
-            $updateData['prorate'] = $prorateBehavior;
+        if (! is_null($this->prorateBehavior())) {
+            $updateData['prorate'] = $this->prorateBehavior();
         }
 
-        $this->updateChargebeeSubscription($updateData);
+        $updatedChargebeeSubscription = $this->updateChargebeeSubscription($updateData);
 
         $this->items()->where('chargebee_price', $price)->delete();
-
         $this->unsetRelation('items');
 
-        if ($this->items()->count() === 1) {
-            $item = $this->items()->first();
-
-            $this->fill([
-                'chargebee_price' => $item->chargebee_price,
-                'quantity' => $item->quantity,
-            ])->save();
-        }
+        $this->refreshSubscriptionAttributes($updatedChargebeeSubscription);
 
         return $this;
     }
@@ -815,8 +767,6 @@ class Subscription extends Model
 
     /**
      * Cancel the subscription at a specific moment in time.
-     *
-     * @todo creditOptionForCurrentTermCharges
      */
     public function cancelAt(DateTimeInterface|int $endsAt): self
     {
@@ -831,7 +781,6 @@ class Subscription extends Model
         ])->subscription();
 
         $this->chargebee_status = $chargebeeSubscription->status;
-
         $this->ends_at = Carbon::createFromTimestamp($chargebeeSubscription->cancelledAt);
 
         $this->save();
@@ -904,146 +853,13 @@ class Subscription extends Model
         return $this;
     }
 
-    // /**
-    //  * Determine if the subscription has pending updates.
-    //  */
-    // public function pending(): bool
-    // {
-    //     return ! is_null($this->asChargebeeSubscription()->hasScheduledChanges);
-    // }
-
-    // /**
-    //  * Invoice the subscription outside of the regular billing cycle.
-    //  *
-    //  * @throws \Laravel\CashierChargebee\Exceptions\IncompletePayment
-    //  */
-    // public function invoice(array $options = []): Invoice
-    // {
-    //     try {
-    //         return $this->user->invoice(array_merge($options, ['subscription' => $this->chargebee_id]));
-    //     } catch (IncompletePayment $exception) {
-    //         // Set the new Chargebee subscription status immediately when payment fails...
-    //         $this->fill([
-    //             'chargebee_status' => $exception->payment->invoice->subscription->status,
-    //         ])->save();
-
-    //         throw $exception;
-    //     }
-    // }
-
-    // /**
-    //  * Get the latest invoice for the subscription.
-    //  */
-    // public function latestInvoice(array $expand = []): ?Invoice
-    // {
-    //     $chargebeeSubscription = $this->asChargebeeSubscription(['latest_invoice', ...$expand]);
-
-    //     if ($chargebeeSubscription->latest_invoice) {
-    //         return new Invoice($this->owner, $chargebeeSubscription->latest_invoice);
-    //     }
-    // }
-
-    // /**
-    //  * Fetches upcoming invoice for this subscription.
-    //  */
-    // public function upcomingInvoice(array $options = []): ?Invoice
-    // {
-    //     if ($this->canceled()) {
-    //         return null;
-    //     }
-
-    //     return $this->owner->upcomingInvoice(array_merge([
-    //         'subscription' => $this->chargebee_id,
-    //     ], $options));
-    // }
-
-    // /**
-    //  * Preview the upcoming invoice with new Chargebee prices.
-    //  */
-    // public function previewInvoice(string|array $prices, array $options = []): ?Invoice
-    // {
-    //     if (empty($prices = (array) $prices)) {
-    //         throw new InvalidArgumentException('Please provide at least one price when swapping.');
-    //     }
-
-    //     $this->guardAgainstIncomplete();
-
-    //     $items = $this->mergeItemsThatShouldBeDeletedDuringSwap(
-    //         $this->parseSwapPrices($prices)
-    //     );
-
-    //     $swapOptions = Collection::make($this->getSwapOptions($items))
-    //         ->only([
-    //             'billing_cycle_anchor',
-    //             'cancel_at_period_end',
-    //             'items',
-    //             'proration_behavior',
-    //             'trial_end',
-    //         ])
-    //         ->mapWithKeys(function ($value, $key) {
-    //             return ["subscription_$key" => $value];
-    //         })
-    //         ->merge($options)
-    //         ->all();
-
-    //     return $this->upcomingInvoice($swapOptions);
-    // }
-
-    // /**
-    //  * Get a collection of the subscription's invoices.
-    //  */
-    // public function invoices(bool $includePending = false, array $parameters = []): Collection|Invoice
-    // {
-    //     return $this->owner->invoices(
-    //         $includePending, array_merge($parameters, ['subscription' => $this->chargebee_id])
-    //     );
-    // }
-
-    // /**
-    //  * Get an array of the subscription's invoices, including pending invoices.
-    //  */
-    // public function invoicesIncludingPending(array $parameters = []): Collection|Invoice
-    // {
-    //     return $this->invoices(true, $parameters);
-    // }
-
-    // /**
-    //  * Get the latest payment for a Subscription.
-    //  */
-    // public function latestPayment(): ?Payment
-    // {
-    //     $subscription = $this->asChargebeeSubscription(['latest_invoice.payment_intent']);
-
-    //     if ($invoice = $subscription->latest_invoice) {
-    //         return $invoice->payment_intent
-    //             ? new Payment($invoice->payment_intent)
-    //             : null;
-    //     }
-    // }
-
-    // /**
-    //  * The discount that applies to the subscription, if applicable.
-    //  */
-    // public function discount(): Discount
-    // {
-    //     $subscription = $this->asChargebeeSubscription(['discount.promotion_code']);
-
-    //     return $subscription->discount
-    //         ? new Discount($subscription->discount)
-    //         : null;
-    // }
-
     /**
      * Apply coupons to the subscription.
      */
     public function applyCoupon(string|array $coupons): void
     {
-        if (! is_array($coupons)) {
-            $coupons = array($coupons);
-        }
-        
         $this->updateChargebeeSubscription([
-            'couponIds' => $coupons,
+            'couponIds' => is_array($coupons) ? $coupons : array($coupons),
         ]);
     }
 
@@ -1061,6 +877,9 @@ class Subscription extends Model
         }
     }
 
+    /**
+     * Get creditOptionForCurrentTermCharges parameter from proration behavior.
+     */
     public function getCreditOptionForCurrentCharges(): string
     {
         $prorateBehavior = $this->prorateBehavior();
@@ -1074,6 +893,28 @@ class Subscription extends Model
         }
 
         return 'none';
+    }
+
+    /**
+     * Update a specific Chargebee subscription item indentified by the given price ID with provided options.
+     */
+    public function updateChargebeeSubscriptionItem(string $price, array $itemOptions = [], array $subscriptionOptions = []): ChargebeeSubscription
+    {
+        $chargebeeSubscription = $this->asChargebeeSubscription();
+
+        $subscriptionItems = array_map(function ($item) use ($price, $itemOptions) {
+            if ($item->itemPriceId === $price) {
+                return $itemOptions;
+            }
+            return $item->getValues();
+        }, $chargebeeSubscription->subscriptionItems);
+
+        $updateData = array_merge([
+            'replaceItemsList' => true,
+            'subscriptionItems' => array_values($subscriptionItems),
+        ], $subscriptionOptions);
+
+        return $this->updateChargebeeSubscription($updateData);
     }
 
     /**

@@ -7,13 +7,13 @@ use ChargeBee\ChargeBee\Models\Estimate as ChargeBeeEstimate;
 use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
-use Illuminate\Pagination\Paginator;
+use Illuminate\Pagination\Paginator as IlluminatePaginator;
 use Illuminate\Support\Collection;
-use Laravel\CashierChargebee\ChargebeePaginator;
 use Laravel\CashierChargebee\Estimate;
 use Laravel\CashierChargebee\Exceptions\InvalidInvoice;
 use Laravel\CashierChargebee\Invoice;
 use Laravel\CashierChargebee\InvoiceBuilder;
+use Laravel\CashierChargebee\Paginator;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -34,7 +34,7 @@ trait ManagesInvoices
      */
     public function upcomingInvoice(array $options = [])
     {
-        if (! $this->hasChargebeeId()) {
+        if (!$this->hasChargebeeId()) {
             return;
         }
 
@@ -114,7 +114,7 @@ trait ManagesInvoices
      */
     public function invoices($includePending = false, $parameters = [])
     {
-        if (! $this->hasChargebeeId()) {
+        if (!$this->hasChargebeeId()) {
             return new Collection();
         }
 
@@ -126,7 +126,7 @@ trait ManagesInvoices
             ['customerId[is]' => $this->chargebeeId()] + $parameters
         );
 
-        if (! is_null($chargebeeInvoices)) {
+        if (!is_null($chargebeeInvoices)) {
             foreach ($chargebeeInvoices as $chargebeeInvoice) {
                 $invoice = $chargebeeInvoice->invoice();
                 if ($invoice->status == 'paid' || $includePending) {
@@ -160,17 +160,17 @@ trait ManagesInvoices
      * @param  array  $parameters
      * @param  string  $cursorName
      * @param  \Illuminate\Pagination\Cursor|string|null  $cursor
-     * @return \Laravel\CashierChargebee\ChargebeePaginator
+     * @return \Laravel\CashierChargebee\Paginator
      */
     public function cursorPaginateInvoices($perPage = 24, array $parameters = [], $cursorName = 'cursor', $cursor = null)
     {
-        if (! $cursor instanceof Cursor) {
+        if (!$cursor instanceof Cursor) {
             $cursor = is_string($cursor)
                 ? Cursor::fromEncoded($cursor)
                 : CursorPaginator::resolveCurrentCursor($cursorName, $cursor);
         }
 
-        if (! is_null($cursor)) {
+        if (!is_null($cursor)) {
             $parameters['offset'] = $cursor->parameter('next_offset');
         }
 
@@ -178,13 +178,13 @@ trait ManagesInvoices
 
         $hasMore = count($invoices) ? $invoices[0]->next_offset != null : false;
 
-        return new ChargebeePaginator(
+        return new Paginator(
             $invoices,
             $perPage,
             $cursor,
             $hasMore,
             array_merge([
-                'path' => Paginator::resolveCurrentPath(),
+                'path' => IlluminatePaginator::resolveCurrentPath(),
                 'cursorName' => $cursorName,
                 'parameters' => ['next_offset'],
             ])

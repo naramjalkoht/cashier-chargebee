@@ -8,7 +8,7 @@ use Illuminate\Contracts\Pagination\CursorPaginator as PaginatorContract;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Pagination\AbstractCursorPaginator;
-use Illuminate\Pagination\Paginator;
+use Illuminate\Pagination\Paginator as IlluminatePaginator;
 use Illuminate\Support\Collection;
 use IteratorAggregate;
 use JsonSerializable;
@@ -26,7 +26,7 @@ use JsonSerializable;
  * @implements IteratorAggregate<TKey, TValue>
  * @implements PaginatorContract<TKey, TValue>
  */
-class ChargebeePaginator extends AbstractCursorPaginator implements Arrayable, ArrayAccess, Countable, IteratorAggregate, Jsonable, JsonSerializable, PaginatorContract
+class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAccess, Countable, IteratorAggregate, Jsonable, JsonSerializable, PaginatorContract
 {
     /**
      * Indicates whether there are more items in the data source.
@@ -97,7 +97,7 @@ class ChargebeePaginator extends AbstractCursorPaginator implements Arrayable, A
      */
     public function render($view = null, $data = [])
     {
-        return static::viewFactory()->make($view ?: Paginator::$defaultSimpleView, array_merge($data, [
+        return static::viewFactory()->make($view ?: IlluminatePaginator::$defaultSimpleView, array_merge($data, [
             'paginator' => $this,
         ]));
     }

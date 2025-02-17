@@ -2,6 +2,7 @@
 
 namespace Laravel\CashierChargebee\Tests\Feature;
 
+use ChargeBee\ChargeBee\Models\Coupon;
 use ChargeBee\ChargeBee\Models\Customer;
 use ChargeBee\ChargeBee\Models\PaymentSource;
 use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
@@ -28,6 +29,33 @@ class InvoicesTest extends FeatureTestCase
 
         $this->assertInstanceOf(Invoice::class, $invoice);
         $this->assertEquals(49900, $invoice->total);
+    }
+
+    public function test_customer_can_be_invoiced_with_a_coupon()
+    {
+        $user = $this->createCustomerWithPaymentSource('customer_can_be_invoiced_with_coupon');
+
+        $id = 'coupon_' . now()->timestamp;
+        $coupon = Coupon::createForItems([
+            'id' => $id,
+            'name' => $id,
+            'discountType' => 'fixed_amount',
+            'discountAmount' => 500,
+            'durationType' => 'one_time',
+            'applyOn' => 'invoice_amount',
+            'currencyCode' => config('cashier.currency'),
+        ])->coupon();
+
+        $invoice = $user->newInvoice()
+            ->tabFor('Laracon', 49900)
+            ->invoice([
+                'couponIds' => [$coupon->id]
+            ]);
+
+        $this->assertNotNull($invoice->discounts()[0]->coupon());
+        $this->assertEquals($id, $invoice->discounts()[0]->coupon()->id);
+        $this->assertInstanceOf(Invoice::class, $invoice);
+        $this->assertEquals(49400, $invoice->total);
     }
 
     public function test_customer_can_be_invoiced_with_a_price()
@@ -268,6 +296,7 @@ class InvoicesTest extends FeatureTestCase
         );
 
         $invoice = $user->invoicesIncludingPending()->first();
+        $this->assertTrue($invoice->isOpen());
         $price = $this->createPrice('Laravel T-shirt', amount: 499);
         $invoice = $invoice->tabPrice($price->id);
         $this->assertEquals(5499, $invoice->total);
@@ -293,6 +322,19 @@ class InvoicesTest extends FeatureTestCase
         $this->assertEquals(5499, $invoice->total);
     }
 
+    public function skip_test_it_can_determine_if_sends_invoice()
+    {
+        $user = $this->createCustomerWithPaymentSource('sends_invoice');
+        $invoice = $user->newInvoice()
+            ->tabFor('Laracon', amount: 5000)
+            ->invoice([
+                'autoCollection' => 'off',
+            ]);
+
+        $this->assertTrue($invoice->chargesAutomatically());
+        $this->assertFalse($invoice->sendsInvoice());
+    }
+
     public function test_it_can_determine_if_the_customer_was_exempt_from_taxes()
     {
         $user = $this->createCustomerWithPaymentSource('paying_invoice');
@@ -303,6 +345,8 @@ class InvoicesTest extends FeatureTestCase
             ]);
 
         $this->assertTrue($invoice->isNotTaxExempt());
+        $this->assertFalse($invoice->isTaxExempt());
+
     }
 
     protected function createCustomerWithPaymentSource($description = 'testuser', array $options = []): User
