@@ -212,6 +212,7 @@ class SubscriptionTest extends FeatureTestCase
         $paymentSource = $this->createCard($user);
 
         $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->withMetadata(['type' => 'main'])
             ->create($paymentSource);
 
         $this->assertEquals(1, count($user->subscriptions));
@@ -444,7 +445,7 @@ class SubscriptionTest extends FeatureTestCase
             ->create($paymentSource);
 
         // Test adding second price (with default quantity = 1)
-        $subscription->addPrice(static::$secondPriceId);
+        $subscription->addPriceAndInvoice(static::$secondPriceId);
 
         $this->assertCount(2, $subscription->items);
         $this->assertTrue($subscription->items->pluck('chargebee_price')->contains(static::$firstPriceId));
@@ -502,7 +503,7 @@ class SubscriptionTest extends FeatureTestCase
             ->create($paymentSource);
 
         // Test adding metered price
-        $subscription->addMeteredPrice(static::$secondMeteredPriceId);
+        $subscription->addMeteredPriceAndInvoice(static::$secondMeteredPriceId);
         $chargebeeSubscription = $subscription->asChargebeeSubscription();
 
         $this->assertCount(2, $subscription->items);
