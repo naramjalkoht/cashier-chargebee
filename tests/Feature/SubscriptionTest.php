@@ -466,7 +466,8 @@ class SubscriptionTest extends FeatureTestCase
         } catch (Exception $e) {
             $this->assertInstanceOf(SubscriptionUpdateFailure::class, $e);
             $this->assertSame(
-                "The price \"$secondPriceItem->itemPriceId\" is already attached to subscription \"{$subscription->chargebee_id}\".", $e->getMessage()
+                "The price \"$secondPriceItem->itemPriceId\" is already attached to subscription \"{$subscription->chargebee_id}\".",
+                $e->getMessage()
             );
         }
 
@@ -486,7 +487,8 @@ class SubscriptionTest extends FeatureTestCase
         } catch (Exception $e) {
             $this->assertInstanceOf(SubscriptionUpdateFailure::class, $e);
             $this->assertSame(
-                "The price on subscription \"{$subscription->chargebee_id}\" cannot be removed because it is the last one.", $e->getMessage()
+                "The price on subscription \"{$subscription->chargebee_id}\" cannot be removed because it is the last one.",
+                $e->getMessage()
             );
         }
     }
@@ -568,7 +570,8 @@ class SubscriptionTest extends FeatureTestCase
             $this->assertInstanceOf(InvalidArgumentException::class, $e);
 
             $this->assertSame(
-                'This method requires a price argument since the subscription has multiple prices.', $e->getMessage()
+                'This method requires a price argument since the subscription has multiple prices.',
+                $e->getMessage()
             );
         }
     }
@@ -611,7 +614,7 @@ class SubscriptionTest extends FeatureTestCase
         $subscription->refresh();
 
         $this->assertEquals(1, $subscription->items->first()->quantity);
-        $this->assertEquals(1, $subscription->quantity); 
+        $this->assertEquals(1, $subscription->quantity);
 
         $chargebeeSubscription = $subscription->asChargebeeSubscription();
         $chargebeeItem = collect($chargebeeSubscription->subscriptionItems)->firstWhere('itemPriceId', static::$firstPriceId);
@@ -928,7 +931,7 @@ class SubscriptionTest extends FeatureTestCase
             'chargebee_id' => 'test_chargebee_id_123',
             'chargebee_status' => 'active',
         ]);
-        
+
         $mockChargebeeSubscription = new ChargebeeSubscription([
             'id' => 'test_chargebee_id_123',
             'status' => 'active',
@@ -957,13 +960,116 @@ class SubscriptionTest extends FeatureTestCase
 
         $subscription = $user->newSubscription('main', static::$firstPriceId)
             ->trialDays(5)
-            ->create($paymentSource);
+            ->create(paymentSource: $paymentSource);
 
         $this->assertTrue($subscription->onTrial());
 
         $subscription = $subscription->skipTrial()->swapAndInvoice(static::$thirdPriceId);
 
         $this->assertFalse($subscription->onTrial());
+    }
+
+
+    // public function test_subscription_changes_can_be_prorated()
+    // {
+    //     $user = $this->createCustomer('subscription_changes_can_be_prorated');
+    //     $user->createAsChargebeeCustomer();
+    //     $paymentSource = $this->createCard($user);
+
+    //     $subscription = $user->newSubscription('main', static::$firstPriceId)
+    //         ->create($paymentSource, [], [
+    //             'autoCollection' => 'on'
+    //         ]);
+
+    //     $this->assertEquals(5000, ($invoice = $user->invoices()->first())->rawTotal());
+
+    //     $subscription->noProrate()->swap(static::$secondPriceId);
+
+    //     // Assert that no new invoice was created because of no prorating.
+    //     $this->assertEquals($invoice->id, $user->invoices()->first()->id);
+    //     $this->assertEquals(1000, $user->upcomingInvoice()->rawTotal());
+
+    //     $subscription->swapAndInvoice(static::$firstPriceId);
+
+    //     // Assert that a new invoice was created because of immediate invoicing.
+    //     $this->assertNotSame($invoice->id, ($invoice = $user->invoices()->first())->id);
+    //     $this->assertEquals(1000, $invoice->rawTotal());
+    //     // $this->assertEquals(2000, $user->upcomingInvoice()->rawTotal());
+
+    //     $subscription->prorate()->swap(static::$firstPriceId);
+
+    //     // Get back from unused time on premium price on next invoice.
+    //     // $this->assertEquals(0, $user->upcomingInvoice()->rawTotal());
+    // }
+
+
+    public function test_upcoming_invoice()
+    {
+        $user = $this->createCustomer('subscription_upcoming_invoice');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->create($paymentSource);
+        
+        $estimate = $subscription->previewInvoice(static::$thirdPriceId);
+
+        $this->assertSame(3000, $estimate->total);
+    }
+
+    public function test_invoice_subscription_directly()
+    {
+        $user = $this->createCustomer('invoice_subscription_directly');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->create($paymentSource);
+
+        $subscription->updateQuantity(3);
+
+        $invoice = $subscription->invoice([
+            'invoiceImmediately' => true,
+            'scheduleType' => 'immediate'
+        ]);
+
+        $latestInvoice = ($subscription->latestInvoice());
+
+        $this->assertEquals($latestInvoice->id, $invoice->id);
+        $this->assertSame('paid', $invoice->status);
+        $this->assertSame(15000, $invoice->total);
+    }
+
+    public function skip_test_invoice_subscription_directly_fails()
+    {
+        $user = $this->createCustomer('invoice_subscription_directly_fails');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createFailedCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->create($paymentSource);
+
+        $subscription->updateQuantity(3);
+
+        $invoice = $subscription->invoice();
+
+        $this->assertSame('paid', $invoice->status);
+        $this->assertSame(15000, $invoice->total);
+    }
+
+    private function createFailedCard(Model $user): ?PaymentSource
+    {
+        return PaymentSource::createCard(
+            [
+                'customer_id' => $user->chargebeeId(),
+                'card' => [
+                    'number' => '4005 5192 0000 0004',
+                    'cvv' => '123',
+                    'expiry_year' => date('Y', strtotime('+ 1 year')),
+                    'expiry_month' => date('m', strtotime('+ 1 year')),
+                ],
+            ]
+        )->paymentSource();
     }
 
     private function createCard(Model $user): ?PaymentSource

@@ -21,14 +21,12 @@
     - [Route Configuration](#route-configuration)
     - [Configuring Basic Authentication](#configuring-basic-authentication)
     - [Handling Webhook Events](#handling-webhook-events)
-<<<<<<< HEAD
 - [Checkout](#checkout)
     - [Product Checkouts](#product-checkouts)
     - [Single Charge Checkouts](#single-charge-checkouts)
     - [Subscription Checkouts](#subscription-checkouts)
     - [Collecting Tax IDs](#collecting-tax-ids)
     - [Guest Checkouts](#guest-checkouts)
-=======
 - [Manage Payment Methods](#manage-payment-methods)
     - [Creating a SetupIntent](#payment-methods-create-setupintent)
     - [Retrieving a SetupIntent](#payment-methods-find-setupintent)
@@ -45,7 +43,12 @@
     - [Creating Payment Intents](#creating-payment-intents)
     - [Payment Status Helpers](#payment-status-helpers)
     - [Finding Payment Intents](#finding-payment-intents)
->>>>>>> 46a6446bae58da29c05fd40b591f85b773dc535e
+    - [Charge With Invoice](#charge-with-invoice)
+- [Invoices](#invoices)
+    - [Retrieving Invoices](#retrieving-invoices)
+    - [Upcoming Invoices](#upcoming-invoices)
+    - [Previewing Subscription Invoices](#previewing-subscription-invoices)
+    - [Generating Invoice PDFs](#generating-invoice-pdfs)
 
 <a name="installation"></a>
 ## Installation
@@ -1054,3 +1057,144 @@ $payment = $user->findPayment('id_123456789');
 ```
 
 If the payment intent exists, it is returned as a `Laravel\CashierChargebee\Payment` instance. If the payment intent is not found, a `PaymentNotFound` exception is thrown.
+
+<a name="charge-with-invoice"></a>
+### Charge With Invoice
+
+Sometimes you may need to make a one-time charge and offer a PDF invoice to your customer. The `invoicePrice` method lets you do just that. For example, let's invoice a customer for five new shirts:
+
+    $user->invoicePrice('price_tshirt', 5);
+
+The invoice will be immediately charged against the user's default payment method. The `invoicePrice` method also accepts an array as its third argument. This array contains the billing options for the invoice item. The fourth argument accepted by the method is also an array which should contain the billing options for the invoice itself:
+
+    $user->invoicePrice('price_tshirt', 5, [
+    ], [
+        'couponIds' => ['SUMMER21SALE']
+    ]);
+
+To create a one-time charge for multiple items, you may use the `newInvoice` method and then adding them to the customer's "tab" and then invoicing the customer. For example, we may invoice a customer for five shirts and two mugs:
+
+    $user->newInvoice()
+        ->tabPrice('price_tshirt', 5);
+        ->tabPrice('price_mug', 2);
+        ->invoice();
+
+Alternatively, you may use the `tabFor` method to make a "one-off" charge against the customer's default payment method:
+
+    $user->newInvoice()
+        ->tabFor('One Time Fee', 500)
+        ->invoice();
+
+
+<a name="invoices"></a>
+## Invoices
+
+<a name="retrieving-invoices"></a>
+### Retrieving Invoices
+
+You may easily retrieve an array of a billable model's invoices using the `invoices` method. The `invoices` method returns a collection of `Laravel\Cashier\Invoice` instances:
+
+    $invoices = $user->invoices();
+
+If you would like to include pending invoices in the results, you may use the `invoicesIncludingPending` method:
+
+    $invoices = $user->invoicesIncludingPending();
+
+You may use the `findInvoice` method to retrieve a specific invoice by its ID:
+
+    $invoice = $user->findInvoice($invoiceId);
+
+<a name="displaying-invoice-information"></a>
+#### Displaying Invoice Information
+
+When listing the invoices for the customer, you may use the invoice's methods to display the relevant invoice information. For example, you may wish to list every invoice in a table, allowing the user to easily download any of them:
+
+    <table>
+        @foreach ($invoices as $invoice)
+            <tr>
+                <td>{{ $invoice->date()->toFormattedDateString() }}</td>
+                <td>{{ $invoice->total() }}</td>
+                <td><a href="/user/invoice/{{ $invoice->id }}">Download</a></td>
+            </tr>
+        @endforeach
+    </table>
+
+<a name="upcoming-invoices"></a>
+### Upcoming Invoices
+
+To retrieve the upcoming invoice for a customer, you may use the `upcomingInvoice` method:
+
+    $invoice = $user->upcomingInvoice();
+
+Similarly, if the customer has multiple subscriptions, you can also retrieve the upcoming invoice for a specific subscription:
+
+    $invoice = $user->subscription('default')->upcomingInvoice();
+
+<a name="previewing-subscription-invoices"></a>
+### Previewing Subscription Invoices
+
+Using the `previewInvoice` method, you can preview an invoice before making price changes. This will allow you to determine what your customer's invoice will look like when a given price change is made:
+
+    $invoice = $user->subscription('default')->previewInvoice('price_yearly');
+
+You may pass an array of prices to the `previewInvoice` method in order to preview invoices with multiple new prices:
+
+    $invoice = $user->subscription('default')->previewInvoice(['price_yearly', 'price_metered']);
+
+<a name="generating-invoice-pdfs"></a>
+### Generating Invoice PDFs
+
+Before generating invoice PDFs, you should use Composer to install the Dompdf library, which is the default invoice renderer for Cashier:
+
+```php
+composer require dompdf/dompdf
+```
+
+From within a route or controller, you may use the `downloadInvoice` method to generate a PDF download of a given invoice. This method will automatically generate the proper HTTP response needed to download the invoice:
+
+    use Illuminate\Http\Request;
+
+    Route::get('/user/invoice/{invoice}', function (Request $request, string $invoiceId) {
+        return $request->user()->downloadInvoice($invoiceId);
+    });
+
+By default, all data on the invoice is derived from the customer and invoice data stored in Chargebee. The filename is based on your `app.name` config value. However, you can customize some of this data by providing an array as the second argument to the `downloadInvoice` method. This array allows you to customize information such as your company and product details:
+
+    return $request->user()->downloadInvoice($invoiceId, [
+        'vendor' => 'Your Company',
+        'product' => 'Your Product',
+        'street' => 'Main Str. 1',
+        'location' => '2000 Antwerp, Belgium',
+        'phone' => '+32 499 00 00 00',
+        'email' => 'info@example.com',
+        'url' => 'https://example.com',
+        'vendorVat' => 'BE123456789',
+    ]);
+
+The `downloadInvoice` method also allows for a custom filename via its third argument. This filename will automatically be suffixed with `.pdf`:
+
+    return $request->user()->downloadInvoice($invoiceId, [], 'my-invoice');
+
+<a name="custom-invoice-render"></a>
+#### Custom Invoice Renderer
+
+Cashier also makes it possible to use a custom invoice renderer. By default, Cashier uses the `DompdfInvoiceRenderer` implementation, which utilizes the [dompdf](https://github.com/dompdf/dompdf) PHP library to generate Cashier's invoices. However, you may use any renderer you wish by implementing the `Laravel\Cashier\Contracts\InvoiceRenderer` interface. For example, you may wish to render an invoice PDF using an API call to a third-party PDF rendering service:
+
+    use Illuminate\Support\Facades\Http;
+    use Laravel\Cashier\Contracts\InvoiceRenderer;
+    use Laravel\Cashier\Invoice;
+
+    class ApiInvoiceRenderer implements InvoiceRenderer
+    {
+        /**
+         * Render the given invoice and return the raw PDF bytes.
+         */
+        public function render(Invoice $invoice, array $data = [], array $options = []): string
+        {
+            $html = $invoice->view($data)->render();
+
+            return Http::get('https://example.com/html-to-pdf', ['html' => $html])->get()->body();
+        }
+    }
+
+Once you have implemented the invoice renderer contract, you should update the `cashier.invoices.renderer` configuration value in your application's `config/cashier.php` configuration file. This configuration value should be set to the class name of your custom renderer implementation.

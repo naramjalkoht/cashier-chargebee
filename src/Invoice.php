@@ -590,17 +590,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      */
     public function isOpen()
     {
-        return $this->invoice->status === 'pending';
-    }
-
-    /**
-     * Determine if the invoice is a draft.
-     *
-     * @return bool
-     */
-    public function isDraft()
-    {
-        return $this->invoice->status === '';
+        return $this->invoice->status === 'payment_due';
     }
 
     /**

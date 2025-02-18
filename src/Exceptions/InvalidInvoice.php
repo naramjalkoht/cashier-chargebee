@@ -16,6 +16,6 @@ class InvalidInvoice extends Exception
      */
     public static function invalidOwner(ChargeBeeInvoice $invoice, $owner)
     {
-        return new static("The invoice `{$invoice->id}` does not belong to this customer `$owner->stripe_id`.");
+        return new static("The invoice `{$invoice->id}` does not belong to this customer `$owner->chargebee_id`.");
     }
 }

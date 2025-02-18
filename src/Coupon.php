@@ -10,7 +10,7 @@ use JsonSerializable;
 class Coupon implements Arrayable, Jsonable, JsonSerializable
 {
     /**
-     * The Stripe Coupon instance.
+     * The Chargebee Coupon instance.
      *
      * @var \ChargeBee\ChargeBee\Models\Coupon
      */

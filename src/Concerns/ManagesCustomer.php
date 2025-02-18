@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Laravel\CashierChargebee\Cashier;
+use Laravel\CashierChargebee\CustomerBalanceTransaction;
 use Laravel\CashierChargebee\Exceptions\CustomerAlreadyCreated;
 use Laravel\CashierChargebee\Exceptions\CustomerNotFound;
 
@@ -28,7 +29,7 @@ trait ManagesCustomer
      */
     public function hasChargebeeId(): bool
     {
-        return ! is_null($this->chargebee_id);
+        return !is_null($this->chargebee_id);
     }
 
     /**
@@ -38,7 +39,7 @@ trait ManagesCustomer
      */
     protected function assertCustomerExists()
     {
-        if (! $this->hasChargebeeId()) {
+        if (!$this->hasChargebeeId()) {
             throw CustomerNotFound::notFound($this);
         }
     }
@@ -142,7 +143,7 @@ trait ManagesCustomer
 
         $filteredData = array_filter(
             $chargebeeData,
-            fn ($key) => Schema::hasColumn($table, $key),
+            fn($key) => Schema::hasColumn($table, $key),
             ARRAY_FILTER_USE_KEY
         );
 
@@ -294,7 +295,7 @@ trait ManagesCustomer
      */
     public function rawBalance(): int
     {
-        if (! $this->hasChargebeeId()) {
+        if (!$this->hasChargebeeId()) {
             return 0;
         }
 
@@ -314,7 +315,7 @@ trait ManagesCustomer
     /**
      * Credit a customer's balance.
      */
-    public function creditBalance(int $amount, string $description = 'Add promotional credits.', array $options = []): PromotionalCredit
+    public function creditBalance(int $amount, string $description = 'Add promotional credits.', array $options = []): CustomerBalanceTransaction
     {
         $result = PromotionalCredit::add(array_merge([
             'customerId' => $this->chargebeeId(),
@@ -323,13 +324,13 @@ trait ManagesCustomer
             'currency_code' => $this->preferredCurrency(),
         ], $options));
 
-        return $result->promotionalCredit();
+        return new CustomerBalanceTransaction($this, $result->promotionalCredit());
     }
 
     /**
      * Debit a customer's balance.
      */
-    public function debitBalance(int $amount, string $description = 'Deduct promotional credits.', array $options = []): PromotionalCredit
+    public function debitBalance(int $amount, string $description = 'Deduct promotional credits.', array $options = []): CustomerBalanceTransaction
     {
         $result = PromotionalCredit::deduct(array_merge([
             'customerId' => $this->chargebeeId(),
@@ -338,13 +339,13 @@ trait ManagesCustomer
             'currency_code' => $this->preferredCurrency(),
         ], $options));
 
-        return $result->promotionalCredit();
+        return new CustomerBalanceTransaction($this, $result->promotionalCredit());
     }
 
     /**
      * Apply a new amount to the customer's balance.
      */
-    public function applyBalance(int $amount, string $description = 'Apply balance.', array $options = []): PromotionalCredit
+    public function applyBalance(int $amount, string $description = 'Apply balance.', array $options = []): CustomerBalanceTransaction
     {
         $this->assertCustomerExists();
 
@@ -360,7 +361,7 @@ trait ManagesCustomer
      */
     public function balanceTransactions(int $limit = 10, array $options = []): Collection
     {
-        if (! $this->hasChargebeeId()) {
+        if (!$this->hasChargebeeId()) {
             return new Collection();
         }
 

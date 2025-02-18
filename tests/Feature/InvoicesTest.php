@@ -13,9 +13,9 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class InvoicesTest extends FeatureTestCase
 {
-    public function test_require_stripe_customer_for_invoicing()
+    public function test_require_customer_for_invoicing()
     {
-        $user = $this->createCustomer('require_stripe_customer_for_invoicing');
+        $user = $this->createCustomer('require_customer_for_invoicing');
         $this->expectException(CustomerNotFound::class);
         $user->newInvoice()->invoice();
     }
@@ -118,7 +118,7 @@ class InvoicesTest extends FeatureTestCase
 
         $this->expectException(InvalidInvoice::class);
         $this->expectExceptionMessage(
-            "The invoice `{$invoice->id}` does not belong to this customer `$otherUser->stripe_id`."
+            "The invoice `{$invoice->id}` does not belong to this customer `$otherUser->chargebee_id`."
         );
 
         $otherUser->findInvoice($invoice->id);

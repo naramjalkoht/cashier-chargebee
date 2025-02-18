@@ -3,6 +3,7 @@
 namespace Laravel\CashierChargebee;
 
 use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
+use Illuminate\Support\Arr;
 
 class InvoiceBuilder
 {
@@ -38,7 +39,6 @@ class InvoiceBuilder
      * @param  array  $tabOptions
      * @return \Laravel\CashierChargebee\InvoiceBuilder
      *
-     * @throws \Laravel\CashierChargebee\Exceptions\IncompletePayment
      */
     public function tabFor($description, $amount, array $tabOptions = [])
     {
@@ -58,7 +58,6 @@ class InvoiceBuilder
      * @param  array  $tabOptions
      * @return \Laravel\CashierChargebee\InvoiceBuilder
      *
-     * @throws \Laravel\CashierChargebee\Exceptions\IncompletePayment
      */
     public function tabPrice($price, $quantity = 1, array $tabOptions = [])
     {
@@ -71,11 +70,11 @@ class InvoiceBuilder
     }
 
     /**
-     * Begin a new Checkout Session.
+     * Invoice the customer outside of the regular billing cycle.
      *
-     * @param  array  $sessionOptions
-     * @param  array  $customerOptions
+     * @param  array  $options
      * @return \Laravel\CashierChargebee\Invoice
+     * 
      */
     public function invoice(?array $options = [])
     {
@@ -85,6 +84,10 @@ class InvoiceBuilder
             'charges' => $this->charges,
             'itemPrices' => $this->itemPrices,
         ], $options));
+
+        if (Arr::has($data, 'subscriptionId')) {
+            Arr::forget($data, ['customerId', 'currencyCode']);
+        }
 
         $response = ChargeBeeInvoice::createForChargeItemsAndCharges($data);
 

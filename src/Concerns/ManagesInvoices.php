@@ -8,6 +8,7 @@ use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Pagination\Paginator as IlluminatePaginator;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Laravel\CashierChargebee\Estimate;
 use Laravel\CashierChargebee\Exceptions\InvalidInvoice;
@@ -27,6 +28,42 @@ trait ManagesInvoices
     }
 
     /**
+     * Invoice the customer for the given Price ID and generate an invoice immediately.
+     *
+     * @param  string  $price
+     * @param  int  $quantity
+     * @param  array  $tabOptions
+     * @param  array  $invoiceOptions
+     * @return \Laravel\CashierChargebee\Invoice
+     *
+     * @throws \Laravel\CashierChargebee\Exceptions\IncompletePayment
+     */
+    public function invoicePrice($price, $quantity = 1, array $tabOptions = [], array $invoiceOptions = [])
+    {
+        return $this->newInvoice()
+            ->tabPrice($price, $quantity, $tabOptions)
+            ->invoice($invoiceOptions);
+    }
+
+    /**
+     * Invoice the customer for the given amount and generate an invoice immediately.
+     *
+     * @param  string  $description
+     * @param  int  $amount
+     * @param  array  $tabOptions
+     * @param  array  $invoiceOptions
+     * @return \Laravel\CashierChargebee\Invoice
+     *
+     * @throws \Laravel\CashierChargebee\Exceptions\IncompletePayment
+     */
+    public function invoiceFor($description, $amount, array $tabOptions = [], array $invoiceOptions = [])
+    {
+        return $this->newInvoice()
+            ->tabFor($description, $amount, $tabOptions)
+            ->invoice($invoiceOptions);
+    }
+
+    /**
      * Get the customer's upcoming invoice.
      *
      * @param  array  $options
@@ -39,8 +76,15 @@ trait ManagesInvoices
         }
 
         try {
-            $chargebeeEstimate = ChargeBeeEstimate::upcomingInvoicesEstimate($this->chargebeeId());
 
+            if (Arr::has($options, 'subscriptionId')) {
+                $chargebeeEstimate = ChargeBeeEstimate::advanceInvoiceEstimate(
+                    $options['subscriptionId'],
+                    $options
+                );
+            } else {
+                $chargebeeEstimate = ChargeBeeEstimate::upcomingInvoicesEstimate($this->chargebeeId());
+            }
             return new Estimate($this, $chargebeeEstimate->estimate()->invoiceEstimates[0]);
         } catch (InvalidRequestException $exception) {
             //
