@@ -274,11 +274,14 @@ class SubscriptionBuilder
     {
         $payload = array_filter([
             'couponIds' => $this->couponIds,
-            'metaData' => $this->metadata,
             'subscriptionItems' => Collection::make($this->items)->values()->all(),
             'trialEnd' => $this->getTrialEndForPayload(),
             'autoCollection' => 'off',
         ]);
+
+        if (! empty($this->metadata)) {
+            $payload['metaData'] = json_encode($this->metadata);
+        }
 
         return $payload;
     }
