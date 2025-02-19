@@ -23,7 +23,6 @@ use Laravel\CashierChargebee\Concerns\Prorates;
 use Laravel\CashierChargebee\Database\Factories\SubscriptionFactory;
 use Laravel\CashierChargebee\Exceptions\IncompletePayment;
 use Laravel\CashierChargebee\Exceptions\SubscriptionUpdateFailure;
-use Laravel\CashierChargebee\SubscriptionItem;
 use LogicException;
 use ChargeBee\ChargeBee\Models\Estimate as ChargeBeeEstimate;
 use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
@@ -146,6 +145,7 @@ class Subscription extends Model
         }
 
         $this->guardAgainstMultiplePrices();
+
         return $this->items()->first();
     }
 
@@ -327,7 +327,7 @@ class Subscription extends Model
 
     /**
      *  Increment the quantity of the subscription, and invoice immediately.
-     * 
+     *
      * @throws \InvalidArgumentException
      */
     public function incrementAndInvoice(int $count = 1, ?string $price = null): static
@@ -363,6 +363,7 @@ class Subscription extends Model
             if ($item->itemPriceId === $subscriptionItem->chargebee_price) {
                 return array_merge($item->getValues(), ['quantity' => $quantity]);
             }
+
             return $item->getValues();
         }, $chargebeeSubscription->subscriptionItems);
 
@@ -568,7 +569,7 @@ class Subscription extends Model
                 ['chargebee_price' => $item->itemPriceId],
                 [
                     'chargebee_product' => ItemPrice::retrieve($item->itemPriceId)->itemPrice()->itemId,
-                    'quantity' => $item->quantity ?? null
+                    'quantity' => $item->quantity ?? null,
                 ]
             );
         }
@@ -579,6 +580,7 @@ class Subscription extends Model
 
     /**
      * Swap the subscription to new Chargebee prices, and invoice immediately.
+     *
      * @throws \InvalidArgumentException
      */
     public function swapAndInvoice(string|array $prices, array $options = []): self
@@ -622,7 +624,7 @@ class Subscription extends Model
             'couponIds' => $this->couponIds,
             'trialEnd' => $this->trialExpires ? $this->trialExpires->getTimestamp() : 0,
             'prorate' => $this->prorateBehavior(),
-        ], fn($value) => !is_null($value));
+        ], fn ($value) => ! is_null($value));
 
         $payload = array_merge($payload, $options);
 
@@ -644,14 +646,14 @@ class Subscription extends Model
             'itemPriceId' => $price,
         ];
 
-        if (!is_null($quantity)) {
+        if (! is_null($quantity)) {
             $subscriptionItem['quantity'] = $quantity;
         }
 
         $chargebeeSubscription = $this->updateChargebeeSubscription(array_filter(array_merge([
-            'subscriptionItems' => array($subscriptionItem),
+            'subscriptionItems' => [$subscriptionItem],
             'prorate' => $this->prorateBehavior(),
-        ], $options)), fn($value) => !is_null($value));
+        ], $options)), fn ($value) => ! is_null($value));
 
         $this->items()->create([
             'chargebee_product' => ItemPrice::retrieve($price)->itemPrice()->itemId,
@@ -716,7 +718,7 @@ class Subscription extends Model
             return $item->itemPriceId !== $price;
         });
 
-        $subscriptionItems = array_map(fn($item) => $item->getValues(), $subscriptionItems);
+        $subscriptionItems = array_map(fn ($item) => $item->getValues(), $subscriptionItems);
 
         $updateData = [
             'replaceItemsList' => true,
@@ -1004,7 +1006,7 @@ class Subscription extends Model
     public function applyCoupon(string|array $coupons): void
     {
         $this->updateChargebeeSubscription([
-            'couponIds' => is_array($coupons) ? $coupons : array($coupons),
+            'couponIds' => is_array($coupons) ? $coupons : [$coupons],
         ]);
     }
 
@@ -1051,6 +1053,7 @@ class Subscription extends Model
             if ($item->itemPriceId === $price) {
                 return $itemOptions;
             }
+
             return $item->getValues();
         }, $chargebeeSubscription->subscriptionItems);
 

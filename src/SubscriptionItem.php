@@ -171,7 +171,7 @@ class SubscriptionItem extends Model
 
     /**
      * Get the subscription item as a Chargebee SubscriptionSubscriptionItem object.
-     * 
+     *
      * @throws ModelNotFoundException
      */
     public function asChargebeeSubscriptionItem(): SubscriptionSubscriptionItem
@@ -180,7 +180,7 @@ class SubscriptionItem extends Model
 
         $subscriptionItem = collect($chargebeeSubscription->subscriptionItems)->firstWhere('itemPriceId', $this->chargebee_price);
 
-        if (!$subscriptionItem) {
+        if (! $subscriptionItem) {
             throw new ModelNotFoundException("Subscription item with price '{$this->chargebee_price}' not found in Chargebee.");
         }
 

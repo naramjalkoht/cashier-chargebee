@@ -103,7 +103,7 @@ class ManagesSubscriptionsTest extends FeatureTestCase
         $user = User::factory()->create();
         $subscription = Subscription::factory()->create(['user_id' => $user->id]);
         SubscriptionItem::factory()->create(['subscription_id' => $subscription->id, 'chargebee_product' => 'product_123']);
-        
+
         $this->assertTrue($user->subscribedToProduct('product_123'));
     }
 

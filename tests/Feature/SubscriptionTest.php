@@ -125,33 +125,14 @@ class SubscriptionTest extends FeatureTestCase
             'currencyCode' => 'EUR',
         ])->itemPrice()->id;
 
-        static::$threeDSecureItemId = Item::create([
-            'id' => Str::random(40),
-            'name' => Str::random(40),
-            'type' => 'plan',
-            'itemFamilyId' => static::$itemFamilyId,
-        ])->item()->id;
-
-        static::$threeDSecurePriceId = ItemPrice::create([
-            'id' => Str::random(40),
-            'itemId' => static::$threeDSecureItemId,
-            'name' => Str::random(40),
-            'pricingModel' => 'per_unit',
-            'price' => 3001,
-            'externalName' => 'Test 3DS2 ItemPrice 1',
-            'periodUnit' => 'month',
-            'period' => 1,
-            'currencyCode' => 'EUR',
-        ])->itemPrice()->id;
-
-        static::$secondItemId = Item::create(array(
+        static::$secondItemId = Item::create([
             'id' => Str::random(40),
             'name' => Str::random(40),
             'type' => 'addon',
             'itemFamilyId' => static::$itemFamilyId,
-        ))->item()->id;
+        ])->item()->id;
 
-        static::$secondPriceId = ItemPrice::create(array(
+        static::$secondPriceId = ItemPrice::create([
             'id' => Str::random(40),
             'itemId' => static::$secondItemId,
             'name' => Str::random(40),
@@ -161,16 +142,16 @@ class SubscriptionTest extends FeatureTestCase
             'periodUnit' => 'month',
             'period' => 1,
             'currencyCode' => 'EUR',
-        ))->itemPrice()->id;
+        ])->itemPrice()->id;
 
-        static::$thirdItemId = Item::create(array(
+        static::$thirdItemId = Item::create([
             'id' => Str::random(40),
             'name' => Str::random(40),
             'type' => 'plan',
             'itemFamilyId' => static::$itemFamilyId,
-        ))->item()->id;
+        ])->item()->id;
 
-        static::$thirdPriceId = ItemPrice::create(array(
+        static::$thirdPriceId = ItemPrice::create([
             'id' => Str::random(40),
             'itemId' => static::$thirdItemId,
             'name' => Str::random(40),
@@ -180,17 +161,17 @@ class SubscriptionTest extends FeatureTestCase
             'periodUnit' => 'month',
             'period' => 1,
             'currencyCode' => 'EUR',
-        ))->itemPrice()->id;
+        ])->itemPrice()->id;
 
-        static::$firstMeteredItemId = Item::create(array(
+        static::$firstMeteredItemId = Item::create([
             'id' => Str::random(40),
             'name' => Str::random(40),
             'type' => 'plan',
             'itemFamilyId' => static::$itemFamilyId,
             'metered' => true,
-        ))->item()->id;
+        ])->item()->id;
 
-        static::$firstMeteredPriceId = ItemPrice::create(array(
+        static::$firstMeteredPriceId = ItemPrice::create([
             'id' => Str::random(40),
             'itemId' => static::$firstMeteredItemId,
             'name' => Str::random(40),
@@ -200,17 +181,17 @@ class SubscriptionTest extends FeatureTestCase
             'periodUnit' => 'month',
             'period' => 1,
             'currencyCode' => 'EUR',
-        ))->itemPrice()->id;
+        ])->itemPrice()->id;
 
-        static::$secondMeteredItemId = Item::create(array(
+        static::$secondMeteredItemId = Item::create([
             'id' => Str::random(40),
             'name' => Str::random(40),
             'type' => 'addon',
             'itemFamilyId' => static::$itemFamilyId,
             'metered' => true,
-        ))->item()->id;
+        ])->item()->id;
 
-        static::$secondMeteredPriceId = ItemPrice::create(array(
+        static::$secondMeteredPriceId = ItemPrice::create([
             'id' => Str::random(40),
             'itemId' => static::$secondMeteredItemId,
             'name' => Str::random(40),
@@ -220,9 +201,9 @@ class SubscriptionTest extends FeatureTestCase
             'periodUnit' => 'month',
             'period' => 1,
             'currencyCode' => 'EUR',
-        ))->itemPrice()->id;
+        ])->itemPrice()->id;
 
-        static::$couponId = Coupon::createForItems(array(
+        static::$couponId = Coupon::createForItems([
             'id' => Str::random(40),
             'name' => Str::random(40),
             'discountPercentage' => 10,
@@ -233,9 +214,9 @@ class SubscriptionTest extends FeatureTestCase
                 [
                     'constraint' => 'ALL',
                     'itemType' => 'PLAN',
-                ]
-            ]
-        ))->coupon()->id;
+                ],
+            ],
+        ])->coupon()->id;
     }
 
     public function test_subscription_can_be_created_and_status_synced(): void
@@ -967,7 +948,7 @@ class SubscriptionTest extends FeatureTestCase
         ]);
 
         $this->expectException(ModelNotFoundException::class);
-        $this->expectExceptionMessage("Subscription item with price '" . static::$secondPriceId . "' not found in Chargebee.");
+        $this->expectExceptionMessage("Subscription item with price '".static::$secondPriceId."' not found in Chargebee.");
 
         $subscription->findItemOrFail(static::$secondPriceId)->asChargebeeSubscriptionItem();
     }

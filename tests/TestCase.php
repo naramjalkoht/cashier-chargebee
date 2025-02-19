@@ -37,6 +37,7 @@ abstract class TestCase extends OrchestraTestCase
         $reflection = new \ReflectionClass($object);
         $property = $reflection->getProperty($property);
         $property->setAccessible(true);
+
         return $property->getValue($object);
     }
 }
