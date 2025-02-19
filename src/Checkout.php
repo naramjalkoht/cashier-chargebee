@@ -90,7 +90,7 @@ class Checkout implements Arrayable, Jsonable, JsonSerializable, Responsable
             $result = HostedPage::checkoutOneTimeForItems($data);
         }
 
-        return new static($owner, new Session(
+        return new Checkout($owner, new Session(
             $result->hostedPage()->getValues(),
             $data['mode']
         ));

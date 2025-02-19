@@ -6,6 +6,7 @@ use ChargeBee\ChargeBee\Models\InvoiceEstimate as ChargeBeeEstimate;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use JsonSerializable;
+use Laravel\CashierChargebee\Exceptions\InvalidEstimate;
 use Laravel\CashierChargebee\Exceptions\InvalidInvoice;
 
 class Estimate implements Arrayable, Jsonable, JsonSerializable
@@ -36,7 +37,7 @@ class Estimate implements Arrayable, Jsonable, JsonSerializable
     public function __construct($owner, ChargeBeeEstimate $estimate)
     {
         if ($owner->chargebee_id !== $estimate->customerId) {
-            throw InvalidInvoice::invalidOwner($invoice, $owner);
+            throw InvalidEstimate::invalidOwner($estimate, $owner);
         }
 
         $this->owner = $owner;

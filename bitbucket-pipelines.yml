@@ -46,6 +46,7 @@ pipelines:
           size: 2x
           image: threadable/php84-laravel
           caches:
+            - docker
             - composer
           script:
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
@@ -70,6 +71,7 @@ pipelines:
           services:
             - mysql
           caches:
+            - docker
             - composer
           script:
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^10"
@@ -94,6 +96,7 @@ pipelines:
           services:
             - mysql
           caches:
+            - docker
             - composer
           script:
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^10"
@@ -118,6 +121,7 @@ pipelines:
           services:
             - mysql
           caches:
+            - docker
             - composer
           script:
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^10"
@@ -142,6 +146,7 @@ pipelines:
           services:
             - mysql
           caches:
+            - docker
             - composer
           script:
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
@@ -166,6 +171,7 @@ pipelines:
           services:
             - mysql
           caches:
+            - docker
             - composer
           script:
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
@@ -190,6 +196,7 @@ pipelines:
           services:
             - mysql
           caches:
+            - docker
             - composer
           script:
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
@@ -269,6 +276,7 @@ pipelines:
             - mysql
           caches:
             - composer
+            - docker
           script:
             - composer update --prefer-dist --no-interaction --no-progress --with="illuminate/contracts=^11"
             - vendor/bin/phpunit --display-deprecations --fail-on-deprecation

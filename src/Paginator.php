@@ -46,7 +46,7 @@ class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAcces
      * @param  array  $options  (path, query, fragment, pageName)
      * @return void
      */
-    public function __construct($items, $perPage, $cursor = null, $hasMore, array $options = [])
+    public function __construct($items, $perPage, $hasMore, $cursor = null, array $options = [])
     {
         $this->options = $options;
 

@@ -5,7 +5,7 @@ namespace Laravel\CashierChargebee\Exceptions;
 use Exception;
 use ChargeBee\ChargeBee\Models\PromotionalCredit;
 
-class InvalidCustomerBalanceTransaction extends Exception
+final class InvalidCustomerBalanceTransaction extends Exception
 {
     /**
      * Create a new CustomerBalanceTransaction instance.

@@ -4,7 +4,7 @@ namespace Laravel\CashierChargebee\Exceptions;
 
 use Exception;
 
-class InvalidCustomer extends Exception
+final class InvalidCustomer extends Exception
 {
     /**
      * Create a new InvalidCustomer instance.

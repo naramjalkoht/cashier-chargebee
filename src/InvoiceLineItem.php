@@ -84,7 +84,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      */
     public function hasTaxRates(): bool
     {
-        return ! empty($this->item->taxRate);
+        return !empty($this->item->taxRate);
     }
 
     /**
@@ -92,11 +92,13 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return string|null
      */
-    public function startDate(): ?string
+    public function startDate(): string|null
     {
         if ($this->hasPeriod()) {
             return $this->startDateAsCarbon()->toFormattedDateString();
         }
+
+        return null;
     }
 
     /**
@@ -104,11 +106,13 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return string|null
      */
-    public function endDate(): ?string
+    public function endDate(): string|null
     {
         if ($this->hasPeriod()) {
             return $this->endDateAsCarbon()->toFormattedDateString();
         }
+
+        return null;
     }
 
     /**
@@ -116,11 +120,13 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \Carbon\Carbon|null
      */
-    public function startDateAsCarbon(): ?Carbon
+    public function startDateAsCarbon(): Carbon|null
     {
         if ($this->hasPeriod()) {
             return Carbon::createFromTimestampUTC($this->item->dateFrom);
         }
+
+        return null;
     }
 
     /**
@@ -128,11 +134,13 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \Carbon\Carbon|null
      */
-    public function endDateAsCarbon()
+    public function endDateAsCarbon(): Carbon|null
     {
         if ($this->hasPeriod()) {
             return Carbon::createFromTimestampUTC($this->item->dateTo);
         }
+
+        return null;
     }
 
     /**
@@ -140,9 +148,9 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function hasPeriod()
+    public function hasPeriod(): bool
     {
-        return ! is_null($this->item->dateFrom) && ! is_null($this->item->dateTo);
+        return !is_null($this->item->dateFrom) && !is_null($this->item->dateTo);
     }
 
     /**
@@ -150,7 +158,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function periodStartAndEndAreEqual()
+    public function periodStartAndEndAreEqual(): bool
     {
         return $this->hasPeriod() ? $this->item->dateFrom === $this->item->dateTo : false;
     }
@@ -160,7 +168,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function isSubscription()
+    public function isSubscription(): bool
     {
         return $this->item->subscriptionId != null;
     }
@@ -171,7 +179,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      * @param  int  $amount
      * @return string
      */
-    protected function formatAmount($amount)
+    protected function formatAmount($amount): string
     {
         return Cashier::formatAmount($amount, $this->invoice()->currencyCode);
     }
@@ -181,7 +189,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \Laravel\CashierChargebee\Invoice
      */
-    public function invoice()
+    public function invoice(): Invoice
     {
         return $this->invoice;
     }
@@ -191,7 +199,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \ChargeBee\ChargeBee\Models\InvoiceLineItem
      */
-    public function asChargebeeInvoiceLineItem()
+    public function asChargebeeInvoiceLineItem(): ChargeBeeInvoiceLineItem
     {
         return $this->item;
     }
@@ -201,7 +209,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return array
      */
-    public function toArray()
+    public function toArray(): mixed
     {
         return $this->asChargebeeInvoiceLineItem()->getValues();
     }
@@ -212,7 +220,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      * @param  int  $options
      * @return string
      */
-    public function toJson($options = 0)
+    public function toJson($options = 0): bool|string
     {
         return json_encode($this->jsonSerialize(), $options);
     }
@@ -234,7 +242,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      * @param  string  $key
      * @return mixed
      */
-    public function __get($key)
+    public function __get($key): mixed
     {
         return $this->item->{$key};
     }

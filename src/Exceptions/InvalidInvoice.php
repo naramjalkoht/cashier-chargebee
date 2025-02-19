@@ -5,7 +5,7 @@ namespace Laravel\CashierChargebee\Exceptions;
 use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
 use Exception;
 
-class InvalidInvoice extends Exception
+final class InvalidInvoice extends Exception
 {
     /**
      * Create a new InvalidInvoice instance.

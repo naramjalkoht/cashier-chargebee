@@ -49,7 +49,7 @@ class CheckoutBuilder
      */
     public static function make($owner = null, $instance = null)
     {
-        return new static($owner, $instance);
+        return new CheckoutBuilder($owner, $instance);
     }
 
     /**
