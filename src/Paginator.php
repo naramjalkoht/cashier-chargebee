@@ -6,7 +6,9 @@ use ArrayAccess;
 use Countable;
 use Illuminate\Contracts\Pagination\CursorPaginator as PaginatorContract;
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\Support\Jsonable;
+use Illuminate\Contracts\View\View;
 use Illuminate\Pagination\AbstractCursorPaginator;
 use Illuminate\Pagination\Paginator as IlluminatePaginator;
 use Illuminate\Support\Collection;
@@ -65,7 +67,7 @@ class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAcces
      * @param  Collection<TKey, TValue>|Arrayable<TKey, TValue>|iterable<TKey, TValue>|null  $items
      * @return void
      */
-    protected function setItems($items)
+    protected function setItems($items): void
     {
         $this->items = $items instanceof Collection ? $items : new Collection($items);
 
@@ -83,7 +85,7 @@ class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAcces
      * @param  array  $data
      * @return \Illuminate\Contracts\Support\Htmlable
      */
-    public function links($view = null, $data = [])
+    public function links($view = null, $data = []): Htmlable|View
     {
         return $this->render($view, $data);
     }
@@ -95,7 +97,7 @@ class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAcces
      * @param  array  $data
      * @return \Illuminate\Contracts\Support\Htmlable
      */
-    public function render($view = null, $data = [])
+    public function render($view = null, $data = []): View
     {
         return static::viewFactory()->make($view ?: IlluminatePaginator::$defaultSimpleView, array_merge($data, [
             'paginator' => $this,
@@ -107,7 +109,7 @@ class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAcces
      *
      * @return bool
      */
-    public function hasMorePages()
+    public function hasMorePages(): bool
     {
         return (is_null($this->cursor) && $this->hasMore) ||
             (!is_null($this->cursor) && $this->cursor->pointsToNextItems() && $this->hasMore) ||
@@ -119,7 +121,7 @@ class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAcces
      *
      * @return bool
      */
-    public function hasPages()
+    public function hasPages(): bool
     {
         return !$this->onFirstPage() || $this->hasMorePages();
     }
@@ -129,7 +131,7 @@ class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAcces
      *
      * @return bool
      */
-    public function onFirstPage()
+    public function onFirstPage(): bool
     {
         return is_null($this->cursor) || ($this->cursor->pointsToPreviousItems() && !$this->hasMore);
     }
@@ -149,7 +151,7 @@ class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAcces
      *
      * @return array
      */
-    public function toArray()
+    public function toArray(): array
     {
         return [
             'data' => $this->items->toArray(),
@@ -178,7 +180,7 @@ class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAcces
      * @param  int  $options
      * @return string
      */
-    public function toJson($options = 0)
+    public function toJson($options = 0): bool|string
     {
         return json_encode($this->jsonSerialize(), $options);
     }

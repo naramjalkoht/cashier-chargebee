@@ -5,6 +5,7 @@ namespace Laravel\CashierChargebee\Tests\Feature;
 use Carbon\Carbon;
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\Coupon;
+use ChargeBee\ChargeBee\Models\Discount;
 use ChargeBee\ChargeBee\Models\Invoice;
 use ChargeBee\ChargeBee\Models\Item;
 use ChargeBee\ChargeBee\Models\ItemFamily;
@@ -609,22 +610,6 @@ class SubscriptionTest extends FeatureTestCase
         $this->assertEquals(static::$couponId, $coupons[0]->couponId);
     }
 
-    public function test_can_retrieve_discounts(): void
-    {
-        $user = $this->createCustomer('test_can_retrieve_discounts');
-        $user->createAsChargebeeCustomer();
-        $paymentSource = $this->createCard($user);
-
-        $subscription = $user->newSubscription('main', static::$firstPriceId)
-            ->create($paymentSource, [], [
-                'couponIds' => [static::$couponId],
-                'autoCollection' => 'on'
-            ]);
-
-        $this->assertNotNull($subscription->discounts());
-
-    }
-
     public function test_item_quantity_can_be_updated_from_subscription(): void
     {
         $user = $this->createCustomer('test_item_quantity_can_be_updated');
@@ -948,7 +933,7 @@ class SubscriptionTest extends FeatureTestCase
         ]);
 
         $this->expectException(ModelNotFoundException::class);
-        $this->expectExceptionMessage("Subscription item with price '".static::$secondPriceId."' not found in Chargebee.");
+        $this->expectExceptionMessage("Subscription item with price '" . static::$secondPriceId . "' not found in Chargebee.");
 
         $subscription->findItemOrFail(static::$secondPriceId)->asChargebeeSubscriptionItem();
     }
@@ -999,39 +984,6 @@ class SubscriptionTest extends FeatureTestCase
 
         $this->assertFalse($subscription->onTrial());
     }
-
-
-    // public function test_subscription_changes_can_be_prorated()
-    // {
-    //     $user = $this->createCustomer('subscription_changes_can_be_prorated');
-    //     $user->createAsChargebeeCustomer();
-    //     $paymentSource = $this->createCard($user);
-
-    //     $subscription = $user->newSubscription('main', static::$firstPriceId)
-    //         ->create($paymentSource, [], [
-    //             'autoCollection' => 'on'
-    //         ]);
-
-    //     $this->assertEquals(5000, ($invoice = $user->invoices()->first())->rawTotal());
-
-    //     $subscription->noProrate()->swap(static::$secondPriceId);
-
-    //     // Assert that no new invoice was created because of no prorating.
-    //     $this->assertEquals($invoice->id, $user->invoices()->first()->id);
-    //     $this->assertEquals(1000, $user->upcomingInvoice()->rawTotal());
-
-    //     $subscription->swapAndInvoice(static::$firstPriceId);
-
-    //     // Assert that a new invoice was created because of immediate invoicing.
-    //     $this->assertNotSame($invoice->id, ($invoice = $user->invoices()->first())->id);
-    //     $this->assertEquals(1000, $invoice->rawTotal());
-    //     // $this->assertEquals(2000, $user->upcomingInvoice()->rawTotal());
-
-    //     $subscription->prorate()->swap(static::$firstPriceId);
-
-    //     // Get back from unused time on premium price on next invoice.
-    //     // $this->assertEquals(0, $user->upcomingInvoice()->rawTotal());
-    // }
 
 
     public function test_upcoming_invoice()
@@ -1090,10 +1042,7 @@ class SubscriptionTest extends FeatureTestCase
 
         $subscription->updateQuantity(3);
 
-        $invoice = $subscription->invoice([
-            'invoiceImmediately' => true,
-            'scheduleType' => 'immediate'
-        ]);
+        $invoice = $subscription->invoice();
 
         $latestInvoice = ($subscription->latestInvoice());
 

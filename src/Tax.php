@@ -45,7 +45,7 @@ class Tax
      *
      * @return string
      */
-    public function currency()
+    public function currency(): string
     {
         return $this->currency;
     }
@@ -55,7 +55,7 @@ class Tax
      *
      * @return string
      */
-    public function amount()
+    public function amount(): string
     {
         return $this->formatAmount($this->amount);
     }
@@ -65,7 +65,7 @@ class Tax
      *
      * @return int
      */
-    public function rawAmount()
+    public function rawAmount(): int
     {
         return $this->amount;
     }
@@ -76,7 +76,7 @@ class Tax
      * @param  int  $amount
      * @return string
      */
-    protected function formatAmount($amount)
+    protected function formatAmount($amount): string
     {
         return Cashier::formatAmount($amount, $this->currency);
     }
@@ -84,7 +84,7 @@ class Tax
     /**
      * @return float
      */
-    public function taxRate()
+    public function taxRate(): float
     {
         return $this->taxRate;
     }
@@ -95,7 +95,7 @@ class Tax
      * @param  string  $key
      * @return mixed
      */
-    public function __get($key)
+    public function __get($key): mixed
     {
         return $this->{$key};
     }

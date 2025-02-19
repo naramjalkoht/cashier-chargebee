@@ -26,6 +26,7 @@ use Laravel\CashierChargebee\Exceptions\SubscriptionUpdateFailure;
 use LogicException;
 use ChargeBee\ChargeBee\Models\Estimate as ChargeBeeEstimate;
 use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
+use ChargeBee\ChargeBee\Models\UnbilledCharge;
 
 class Subscription extends Model
 {
@@ -624,7 +625,7 @@ class Subscription extends Model
             'couponIds' => $this->couponIds,
             'trialEnd' => $this->trialExpires ? $this->trialExpires->getTimestamp() : 0,
             'prorate' => $this->prorateBehavior(),
-        ], fn ($value) => ! is_null($value));
+        ], fn($value) => !is_null($value));
 
         $payload = array_merge($payload, $options);
 
@@ -634,7 +635,7 @@ class Subscription extends Model
     /**
      * Add a new Chargebee price to the subscription.
      *
-     * @throws \Laravel\Cashier\Exceptions\SubscriptionUpdateFailure
+     * @throws \Laravel\CashierChargebee\Exceptions\SubscriptionUpdateFailure
      */
     public function addPrice(string $price, ?int $quantity = 1, array $options = []): self
     {
@@ -646,14 +647,14 @@ class Subscription extends Model
             'itemPriceId' => $price,
         ];
 
-        if (! is_null($quantity)) {
+        if (!is_null($quantity)) {
             $subscriptionItem['quantity'] = $quantity;
         }
 
         $chargebeeSubscription = $this->updateChargebeeSubscription(array_filter(array_merge([
             'subscriptionItems' => [$subscriptionItem],
             'prorate' => $this->prorateBehavior(),
-        ], $options)), fn ($value) => ! is_null($value));
+        ], $options)), fn($value) => !is_null($value));
 
         $this->items()->create([
             'chargebee_product' => ItemPrice::retrieve($price)->itemPrice()->itemId,
@@ -670,7 +671,7 @@ class Subscription extends Model
     /**
      * Add a new Chargebee price to the subscription, and invoice immediately.
      *
-     * @throws \Laravel\Cashier\Exceptions\SubscriptionUpdateFailure
+     * @throws \Laravel\CashierChargebee\Exceptions\SubscriptionUpdateFailure
      */
     public function addPriceAndInvoice(string $price, ?int $quantity = 1, array $options = []): self
     {
@@ -682,7 +683,7 @@ class Subscription extends Model
     /**
      * Add a new Chargebee metered price to the subscription.
      *
-     * @throws \Laravel\Cashier\Exceptions\SubscriptionUpdateFailure
+     * @throws \Laravel\CashierChargebee\Exceptions\SubscriptionUpdateFailure
      */
     public function addMeteredPrice(string $price, array $options = []): self
     {
@@ -692,7 +693,7 @@ class Subscription extends Model
     /**
      * Add a new Chargebee metered price to the subscription, and invoice immediately.
      *
-     * @throws \Laravel\Cashier\Exceptions\SubscriptionUpdateFailure
+     * @throws \Laravel\CashierChargebee\Exceptions\SubscriptionUpdateFailure
      */
     public function addMeteredPriceAndInvoice(string $price, array $options = []): self
     {
@@ -718,7 +719,7 @@ class Subscription extends Model
             return $item->itemPriceId !== $price;
         });
 
-        $subscriptionItems = array_map(fn ($item) => $item->getValues(), $subscriptionItems);
+        $subscriptionItems = array_map(fn($item) => $item->getValues(), $subscriptionItems);
 
         $updateData = [
             'replaceItemsList' => true,
@@ -855,45 +856,11 @@ class Subscription extends Model
     }
 
     /**
-     * Invoice the subscription outside of the regular billing cycle.
-     *
-     * @param  array  $options
-     * @return \Laravel\CashierChargebee\Invoice
-     *
-     * @throws \Laravel\CashierChargebee\Exceptions\IncompletePayment
-     */
-    public function invoice(array $options = [])
-    {
-        try {
-
-
-            dd(ChargeBeeInvoice::createForChargeItemsAndCharges([
-                'subscriptionId' => $this->chargebee_id
-            ]));
-
-            return new Invoice(
-                $this->user,
-                ChargebeeSubscription::chargeFutureRenewals($this->chargebee_id, $options)
-                    ->invoice()
-            );
-
-        } catch (PaymentException $exception) {
-            // Set the new Chargebee subscription status immediately when payment fails...
-            dd($exception);
-            $this->fill([
-                'chargebee_status' => $exception->payment->invoice->subscription->status,
-            ])->save();
-
-            throw $exception;
-        }
-    }
-
-    /**
      * Get the latest invoice for the subscription.
      *
      * @return \Laravel\CashierChargebee\Invoice|null
      */
-    public function latestInvoice()
+    public function latestInvoice(): Invoice|null
     {
         $invoices = $this->user->invoices(true, [
             'limit' => 1,
@@ -904,6 +871,8 @@ class Subscription extends Model
         if ($invoices && $invoices->first()) {
             return $invoices->first();
         }
+
+        return null;
     }
 
     /**
@@ -912,7 +881,7 @@ class Subscription extends Model
      * @param  array  $options
      * @return \Laravel\CashierChargebee\Estimate|null
      */
-    public function upcomingInvoice(array $options = [])
+    public function upcomingInvoice(array $options = []): Estimate|null
     {
         if ($this->canceled()) {
             return null;
@@ -930,7 +899,7 @@ class Subscription extends Model
      * @param  array  $options
      * @return \Laravel\CashierChargebee\Estimate|null
      */
-    public function previewInvoice($prices, array $options = [])
+    public function previewInvoice($prices, array $options = []): Estimate
     {
         if (empty($prices = (array) $prices)) {
             throw new InvalidArgumentException('Please provide at least one price when previewing.');
@@ -952,7 +921,7 @@ class Subscription extends Model
      * @param  array  $parameters
      * @return \Illuminate\Support\Collection|\Laravel\CashierChargebee\Invoice[]
      */
-    public function invoices($includePending = false, $parameters = [])
+    public function invoices($includePending = false, $parameters = []): Collection
     {
         return $this->owner->invoices(
             $includePending,
@@ -966,7 +935,7 @@ class Subscription extends Model
      * @param  array  $parameters
      * @return \Illuminate\Support\Collection|\Laravel\CashierChargebee\Invoice[]
      */
-    public function invoicesIncludingPending(array $parameters = [])
+    public function invoicesIncludingPending(array $parameters = []): array|Collection
     {
         return $this->invoices(true, $parameters);
     }
@@ -976,7 +945,7 @@ class Subscription extends Model
      *
      * @return \Laravel\CashierChargebee\Transaction|null
      */
-    public function latestPayment()
+    public function latestPayment(): Transaction|null
     {
         $items = ChargebeeTransaction::all([
             'limit' => 1,
@@ -985,19 +954,6 @@ class Subscription extends Model
         ]);
 
         return $items->count() > 0 ? new Transaction($items[0]->transaction()) : null;
-    }
-
-    /**
-     * The discounts that applies to the subscription, if applicable.
-     *
-     * @return \Laravel\CashierChargebee\Discount[]
-     */
-    public function discounts()
-    {
-        $subscription = $this->asChargebeeSubscription();
-        return Collection::make($subscription->discounts)
-            ->mapInto(Discount::class)
-            ->all();
     }
 
     /**

@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
+use Illuminate\Contracts\View\View as ViewView;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\View;
@@ -70,7 +71,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  \DateTimeZone|string  $timezone
      * @return \Carbon\Carbon
      */
-    public function date($timezone = null)
+    public function date($timezone = null): Carbon
     {
         $carbon = Carbon::createFromTimestampUTC($this->invoice->date);
 
@@ -83,33 +84,15 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  \DateTimeZone|string  $timezone
      * @return \Carbon\Carbon|null
      */
-    public function dueDate($timezone = null)
+    public function dueDate($timezone = null): Carbon|null
     {
         if ($this->invoice->dueDate) {
             $carbon = Carbon::createFromTimestampUTC($this->invoice->dueDate);
 
             return $timezone ? $carbon->setTimezone($timezone) : $carbon;
         }
-    }
 
-    /**
-     * Get the total amount minus the starting balance that was paid (or will be paid).
-     *
-     * @return string
-     */
-    public function total()
-    {
-        return $this->formatAmount($this->rawTotal());
-    }
-
-    /**
-     * Get the raw total amount minus the starting balance that was paid (or will be paid).
-     *
-     * @return int
-     */
-    public function rawTotal()
-    {
-        return $this->invoice->total;
+        return null;
     }
 
     /**
@@ -117,9 +100,9 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return string
      */
-    public function realTotal()
+    public function total(): string
     {
-        return $this->formatAmount($this->rawRealTotal());
+        return $this->formatAmount($this->rawTotal());
     }
 
     /**
@@ -127,7 +110,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return int
      */
-    public function rawRealTotal()
+    public function rawTotal(): mixed
     {
         return $this->invoice->total;
     }
@@ -137,7 +120,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return string
      */
-    public function subtotal()
+    public function subtotal(): string
     {
         return $this->formatAmount($this->invoice->subTotal);
     }
@@ -147,7 +130,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return string
      */
-    public function amountDue()
+    public function amountDue(): string
     {
         return $this->formatAmount($this->rawAmountDue());
     }
@@ -157,99 +140,9 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return int
      */
-    public function rawAmountDue()
+    public function rawAmountDue(): mixed
     {
         return $this->invoice->amountDue ?? 0;
-    }
-
-    /**
-     * Determine if the account had a starting balance.
-     *
-     * @return bool
-     */
-    public function hasStartingBalance()
-    {
-        return $this->rawStartingBalance() < 0;
-    }
-
-    /**
-     * Get the starting balance for the invoice.
-     *
-     * @return string
-     */
-    public function startingBalance()
-    {
-        return $this->formatAmount($this->rawStartingBalance());
-    }
-
-    /**
-     * Get the raw starting balance for the invoice.
-     *
-     * @return int
-     */
-    public function rawStartingBalance()
-    {
-        return $this->invoice->starting_balance ?? 0;
-    }
-
-    /**
-     * Determine if the account had an ending balance.
-     *
-     * @return bool
-     */
-    public function hasEndingBalance()
-    {
-        return !is_null($this->invoice->ending_balance);
-    }
-
-    /**
-     * Get the ending balance for the invoice.
-     *
-     * @return string
-     */
-    public function endingBalance()
-    {
-        return $this->formatAmount($this->rawEndingBalance());
-    }
-
-    /**
-     * Get the raw ending balance for the invoice.
-     *
-     * @return int
-     */
-    public function rawEndingBalance()
-    {
-        return $this->invoice->ending_balance ?? 0;
-    }
-
-    /**
-     * Determine if the invoice has balance applied.
-     *
-     * @return bool
-     */
-    public function hasAppliedBalance()
-    {
-        return $this->rawAppliedBalance() < 0;
-    }
-
-    /**
-     * Get the applied balance for the invoice.
-     *
-     * @return string
-     */
-    public function appliedBalance()
-    {
-        return $this->formatAmount($this->rawAppliedBalance());
-    }
-
-    /**
-     * Get the raw applied balance for the invoice.
-     *
-     * @return int
-     */
-    public function rawAppliedBalance()
-    {
-        return $this->rawStartingBalance() - $this->rawEndingBalance();
     }
 
     /**
@@ -257,7 +150,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function hasDiscount()
+    public function hasDiscount(): bool
     {
         if (is_null($this->invoice->discounts)) {
             return false;
@@ -271,7 +164,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \Laravel\CashierChargebee\Discount[]
      */
-    public function discounts()
+    public function discounts(): array
     {
         return Collection::make($this->invoice->discounts)
             ->mapInto(Discount::class)
@@ -284,11 +177,13 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  \Laravel\CashierChargebee\Discount  $discount
      * @return string|null
      */
-    public function discountFor(Discount $discount)
+    public function discountFor(Discount $discount): string|null
     {
         if (!is_null($discountAmount = $this->rawDiscountFor($discount))) {
             return $this->formatAmount($discountAmount);
         }
+
+        return null;
     }
 
     /**
@@ -297,7 +192,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  \Laravel\CashierChargebee\Discount  $discount
      * @return int|null
      */
-    public function rawDiscountFor(Discount $discount)
+    public function rawDiscountFor(Discount $discount): mixed
     {
         return optional(Collection::make($this->invoice->discounts)
             ->first(function ($discountAmount) use ($discount) {
@@ -311,7 +206,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return string
      */
-    public function discount()
+    public function discount(): string
     {
         return $this->formatAmount($this->rawDiscount());
     }
@@ -321,7 +216,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return int
      */
-    public function rawDiscount()
+    public function rawDiscount(): int
     {
         $total = 0;
 
@@ -337,7 +232,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return string
      */
-    public function tax()
+    public function tax(): string
     {
         return $this->formatAmount($this->invoice->tax ?? 0);
     }
@@ -347,7 +242,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function hasTax()
+    public function hasTax(): bool
     {
         $lineItems = $this->invoiceItems() + $this->subscriptions();
 
@@ -361,7 +256,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \Laravel\CashierChargebee\Tax[]
      */
-    public function taxes()
+    public function taxes(): array
     {
         return Collection::make($this->invoice->lineItemTaxes)
             ->map(function ($lineItemTax) {
@@ -399,9 +294,9 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function chargesAutomatically()
+    public function chargesAutomatically(): bool
     {
-        return $this->invoice->autoCollection === 'on';
+        return $this->invoice->status === 'paid';
     }
 
     /**
@@ -409,9 +304,9 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function sendsInvoice()
+    public function sendsInvoice(): bool
     {
-        return $this->invoice->autoCollection === 'off';
+        return $this->invoice->status === 'pending' || $this->invoice->status === 'payment_due';
     }
 
     /**
@@ -419,7 +314,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \Laravel\CashierChargebee\InvoiceLineItem[]
      */
-    public function invoiceItems()
+    public function invoiceItems(): array
     {
         return Collection::make($this->invoiceLineItems())->filter(function (InvoiceLineItem $item) {
             return $item->subscriptionId == null;
@@ -431,7 +326,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \Laravel\CashierChargebee\InvoiceLineItem[]
      */
-    public function subscriptions()
+    public function subscriptions(): array
     {
         return Collection::make($this->invoiceLineItems())->filter(function (InvoiceLineItem $item) {
             return $item->subscriptionId != null;
@@ -443,7 +338,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \Laravel\CashierChargebee\InvoiceLineItem[]
      */
-    public function invoiceLineItems()
+    public function invoiceLineItems(): array
     {
         if (!is_null($this->items)) {
             return $this->items;
@@ -468,7 +363,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  array  $options
      * @return \ChargeBee\ChargeBee\Models\Invoice
      */
-    public function tab($description, $amount, array $options = [])
+    public function tab($description, $amount, array $options = []): ChargeBeeInvoice
     {
         $item = ChargeBeeInvoice::addCharge($this->invoice->id, array_merge($options, [
             'amount' => $amount,
@@ -488,7 +383,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  array  $options
      * @return \ChargeBee\ChargeBee\Models\Invoice
      */
-    public function tabPrice($price, $quantity = 1, array $options = [])
+    public function tabPrice($price, $quantity = 1, array $options = []): ChargeBeeInvoice
     {
         $item = ChargeBeeInvoice::addChargeItem($this->invoice->id, array_merge($options, [
             'itemPrice' => [
@@ -507,7 +402,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return $this
      */
-    public function refresh()
+    public function refresh(): static
     {
         $this->invoice = ChargeBeeInvoice::retrieve($this->invoice->id)->invoice();
 
@@ -520,19 +415,9 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  int  $amount
      * @return string
      */
-    protected function formatAmount($amount)
+    protected function formatAmount($amount): string
     {
         return Cashier::formatAmount($amount, $this->invoice->currencyCode);
-    }
-
-    /**
-     * Return the Tax Ids of the account.
-     *
-     * @return array
-     */
-    public function accountTaxIds()
-    {
-        return $this->invoice->account_tax_ids ?? [];
     }
 
     /**
@@ -541,7 +426,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  array  $options
      * @return $this
      */
-    public function pay(array $options = [])
+    public function pay(array $options = []): static
     {
         if (Arr::get($options, 'off_session', true)) {
             $this->invoice = ChargeBeeInvoice::recordPayment($this->invoice->id, array_merge([
@@ -563,7 +448,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  array  $options
      * @return $this
      */
-    public function void(array $options = [])
+    public function void(array $options = []): static
     {
         $this->invoice = ChargeBeeInvoice::voidInvoice($this->invoice->id, $options)->invoice();
 
@@ -576,7 +461,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  array  $options
      * @return $this
      */
-    public function delete(array $options = [])
+    public function delete(array $options = []): static
     {
         $this->invoice = ChargeBeeInvoice::delete($this->invoice->id, $options)->invoice();
 
@@ -629,7 +514,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  array  $data
      * @return \Illuminate\Contracts\View\View
      */
-    public function view(array $data = [])
+    public function view(array $data = []): ViewView
     {
         return View::make('cashier::invoice', array_merge($data, [
             'invoice' => $this,
@@ -644,7 +529,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  array  $data
      * @return string
      */
-    public function pdf(array $data = [])
+    public function pdf(array $data = []): string
     {
         $options = config('cashier.invoices.options', []);
 
@@ -661,7 +546,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  array  $data
      * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function download(array $data = [])
+    public function download(array $data = []): Response
     {
         $filename = $data['product'] ?? Str::slug(config('app.name'));
         $filename .= '_' . $this->date()->month . '_' . $this->date()->year;
@@ -676,7 +561,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  array  $data
      * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function downloadAs($filename, array $data = [])
+    public function downloadAs($filename, array $data = []): Response
     {
         return new Response($this->pdf($data), 200, [
             'Content-Description' => 'File Transfer',
@@ -702,7 +587,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \ChargeBee\ChargeBee\Models\Invoice
      */
-    public function asChargebeeInvoice()
+    public function asChargebeeInvoice(): ChargeBeeInvoice
     {
         return $this->invoice;
     }
@@ -712,7 +597,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return array
      */
-    public function toArray()
+    public function toArray(): mixed
     {
         return $this->asChargebeeInvoice()->getValues();
     }
@@ -723,7 +608,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  int  $options
      * @return string
      */
-    public function toJson($options = 0)
+    public function toJson($options = 0): bool|string
     {
         return json_encode($this->jsonSerialize(), $options);
     }
@@ -745,7 +630,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      * @param  string  $key
      * @return mixed
      */
-    public function __get($key)
+    public function __get($key): mixed
     {
         return $key == 'next_offset' ? $this->nextOffset : $this->invoice->{$key};
     }

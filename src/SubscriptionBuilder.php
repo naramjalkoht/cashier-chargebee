@@ -101,7 +101,7 @@ class SubscriptionBuilder
         }
 
         if (! isset($options['itemPriceId'])) {
-            throw new \InvalidArgumentException('Each price must include an "itemPriceId" key.');
+            throw new InvalidArgumentException('Each price must include an "itemPriceId" key.');
         }
 
         $this->items[$options['itemPriceId']] = $options;

@@ -42,7 +42,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return string
      */
-    public function total()
+    public function total(): string
     {
         return $this->formatAmount($this->item->amount);
     }
@@ -52,7 +52,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return string
      */
-    public function unitAmountExcludingTax()
+    public function unitAmountExcludingTax(): string
     {
         return $this->formatAmount($this->item->unitAmount - $this->item->taxAmount);
     }
@@ -62,7 +62,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return float
      */
-    public function inclusiveTaxPercentage()
+    public function inclusiveTaxPercentage(): mixed
     {
         return $this->invoice->priceType == 'tax_inclusive' ? $this->taxRate : 0;
     }
@@ -72,7 +72,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return float
      */
-    public function exclusiveTaxPercentage()
+    public function exclusiveTaxPercentage(): mixed
     {
         return $this->invoice->priceType == 'tax_exclusive' ? $this->taxRate : 0;
     }
@@ -82,7 +82,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function hasTaxRates()
+    public function hasTaxRates(): bool
     {
         return ! empty($this->item->taxRate);
     }
@@ -92,7 +92,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return string|null
      */
-    public function startDate()
+    public function startDate(): ?string
     {
         if ($this->hasPeriod()) {
             return $this->startDateAsCarbon()->toFormattedDateString();
@@ -104,7 +104,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return string|null
      */
-    public function endDate()
+    public function endDate(): ?string
     {
         if ($this->hasPeriod()) {
             return $this->endDateAsCarbon()->toFormattedDateString();
@@ -116,7 +116,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \Carbon\Carbon|null
      */
-    public function startDateAsCarbon()
+    public function startDateAsCarbon(): ?Carbon
     {
         if ($this->hasPeriod()) {
             return Carbon::createFromTimestampUTC($this->item->dateFrom);

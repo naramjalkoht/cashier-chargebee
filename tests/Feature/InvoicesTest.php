@@ -314,13 +314,26 @@ class InvoicesTest extends FeatureTestCase
         $this->assertEquals(5499, $invoice->total);
     }
 
-    public function skip_test_it_can_determine_if_sends_invoice()
+    public function test_it_can_determine_if_sends_invoice()
     {
         $user = $this->createCustomerWithPaymentSource('sends_invoice');
         $invoice = $user->newInvoice()
             ->tabFor('Laracon', amount: 5000)
             ->invoice([
                 'autoCollection' => 'off',
+            ]);
+
+        $this->assertFalse($invoice->chargesAutomatically());
+        $this->assertTrue($invoice->sendsInvoice());
+    }
+
+    public function test_it_can_determine_if_charges_automatically()
+    {
+        $user = $this->createCustomerWithPaymentSource('sends_invoice');
+        $invoice = $user->newInvoice()
+            ->tabFor('Laracon', amount: 5000)
+            ->invoice([
+                'autoCollection' => 'on',
             ]);
 
         $this->assertTrue($invoice->chargesAutomatically());

@@ -116,10 +116,6 @@
 
                     @isset($vendorVat)
                         {{ $vendorVat }}<br>
-                    @else
-                        @foreach ($invoice->accountTaxIds() as $taxId)
-                            {{ $taxId->value }}<br>
-                        @endforeach
                     @endisset
                 </td>
                 <td width="50%">
@@ -229,7 +225,7 @@
                         @endforeach
 
                         <!-- Display The Subtotal -->
-                        @if ($invoice->hasDiscount() || $invoice->hasTax() || $invoice->hasStartingBalance())
+                        @if ($invoice->hasDiscount() || $invoice->hasTax())
                             <tr>
                                 <td></td>
                                 <td colspan="{{ $invoice->hasTax() ? 3 : 2 }}">Subtotal</td>
@@ -290,20 +286,9 @@
                                 Total
                             </td>
                             <td align="right">
-                                {{ $invoice->realTotal() }}
+                                {{ $invoice->total() }}
                             </td>
                         </tr>
-
-                        <!-- Applied Balance -->
-                        @if ($invoice->hasAppliedBalance())
-                            <tr>
-                                <td></td>
-                                <td colspan="{{ $invoice->hasTax() ? 3 : 2 }}">
-                                    Applied balance
-                                </td>
-                                <td align="right">{{ $invoice->appliedBalance() }}</td>
-                            </tr>
-                        @endif
 
                         <!-- Display The Amount Due -->
                         <tr>

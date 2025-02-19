@@ -43,6 +43,7 @@ pipelines:
 
       - step: 
           name: Static Analysis
+          size: 2x
           image: threadable/php84-laravel
           caches:
             - composer
@@ -64,6 +65,7 @@ pipelines:
       
       - step:
           name: Run Tests - PHP 8.1, Laravel 10
+          size: 2x
           image: threadable/php81-laravel
           services:
             - mysql
@@ -87,6 +89,7 @@ pipelines:
 
       - step:
           name: Run Tests - PHP 8.2, Laravel 10
+          size: 2x
           image: threadable/php82-laravel
           services:
             - mysql
@@ -110,6 +113,7 @@ pipelines:
 
       - step:
           name: Run Tests - PHP 8.3, Laravel 10
+          size: 2x
           image: threadable/php83-laravel
           services:
             - mysql
@@ -133,6 +137,7 @@ pipelines:
 
       - step:
           name: Run Tests - PHP 8.2, Laravel 11
+          size: 2x
           image: threadable/php82-laravel
           services:
             - mysql
@@ -156,6 +161,7 @@ pipelines:
 
       - step:
           name: Run Tests - PHP 8.3, Laravel 11
+          size: 2x
           image: threadable/php83-laravel
           services:
             - mysql
@@ -179,6 +185,7 @@ pipelines:
 
       - step:
           name: Run Tests - PHP 8.4, Laravel 11 & Code Coverage
+          size: 2x
           image: threadable/php84-laravel
           services:
             - mysql
@@ -256,6 +263,7 @@ pipelines:
     "dev":
       - step:
           name: Sonar Cloud
+          size: 2x
           image: threadable/php84-laravel
           services:
             - mysql
