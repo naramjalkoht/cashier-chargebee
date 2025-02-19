@@ -6,6 +6,7 @@ use ChargeBee\ChargeBee\Models\HostedPage;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Contracts\Support\Responsable;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Redirect;
 use JsonSerializable;
 
@@ -55,7 +56,7 @@ class Checkout implements Arrayable, Jsonable, JsonSerializable, Responsable
      * @param  object|null  $parentInstance
      * @return \Laravel\CashierChargebee\CheckoutBuilder
      */
-    public static function customer($owner, $parentInstance = null)
+    public static function customer($owner, $parentInstance = null): CheckoutBuilder
     {
         return new CheckoutBuilder($owner, $parentInstance);
     }
@@ -68,7 +69,7 @@ class Checkout implements Arrayable, Jsonable, JsonSerializable, Responsable
      * @param  array  $customerOptions
      * @return \Laravel\CashierChargebee\Checkout
      */
-    public static function create($owner, array $sessionOptions = [], array $customerOptions = [])
+    public static function create($owner, array $sessionOptions = [], array $customerOptions = []): Checkout
     {
         $data = array_merge([
             'mode' => Session::MODE_PAYMENT,
@@ -101,7 +102,7 @@ class Checkout implements Arrayable, Jsonable, JsonSerializable, Responsable
      *
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function redirect()
+    public function redirect(): RedirectResponse
     {
         return Redirect::to($this->session->url, 303);
     }
@@ -112,7 +113,7 @@ class Checkout implements Arrayable, Jsonable, JsonSerializable, Responsable
      * @param  \Illuminate\Http\Request  $request
      * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function toResponse($request)
+    public function toResponse($request): RedirectResponse
     {
         return $this->redirect();
     }
@@ -122,7 +123,7 @@ class Checkout implements Arrayable, Jsonable, JsonSerializable, Responsable
      *
      * @return Session
      */
-    public function asChargebeeCheckoutSession()
+    public function asChargebeeCheckoutSession(): Session
     {
         return $this->session;
     }
@@ -132,7 +133,7 @@ class Checkout implements Arrayable, Jsonable, JsonSerializable, Responsable
      *
      * @return array
      */
-    public function toArray()
+    public function toArray(): mixed
     {
         return $this->asChargebeeCheckoutSession()->getValues();
     }
@@ -143,7 +144,7 @@ class Checkout implements Arrayable, Jsonable, JsonSerializable, Responsable
      * @param  int  $options
      * @return string
      */
-    public function toJson($options = 0)
+    public function toJson($options = 0): bool|string
     {
         return json_encode($this->jsonSerialize(), $options);
     }
@@ -165,7 +166,7 @@ class Checkout implements Arrayable, Jsonable, JsonSerializable, Responsable
      * @param  string  $key
      * @return mixed
      */
-    public function __get($key)
+    public function __get($key): mixed
     {
         return $this->session->{$key};
     }

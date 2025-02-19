@@ -39,7 +39,7 @@ class InvoiceBuilder
      * @param  array  $tabOptions
      * @return \Laravel\CashierChargebee\InvoiceBuilder
      */
-    public function tabFor($description, $amount, array $tabOptions = [])
+    public function tabFor($description, $amount, array $tabOptions = []): static
     {
         $this->charges[] = array_merge([
             'amount' => $amount,
@@ -57,7 +57,7 @@ class InvoiceBuilder
      * @param  array  $tabOptions
      * @return \Laravel\CashierChargebee\InvoiceBuilder
      */
-    public function tabPrice($price, $quantity = 1, array $tabOptions = [])
+    public function tabPrice($price, $quantity = 1, array $tabOptions = []): static
     {
         $this->itemPrices[] = array_merge([
             'itemPriceId' => $price,
@@ -73,7 +73,7 @@ class InvoiceBuilder
      * @param  array  $options
      * @return \Laravel\CashierChargebee\Invoice
      */
-    public function invoice(?array $options = [])
+    public function invoice(?array $options = []): Invoice
     {
         $data = array_filter(array_merge([
             'customerId' => $this->owner->chargebeeId(),

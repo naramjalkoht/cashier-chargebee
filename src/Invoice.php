@@ -473,7 +473,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function isOpen()
+    public function isOpen(): bool
     {
         return $this->invoice->status === 'payment_due';
     }
@@ -483,7 +483,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function isPending()
+    public function isPending(): bool
     {
         return $this->invoice->status === 'pending';
     }
@@ -493,7 +493,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function isPaid()
+    public function isPaid(): bool
     {
         return $this->invoice->status === 'paid';
     }
@@ -503,7 +503,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function isVoid()
+    public function isVoid(): bool
     {
         return $this->invoice->status === 'voided';
     }

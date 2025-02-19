@@ -47,7 +47,7 @@ class CheckoutBuilder
      * @param  object|null  $instance
      * @return \Laravel\CashierChargebee\CheckoutBuilder
      */
-    public static function make($owner = null, $instance = null)
+    public static function make($owner = null, $instance = null): CheckoutBuilder
     {
         return new CheckoutBuilder($owner, $instance);
     }
@@ -60,7 +60,7 @@ class CheckoutBuilder
      * @param  array  $customerOptions
      * @return \Laravel\CashierChargebee\Checkout
      */
-    public function create($items, array $sessionOptions = [], array $customerOptions = [])
+    public function create($items, array $sessionOptions = [], array $customerOptions = []): Checkout
     {
         $data = array_merge([
             'mode' => Session::MODE_PAYMENT,

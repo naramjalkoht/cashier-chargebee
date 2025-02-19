@@ -53,7 +53,7 @@ class CashierServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    protected function bindInvoiceRenderer()
+    protected function bindInvoiceRenderer(): void
     {
         $this->app->bind(InvoiceRenderer::class, function ($app) {
             return $app->make(config('cashier.invoices.renderer', DompdfInvoiceRenderer::class));

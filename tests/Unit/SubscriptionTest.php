@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use InvalidArgumentException;
 use Laravel\CashierChargebee\Subscription;
 use Laravel\CashierChargebee\SubscriptionItem;
+use Laravel\CashierChargebee\Tests\Feature\FeatureTestCase;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
 use Laravel\CashierChargebee\Tests\TestCase;
 
-class SubscriptionTest extends TestCase
+class SubscriptionTest extends FeatureTestCase
 {
     public function test_prorate_on_subscription_create(): void
     {
@@ -36,7 +37,7 @@ class SubscriptionTest extends TestCase
 
     public function test_user_relationship(): void
     {
-        $user = User::factory()->make();
+        $user = User::factory()->create();
         $subscription = Subscription::factory()->create(['user_id' => $user->id]);
 
         $this->assertEquals($user->id, $subscription->user->id);
@@ -95,7 +96,6 @@ class SubscriptionTest extends TestCase
         $this->expectException(ModelNotFoundException::class);
 
         $subscription = Subscription::factory()->create();
-        dd($subscription);
         $subscription->findItemOrFail('nonexistent_price');
     }
 
