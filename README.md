@@ -21,6 +21,12 @@
     - [Route Configuration](#route-configuration)
     - [Configuring Basic Authentication](#configuring-basic-authentication)
     - [Handling Webhook Events](#handling-webhook-events)
+- [Checkout](#checkout)
+    - [Product Checkouts](#product-checkouts)
+    - [Single Charge Checkouts](#single-charge-checkouts)
+    - [Subscription Checkouts](#subscription-checkouts)
+    - [Collecting Tax IDs](#collecting-tax-ids)
+    - [Guest Checkouts](#guest-checkouts)
 - [Manage Payment Methods](#manage-payment-methods)
     - [Creating a SetupIntent](#payment-methods-create-setupintent)
     - [Retrieving a SetupIntent](#payment-methods-find-setupintent)
@@ -33,10 +39,34 @@
     - [Synchronizing the Default Payment Method from Chargebee](#payment-methods-sync-default)
     - [Deleting a Payment Method](#payment-methods-delete)
     - [Deleting Payment Methods of a Specific Type](#payment-methods-delete-multiple)
+- [Subscriptions](#subscriptions)
+    - [Setting Up Subscriptions in Chargebeee](#setting-up-subscriptions-in-chargebee)
+    - [Subscription Lifecycle & Statuses](#subscription-lifecycle--statuses)
+    - [Creating Subscriptions](#creating-subscriptions)
+    - [Checking Subscription Status](#checking-subscription-status)
+    - [Subscription Items](#subscription-items)
+    - [Updating a Subscription in Chargebee](#updating-a-subscription-in-chargebee)
+    - [Changing Prices](#changing-prices)
+    - [Subscription Quantity](#subscription-quantity)
+    - [Usage Based Billing](#usage-based-billing)
+    - [Cancelling Subscriptions](#cancelling-subscriptions)
+    - [Resuming Subscriptions](#resuming-subscriptions)
+    - [Multiple Subscriptions](#multiple-subscriptions)
+- [Subscription Trials](#subscription-trials)
+    - [With Payment Method Up Front](#with-payment-method-up-front)
+    - [Generic Trials (Without Payment Method Up Front)](#generic-trials-without-payment-method-up-front)
+    - [Checking And Ending Trials](#checking-and-ending-trials)
+    - [Extending a Trial](#extending-a-trial)
 - [Single Charges](#single-charges)
     - [Creating Payment Intents](#creating-payment-intents)
     - [Payment Status Helpers](#payment-status-helpers)
     - [Finding Payment Intents](#finding-payment-intents)
+    - [Charge With Invoice](#charge-with-invoice)
+- [Invoices](#invoices)
+    - [Retrieving Invoices](#retrieving-invoices)
+    - [Upcoming Invoices](#upcoming-invoices)
+    - [Previewing Subscription Invoices](#previewing-subscription-invoices)
+    - [Generating Invoice PDFs](#generating-invoice-pdfs)
 
 <a name="installation"></a>
 ## Installation
@@ -453,11 +483,15 @@ Cashier will automatically verify these credentials for incoming webhook request
 <a name="handling-webhook-events"></a>
 ### Handling Webhook Events
 
-Cashier emits a `WebhookReceived` event for every incoming webhook, allowing you to handle these events in your application. By default, Cashier includes a `HandleWebhookReceived` listener that handles the `customer_deleted` and `customer_updated` events.
+Cashier emits a `WebhookReceived` event for every incoming webhook, allowing you to handle these events in your application. By default, Cashier includes a `HandleWebhookReceived` listener that processes customer-related events like `customer_deleted` and `customer_updated`, as well as subscription-related events such as `subscription_created`, `subscription_changed`, and `subscription_renewed`.
+
+#### customer_deleted
 
 The `customer_deleted` event ensures that when a customer is deleted in Chargebee, their corresponding record in your application is updated accordingly by removing their Chargebee ID.
 
-The `customer_updated` event uses the `updateCustomerFromChargebee` method on your billable model to synchronize customer information. By default, this method maps Chargebee data to common fields such as `email` and `phone`. However, to ensure the correct mapping for your application, **you should override this method in your billable model**. This allows you to define how Chargebee customer attributes should be mapped to your model's columns. Additionally, you can include more data beyond the default fields, as Chargebee provides a wide range of customer attributes. For a full list, see the [Chargebee API documentation](https://apidocs.eu.chargebee.com/docs/api/customers?prod_cat_ver=2&lang=php#customer_attributes). Here’s an example implementation:
+#### customer_changed
+
+The `customer_changed` event uses the `updateCustomerFromChargebee` method on your billable model to synchronize customer information. By default, this method maps Chargebee data to common fields such as `email` and `phone`. However, to ensure the correct mapping for your application, **you should override this method in your billable model**. This allows you to define how Chargebee customer attributes should be mapped to your model's columns. Additionally, you can include more data beyond the default fields, as Chargebee provides a wide range of customer attributes. For a full list, see the [Chargebee API documentation](https://apidocs.eu.chargebee.com/docs/api/customers?prod_cat_ver=2&lang=php#customer_attributes). Here’s an example implementation:
 
 ```php
 /**
@@ -483,9 +517,31 @@ public function updateCustomerFromChargebee(): void
 }
 ```
 
-Additionally, the `customer_updated` event handler calls the `updateDefaultPaymentMethodFromChargebee` method to synchronize the default payment method from Chargebee to your application.
+Additionally, the `customer_changed` event handler calls the `updateDefaultPaymentMethodFromChargebee` method to synchronize the default payment method from Chargebee to your application.
 
-If you need to modify the default behavior for the `customer_deleted` or `customer_updated` events, or handle additional Chargebee events, you can provide your own listener. The listener class is configurable via the `cashier` configuration file:
+#### subscription_created
+
+The `subscription_created` event is triggered when a new subscription is created in Chargebee. Cashier listens for this event and automatically ensures that the corresponding subscription is created in your application's database.
+
+#### subscription_changed
+
+The `subscription_changed` event is emitted whenever an existing subscription is updated in Chargebee. This includes modifications such as:
+
+- Price changes
+- Quantity updates
+- Status updates (e.g., from trial to active)
+
+Cashier listens for this event and synchronizes the subscription data in your database accordingly.
+
+For example, if a user upgrades their plan from basic to premium, the system will update the subscription details and maintain consistency with Chargebee.
+
+#### subscription_renewed
+
+The `subscription_renewed` event occurs when a subscription is successfully renewed at the end of its billing cycle. Cashier updates the subscription details in the database, ensuring consistency with Chargebee.
+
+#### Customizing Webhook Handling
+
+If you need to modify the default behavior for these webhook events, or handle additional Chargebee events, you can provide your own listener. The listener class is configurable via the `cashier` configuration file:
 
 ```init
 'webhook_listener' => \Laravel\CashierChargebee\Listeners\HandleWebhookReceived::class,
@@ -711,7 +767,7 @@ echo 'Payment method added and set as default: ' . $paymentMethod->id;
 
 #### Behavior:
 - Ensures that the customer exists in Chargebee before proceeding.
-- If `$setAsDefault` is `true`, the method calls `setDefaultPaymentMethod` to assign the newly added payment method as the default.
+- If `$setAsDefault` is `true`, the method calls `updateDefaultPaymentMethod` to assign the newly added payment method as the default.
 - Returns a `PaymentMethod` instance linked to the added `PaymentSource`.
 
 #### Error Handling:
@@ -781,11 +837,11 @@ if ($defaultPaymentMethod) {
 <a name="payment-methods-set-default"></a>
 ### Setting the Default Payment Method
 
-The `setDefaultPaymentMethod` method allows you to designate a specific payment method as the primary payment source for a customer in Chargebee.
+The `updateDefaultPaymentMethod` method allows you to designate a specific payment method as the primary payment source for a customer in Chargebee.
 
 #### Method Signature:
 ```php
-public function setDefaultPaymentMethod(PaymentSource|string $paymentSource): ?Customer
+public function updateDefaultPaymentMethod(PaymentSource|string $paymentSource): ?Customer
 ```
 
 #### Parameters:
@@ -799,7 +855,7 @@ $user->createAsChargebeeCustomer();
 $paymentSourceId = 'pm_123456789';
 
 try {
-    $user->setDefaultPaymentMethod($paymentSourceId);
+    $user->updateDefaultPaymentMethod($paymentSourceId);
     echo 'Default payment method updated successfully.';
 } catch (Exception $e) {
     echo 'Error: ' . $e->getMessage();
@@ -932,6 +988,868 @@ try {
 - If the customer does not exist in Chargebee, a `CustomerNotFound` exception will be thrown.
 - If the request to Chargebee fails due to invalid parameters, an `InvalidRequestException` will be thrown.
 
+<a name="subscriptions"></a>
+## Subscriptions
+
+Subscriptions enable businesses to offer their products or services on a recurring basis, allowing customers to be billed at regular intervals. In Chargebee, each subscription is linked to exactly one plan, which defines the pricing, billing frequency, and renewal terms. Additionally, subscriptions can include addons, charge and coupons.
+
+<a name="setting-up-subscriptions-in-chargebee"></a>
+### Setting Up Subscriptions in Chargebee
+
+Before you can start managing subscriptions with this package, you must first configure your [Product Catalog](https://www.chargebee.com/docs/2.0/product-catalog.html) in Chargebee. This involves creating:
+
+- **Product Families** – Groupings of related plans, addons, and charges.
+- **Plans** – Core subscription offerings that define pricing and billing cycles.
+- **Addons & Charges** – Additional recurring (addons) or one-time (charges) fees that can be attached to a subscription.
+- **Price Points** (Item Prices) – Variations of plans and addons based on currency and billing frequency.
+- **Coupons** – Discounts and promotional offers applied to subscriptions.
+
+<a name="subscription-lifecycle-statuses"></a>
+### Subscription Lifecycle & Statuses
+
+Every subscription in Chargebee progresses through multiple statuses:
+
+- **Future** – The subscription is scheduled to start at a later date.
+- **In Trial** – The subscription is active but in a trial period, during which the customer is not billed.
+- **Active** – The subscription is fully operational, and recurring charges apply.
+- **Non Renewing** – The subscription remains active but is scheduled to be canceled at the end of the current billing cycle.
+- **Paused** – The subscription is temporarily suspended but can be resumed later.
+- **Cancelled** – The subscription is no longer active and will not renew.
+
+For a more detailed overview of how subscriptions work in Chargebee, refer to the [Chargebee Subscriptions Documentation](https://www.chargebee.com/docs/2.0/subscriptions.html).
+
+<a name="creating-subscriptions"></a>
+### Creating Subscriptions
+
+To create a subscription, first retrieve an instance of your billable model, which typically will be an instance of `App\Models\User`. Once you have retrieved the model instance, you may use the `newSubscription` method to initiate the subscription builder:
+
+```php
+use Illuminate\Http\Request;
+
+Route::post('/user/subscribe', function (Request $request) {
+    $request->user()->newSubscription(
+        'default', 'price_monthly'
+    )->create($request->paymentMethodId);
+
+    // ...
+});
+```
+
+The first argument passed to the `newSubscription` method should be the internal type of the subscription. If your application only offers a single subscription, you might call this `default` or `primary`. This subscription type is only for internal application usage and is not meant to be shown to users. In addition, it should not contain spaces and it should never be changed after creating the subscription. The second argument is the specific price the user is subscribing to. This value should correspond to the price's identifier in Chargebee.
+
+The `create` method on the subscription builder accepts a Chargebee payment source identifier or Chargebee `PaymentSource` object. It will begin the subscription as well as create `subscriptions` and `subscription_items` records your database. If you need to pass additional options supported by Chargebee for the customer or subscription, you may provide them as the second and third arguments to the `create` method:
+
+```php
+$subscription = $user->newSubscription('default', 'price_monthly')
+    ->create($paymentMethod, [
+        'email' => $email,
+    ], [
+        'metaData' => json_encode(['note' => 'Some extra information.']),
+    ]);
+```
+
+> [!WARNING]  
+> Passing a payment source identifier directly to the `create` subscription method will also automatically add it to the user's stored payment methods.
+
+If you would like to add a subscription to a customer who already has a default payment method you may invoke the `add` method on the subscription builder:
+
+```php
+$subscription = $user->newSubscription('default', 'price_monthly')
+    ->add();
+```
+
+You can add an item to the subscription and specify its quantity using the `price` method. This method requires the identifier of the Chargebee price, either as a string or an array containing an `itemPriceId` key. An optional second argument allows specifying the quantity of the item:
+
+```php
+$subscription = $user->newSubscription('default', 'price_monthly')
+    ->price('price_annual', 2)
+    ->create($paymentMethod);
+```
+
+For metered billing, use the `meteredPrice` method. This method requires a single argument, which is the identifier of the metered price in Chargebee:
+
+```php
+$subscription = $user->newSubscription('default', 'price_base')
+    ->meteredPrice('price_usage')
+    ->create($paymentMethod);
+```
+
+To set the quantity of a subscription item, use the `quantity` method. This method takes a quantity as the first argument. If the subscription includes multiple items, a second argument specifying the price identifier is required:
+
+```php
+$subscription = $user->newSubscription('default', 'price_standard')
+    ->quantity(3)
+    ->create($paymentMethod);
+```
+
+To define a trial period in days, use `trialDays`. This method requires an integer specifying the number of trial days:
+
+```php
+$subscription = $user->newSubscription('default', 'price_monthly')
+    ->trialDays(14)
+    ->create($paymentMethod);
+```
+
+To specify an exact trial end date, use `trialUntil`. This method accepts a `Carbon` instance or any object implementing `CarbonInterface` representing the trial's end date:
+
+```php
+$subscription = $user->newSubscription('default', 'price_monthly')
+    ->trialUntil(now()->addMonth())
+    ->create($paymentMethod);
+```
+
+If you want to skip the trial period, use `skipTrial`:
+
+```php
+$subscription = $user->newSubscription('default', 'price_monthly')
+    ->skipTrial()
+    ->create($paymentMethod);
+```
+
+To attach metadata to the subscription, use `withMetadata`. This method accepts an associative array of metadata to store alongside the subscription:
+
+```php
+$subscription = $user->newSubscription('default', 'price_monthly')
+    ->withMetadata(['source' => 'campaign_x'])
+    ->create($paymentMethod);
+```
+
+<a name="checking-subscription-status"></a>
+### Checking Subscription Status
+
+Once a customer is subscribed, you can check their subscription status using various methods on the billable model and the `Subscription` model. Additionally, query scopes allow filtering subscriptions based on their status.
+
+#### Methods on the Billable Model ($user)
+
+You can check if a user has an active subscription, including during the trial period, using the `subscribed` method. This method requires the subscription type as an argument:
+
+```php
+if ($user->subscribed('default')) {
+    // The user is subscribed
+}
+```
+
+The `subscribed` method also makes a great candidate for a route middleware, allowing you to filter access to routes and controllers based on the user's subscription status:
+
+```php
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class EnsureUserIsSubscribed
+{
+    /**
+     * Handle an incoming request.
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        if ($request->user() && ! $request->user()->subscribed('default')) {
+            // This user is not a paying customer...
+            return redirect('/billing');
+        }
+
+        return $next($request);
+    }
+}
+```
+
+To check if a user is still within their trial period, use the `onTrial` method. This method accepts the subscription type as the first argument and an optional price identifier as the second argument:
+
+```php
+if ($user->onTrial('default', 'price_monthly')) {
+    // The user is on a trial period
+}
+```
+
+To determine if a user’s trial has expired, use the `hasExpiredTrial` method. This method accepts the subscription type as the first argument:
+
+```php
+if ($user->hasExpiredTrial('default')) {
+    // The user's trial has ended
+}
+```
+
+To check if a user is on a generic trial at the model level, use the `onGenericTrial` method:
+
+```php
+if ($user->onGenericTrial()) {
+    // The user is on a generic trial
+}
+```
+
+To determine if a user's generic trial has expired, use the `hasExpiredGenericTrial` method:
+
+```php
+if ($user->hasExpiredGenericTrial()) {
+    // The user's generic trial has ended
+}
+```
+
+To check when a user's trial ends, use the `trialEndsAt` method:
+
+```php
+$trialEndsAt = $user->trialEndsAt('default');
+```
+
+To check if a user is subscribed to a specific product, use the `subscribedToProduct` method. This method requires a product identifier as the first argument and an optional subscription type as the second argument:
+
+```php
+if ($user->subscribedToProduct('prod_premium', 'default')) {
+    // The user is subscribed to the premium product
+}
+```
+
+By passing an array to the `subscribedToProduct` method, you may determine if the user's `default` subscription is actively subscribed to the application's "basic" or "premium" product:
+
+```php
+if ($user->subscribedToProduct(['prod_basic', 'prod_premium'], 'default')) {
+    // The user is subscribed to the basic or premium product
+}
+```
+
+Similarly, to check if a user is subscribed to a specific price, use the `subscribedToPrice` method:
+
+```php
+if ($user->subscribedToPrice('price_basic_monthly', 'default')) {
+    // The user is subscribed to the basic monthly price
+}
+```
+
+To retrieve a user's subscription instance, use the `subscription` method. This method accepts a subscription type and returns a `Subscription` model instance:
+
+```php
+$subscription = $user->subscription('default');
+```
+
+> [!WARNING]  
+> If a user has two subscriptions with the same type, the most recent subscription will always be returned by the `subscription` method. For example, a user might have two subscription records with the type of `default`; however, one of the subscriptions may be an old, expired subscription, while the other is the current, active subscription. The most recent subscription will always be returned while older subscriptions are kept in the database for historical review.
+
+To retrieve all subscriptions belonging to a user, use the `subscriptions` relationship:
+
+```php
+$subscriptions = $user->subscriptions;
+```
+
+#### Methods on the Subscription Model ($subscription)
+
+The Subscription model provides several methods to check its status. The `valid` method can be used to check if a subscription is active, in trial, or in a grace period:
+
+```php
+if ($subscription->valid()) {
+    // The subscription is valid
+}
+```
+
+To check if a subscription is active, use the `active` method:
+
+```php
+if ($subscription->active()) {
+    // The subscription is currently active
+}
+```
+
+To check if a user's subscription is not cancelled and not in a trial, use the `recurring` method:
+
+```php
+if ($subscription->recurring()) {
+    // The user has a recurring subscription
+}
+```
+
+To determine if a subscription has ended and is no longer in its grace period, use the `ended` method:
+
+```php
+if ($subscription->ended()) {
+    // The subscription has ended
+}
+```
+
+To check if a subscription is in a grace period after cancellation, use the `onGracePeriod` method:
+
+```php
+if ($subscription->onGracePeriod()) {
+    // The subscription is in a grace period
+}
+```
+
+To check if a subscription is currently in a trial period, use the `onTrial` method:
+
+```php
+if ($subscription->onTrial()) {
+    // The subscription is currently in trial
+}
+```
+
+To determine if a subscription's trial has expired, use the `hasExpiredTrial` method:
+
+```php
+if ($subscription->hasExpiredTrial()) {
+    // The subscription's trial period has ended
+}
+```
+
+##### Retrieving the Chargebee Subscription Object
+
+If you need to access the raw Chargebee subscription data, use the `asChargebeeSubscription` method. This method fetches the subscription object directly from Chargebee:
+
+```php
+$chargebeeSubscription = $subscription->asChargebeeSubscription();
+```
+
+You can then access Chargebee’s full subscription details:
+
+```php
+$status = $chargebeeSubscription->status;
+$currentTermEnd = $chargebeeSubscription->currentTermEnd;
+```
+
+##### Syncing Subscription Status with Chargebee
+
+To ensure that your application's database reflects the latest status from Chargebee, you can use the `syncChargebeeStatus` method. This method fetches the latest subscription status from Chargebee and updates it in your database:
+
+```php
+$subscription->syncChargebeeStatus();
+```
+
+##### Retrieving the Subscription Owner
+
+You can retrieve the user associated with a subscription using the `user` or `owner` methods. Both methods return an instance of your billable model, typically `App\Models\User`:
+
+```php
+$user = $subscription->user;
+$owner = $subscription->owner;
+```
+
+#### Query Scopes
+
+Cashier also provides query scopes to filter subscriptions based on their status:
+
+```php
+$activeSubscriptions = Subscription::active()->get();
+$recurringSubscriptions = Subscription::recurring()->get();
+$trialSubscriptions = Subscription::onTrial()->get();
+$notOnTrialSubscriptions = Subscription::notOnTrial()->get();
+$expiredTrialSubscriptions = Subscription::expiredTrial()->get();
+$endedSubscriptions = Subscription::ended()->get();
+$gracePeriodSubscriptions = Subscription::onGracePeriod()->get();
+$gracePeriodSubscriptions = Subscription::notOnGracePeriod()->get();
+$canceledSubscriptions = Subscription::canceled()->get();
+$notCanceledSubscriptions = Subscription::notCanceled()->get();
+```
+
+<a name="subscription-items"></a>
+### Subscription Items
+
+A subscription can have one or more items, each representing a specific price and quantity, stored in your database's `subscription_items` table. You may access these via the `items` relationship on the subscription:
+
+```php
+$subscriptionItems = $subscription->items;
+```
+
+If you need to retrieve a specific subscription item by price, use the `findItemOrFail` method. This method will throw an exception if the requested price is not found:
+
+```php
+$subscriptionItem = $subscription->findItemOrFail('price_chat');
+$chargebeePrice = $subscriptionItem->chargebee_price;
+$quantity = $subscriptionItem->quantity;
+```
+
+If you need to check whether a subscription has multiple prices, use the `hasMultiplePrices` method:
+
+```php
+if ($subscription->hasMultiplePrices()) {
+    // This subscription contains multiple items.
+}
+```
+
+Conversely, if you want to check whether a subscription has a single price, use `hasSinglePrice`:
+
+```php
+if ($subscription->hasSinglePrice()) {
+    // This subscription contains only one item.
+}
+```
+
+To determine whether a subscription contains a specific product, use the `hasProduct` method. This method accepts a product identifier as its argument:
+
+```php
+if ($subscription->hasProduct('prod_chat')) {
+    // This subscription includes the chat product.
+}
+```
+
+Similarly, to check if a subscription contains a specific price, use `hasPrice`:
+
+```php
+if ($subscription->hasPrice('price_chat')) {
+    // This subscription includes the chat price.
+}
+```
+
+#### Managing Subscription Items
+
+Each subscription item is linked to a subscription through the `subscription` relationship:
+
+```php
+$subscriptionItem = $subscription->items->first();
+$parentSubscription = $subscriptionItem->subscription;
+```
+
+To update a subscription item in Chargebee, use the `updateChargebeeSubscriptionItem` method. This method accepts an array of item options and an optional array of subscription-wide options:
+
+```php
+$subscriptionItem->updateChargebeeSubscriptionItem([
+    'quantity' => 5,
+], [
+    'prorate' => true,
+]);
+```
+
+If you need to retrieve the subscription item as a Chargebee object, use `asChargebeeSubscriptionItem`:
+
+```php
+$chargebeeSubscriptionItem = $subscriptionItem->asChargebeeSubscriptionItem();
+```
+
+<a name="updating-a-subscription-in-chargebee"></a>
+### Updating a Subscription in Chargebee
+
+The `updateChargebeeSubscription` method allows you to update a subscription directly in Chargebee by passing an array of options:
+
+```php
+$subscription->updateChargebeeSubscription([
+    'metaData' => json_encode(['note' => 'Updated subscription with coupons']),
+    'couponIds' => $couponIds,
+]);
+```
+
+This method provides flexibility when modifying subscription details without using predefined helper methods. You can find the list of available options [here](https://apidocs.eu.chargebee.com/docs/api/subscriptions#update_subscription_for_items).
+
+<a name="changing-prices"></a>
+### Changing Prices
+
+After a customer is subscribed to your application, they may occasionally want to change to a new subscription price. The `Subscription` model provides various methods to manage price changes, including swapping prices, adding prices, and removing them.
+
+#### Swapping prices
+
+To swap a customer to a new price, use the `swap` method. This will replace the existing prices with the new ones provided:
+
+```php
+$subscription->swap('new_price_id');
+$subscription->swap(['price_id_one', 'price_id_two']);
+```
+
+If the customer is on trial, the trial period will be maintained. Additionally, if a "quantity" exists for the subscription, that quantity will also be maintained.
+
+If you want to cancel the customer's trial period when swapping prices, use `skipTrial`:
+
+```php
+$subscription->skipTrial()->swap('new_price_id');
+```
+
+To swap prices and immediately invoice the customer regardless of Chargebee's global settings, use `swapAndInvoice`:
+
+```php
+$subscription->swapAndInvoice('new_price_id');
+```
+
+You can also swap an individual subscription item to a new price instead of swapping the entire subscription. The `swap` and `swapAndInvoice` methods are available on `SubscriptionItem`:
+
+```php
+$subscriptionItem->swap('new_price_id');
+$subscriptionItem->swapAndInvoice('new_price_id');
+```
+
+#### Adding prices to a subscription
+
+If you need to add an additional price to a subscription without removing the existing ones, use the `addPrice` method:
+
+```php
+$subscription->addPrice('additional_price_id');
+$subscription->addPrice(['price_id_one', 'price_id_two']);
+```
+
+To bill the customer immediately for the new price regardless of Chargebee's global settings, use `addPriceAndInvoice`:
+
+```php
+$subscription->addPriceAndInvoice('additional_price_id');
+```
+
+If adding a price that is metered, use the `addMeteredPrice` method:
+
+```php
+$subscription->addMeteredPrice('metered_price_id');
+```
+
+To immediately invoice a metered price upon adding it, use `addMeteredPriceAndInvoice`:
+
+```php
+$subscription->addMeteredPriceAndInvoice('metered_price_id');
+```
+
+#### Removing Prices from a Subscription
+
+To remove a specific price from a subscription, use the `removePrice` method:
+
+```php
+$subscription->removePrice('price_id_to_remove');
+```
+
+> [!WARNING]  
+> You cannot remove the last price on a subscription. Instead, cancel the subscription entirely.
+
+#### Applying Coupons to a Subscription
+
+You can apply a discount coupon to an active subscription using the `applyCoupon` method. This method accepts either a list of coupon IDs or [coupon codes](https://apidocs.chargebee.com/docs/api/coupon_codes):
+
+```php
+$subscription->applyCoupon('DISCOUNT_10');
+```
+
+If you want to apply multiple coupons at once:
+
+```php
+$subscription->applyCoupon(['DISCOUNT_10', 'SUMMER_SALE']);
+```
+
+#### Proration
+
+By default, Chargebee applies proration based on the settings configured in the Chargebee dashboard. If you want to override this behavior for a specific change, you can use the `prorate` method to enable proration or `noProrate` to disable it:
+
+```php
+$subscription->prorate()->swap('new_price_id');
+$subscription->noProrate()->removePrice('price_id_to_remove');
+```
+
+<a name="subscription-quantity"></a>
+### Subscription Quantity
+
+Some subscriptions may depend on a "quantity" factor. For example, a SaaS platform might charge per user, per project, or per seat.
+
+#### Adjusting Subscription Quantity
+
+To increase or decrease the quantity of a subscription, you can use the `incrementQuantity`, `incrementAndInvoice`, and `decrementQuantity` methods:
+
+```php
+$subscription->incrementQuantity();  // Increase by 1
+$subscription->incrementQuantity(5); // Increase by 5
+
+$subscription->incrementAndInvoice(5); // Increase by 5 and invoice immediately
+
+$subscription->decrementQuantity();  // Decrease by 1
+$subscription->decrementQuantity(3); // Decrease by 3
+```
+
+Alternatively, you may set a specific quantity using `updateQuantity`:
+
+```php
+$subscription->updateQuantity(10);
+```
+
+For subscriptions with multiple prices, you should specify the price ID when updating quantity:
+
+```php
+$subscription->incrementQuantity(2, 'price_chat');
+$subscription->decrementQuantity(1, 'price_chat');
+$subscription->updateQuantity(10, 'price_chat');
+```
+
+If your subscription contains multiple prices, the `chargebee_price` and `quantity` attributes on the `Subscription` model will be null. To access individual price attributes, use the `items` relationship:
+
+```php
+foreach ($subscription->items as $item) {
+    echo "Price: {$item->chargebee_price}, Quantity: {$item->quantity}";
+}
+```
+
+#### Adjusting Quantity on Subscription Items
+
+You can also modify the quantity of a specific `SubscriptionItem` directly:
+
+```php
+$subscriptionItem->incrementQuantity(2);
+$subscriptionItem->incrementAndInvoice(2);
+$subscriptionItem->decrementQuantity(1);
+$subscriptionItem->updateQuantity(10);
+```
+
+#### Proration
+
+By default, Chargebee applies proration based on the settings configured in the Chargebee dashboard. If you want to override this behavior for a specific change, you can use the `prorate` method to enable proration or `noProrate` to disable it:
+
+```php
+$subscription->noProrate()->updateQuantity(3);
+$subscription->prorate()->decrementQuantity(2);
+```
+
+<a name="usage-based-billing"></a>
+### Usage Based Billing
+
+Usage-based billing allows you to charge customers based on their actual usage of a product or service during a billing cycle. This model is commonly used for services like internet data, API requests, or SMS usage.
+
+In Chargebee, usage-based billing must first be enabled in your Chargebee settings. You also need to create metered items to track usage correctly. A subscription can contain both metered and non-metered items. For more details, refer to the Chargebee documentation: [Chargebee Usages API](https://apidocs.chargebee.com/docs/api/usages?prod_cat_ver=2).
+
+To subscribe a customer to a metered price, use the `meteredPrice` method when creating a subscription:
+
+```php
+$subscription = $user->newSubscription('default')
+    ->meteredPrice('price_metered')
+    ->create($paymentMethod);
+```
+
+#### Reporting Usage
+
+To report customer usage of a metered product, use the `reportUsage` method on a subscription. This method allows Chargebee to track usage and bill customers accordingly. By default, the method increments usage by 1, but you can specify a different quantity if needed. If subscription has multiple prices, specify also the price ID:
+
+```php
+$subscription->reportUsage(2, now(), 'price_metered');
+```
+
+Alternatively, you can use `reportUsageFor` to report usage for a specific price directly:
+
+```php
+$subscription->reportUsageFor('price_metered', 10, now());
+```
+
+The parameters for these methods are:
+
+- quantity (optional, default: 1) – The number of units to report.
+- timestamp (optional, default: current time) – The time at which the usage occurred.
+- price (required for `reportUsageFor` or for subscriptions with multiple prices) – The price ID of the metered product.
+
+#### Retrieving Usage Records
+
+To retrieve all recorded usage for a metered product, use the `usageRecords` method. If the subscription has multiple metered prices, specify the price ID:
+
+```php
+$usageRecords = $subscription->usageRecords(['limit' => 10], 'price_metered');
+```
+
+You may also retrieve usage records for a specific price using `usageRecordsFor`:
+
+```php
+$usageRecords = $subscription->usageRecordsFor('price_metered');
+```
+
+The parameters for these methods are:
+
+- options (optional) – An array of filters for retrieving usage records.
+- price (required for `reportUsageFor` or for subscriptions with multiple prices) – The price ID for which usage records should be retrieved.
+
+#### Managing Usage on Subscription Items
+
+The `reportUsage` and `usageRecords` methods are also available on `SubscriptionItem`, allowing you to track usage for specific items within a subscription:
+
+```php
+$subscriptionItem->reportUsage(int $quantity = 1, DateTimeInterface|int|null $timestamp = null);
+$subscriptionItem->usageRecords(array $options = []): Collection;
+```
+
+For example:
+
+```php
+$subscriptionItem->reportUsage(5);
+$usageRecords = $subscriptionItem->usageRecords();
+```
+
+<a name="cancelling-subscriptions"></a>
+### Cancelling Subscriptions
+
+To cancel a subscription, call the `cancel` method on the user's subscription. This schedules the subscription for cancellation at the end of the current billing period, allowing the customer to continue using the service until then:
+
+```php
+$user->subscription('default')->cancel();
+```
+
+When a subscription is canceled, Cashier updates the `ends_at` column in the `subscriptions` database table. This column determines when the `subscribed` method should begin returning `false`. For example, if a subscription is canceled on March 1st but is set to end on March 5th, `subscribed` will continue to return `true` until March 5th.
+
+To check if a user is still within their grace period after canceling a subscription, use `onGracePeriod`:
+
+```php
+if ($user->subscription('default')->onGracePeriod()) {
+    // The user is still in their grace period.
+}
+```
+
+If you want to cancel a subscription immediately, without allowing the customer to continue using the service until the end of the billing period, use `cancelNow`:
+
+```php
+$user->subscription('default')->cancelNow();
+```
+
+To cancel the subscription immediately and also generate an invoice for any pending metered usage or proration adjustments, use `cancelNowAndInvoice`:
+
+```php
+$user->subscription('default')->cancelNowAndInvoice();
+```
+
+If you need to schedule a subscription to be canceled at a specific date in the future, use `cancelAt`:
+
+```php
+$user->subscription('default')->cancelAt(now()->addDays(10));
+```
+
+Finally, you should always cancel user subscriptions before deleting the associated user model:
+
+```php
+$user->subscription('default')->cancelNow();
+$user->delete();
+```
+
+<a name="resuming-subscriptions"></a>
+### Resuming subscriptions
+
+If a subscription has been paused, you can resume it using the `resume` method. This will reactivate the subscription and allow the customer to continue using the service:
+
+```php
+$user->subscription('default')->resume();
+```
+
+Before resuming a subscription, you may want to check whether it is currently paused using the `paused` method:
+
+```php
+if ($user->subscription('default')->paused()) {
+    // The subscription is currently paused.
+    $user->subscription('default')->resume();
+}
+```
+
+<a name="multiple-subscriptions"></a>
+### Multiple Subscriptions
+
+Chargebee allows your customers to have multiple subscriptions simultaneously. For example, you may run a gym that offers a swimming subscription and a weight-lifting subscription, and each subscription may have different pricing. Of course, customers should be able to subscribe to either or both plans.
+
+When your application creates subscriptions, you may provide the type of the subscription to the `newSubscription` method. The type may be any string that represents the type of subscription the user is initiating:
+
+```php
+use Illuminate\Http\Request;
+
+Route::post('/swimming/subscribe', function (Request $request) {
+    $request->user()->newSubscription('swimming')
+        ->price('price_swimming_monthly')
+        ->create($request->paymentMethodId);
+
+    // ...
+});
+```
+
+In this example, we initiated a monthly swimming subscription for the customer. However, they may want to swap to a yearly subscription at a later time. When adjusting the customer's subscription, we can simply swap the price on the `swimming` subscription:
+
+```php
+$user->subscription('swimming')->swap('price_swimming_yearly');
+```
+
+Of course, you may also cancel the subscription entirely:
+
+```php
+$user->subscription('swimming')->cancel();
+```
+
+<a name="subscription-trials"></a>
+## Subscription Trials
+
+<a name="with-payment-method-up-front"></a>
+### With Payment Method Up Front
+
+If you want to offer trial periods while still collecting payment method information upfront, use the `trialDays` method when creating a subscription:
+
+```php
+$user->newSubscription('default', 'price_monthly')
+    ->trialDays(10)
+    ->create($paymentMethod);
+```
+
+This method sets the trial period end date in the database and instructs Chargebee to delay billing until after this period. If you need to specify a precise end date instead of a number of days, use `trialUntil`:
+
+```php
+use Carbon\Carbon;
+
+$user->newSubscription('default', 'price_monthly')
+    ->trialUntil(Carbon::now()->addDays(10))
+    ->create($paymentMethod);
+```
+
+<a name="generic-trials-without-payment-method-up-front"></a>
+### Generic Trials (Without Payment Method Up Front)
+
+If you want to offer trial periods without requiring payment information upfront, set the `trial_ends_at` column when creating a user:
+
+```php
+$user = User::create([
+    // ...
+    'trial_ends_at' => now()->addDays(10),
+]);
+```
+
+Cashier refers to this as a "generic trial", since it's not attached to an actual subscription. You can check if a user is in a generic trial using:
+
+```php
+if ($user->onGenericTrial()) {
+    // User is on a generic trial.
+}
+```
+
+When the user is ready to subscribe, proceed as usual:
+
+```php
+$user->newSubscription('default', 'price_monthly')->create($paymentMethod);
+```
+
+To get the trial end date, use `trialEndsAt`:
+
+```php
+$trialEndsAt = $user->trialEndsAt('default');
+```
+
+<a name="checking-and-ending-trials"></a>
+### Checking and Ending Trials
+
+To check if a user is currently on a trial, use the `onTrial` method on either the user or subscription model:
+
+```php
+if ($user->onTrial('default')) {
+    // User is on a trial.
+}
+
+if ($user->subscription('default')->onTrial()) {
+    // User's subscription is on a trial.
+}
+```
+
+To immediately end a trial period, call `endTrial`:
+
+```php
+$user->subscription('default')->endTrial();
+```
+
+To check if a trial has expired, use `hasExpiredTrial`:
+
+```php
+if ($user->hasExpiredTrial('default')) {
+    // The user's trial has ended.
+}
+
+if ($user->subscription('default')->hasExpiredTrial()) {
+    // The subscription trial has ended.
+}
+```
+
+<a name="extending-a-trial"></a>
+### Extending a Trial
+
+You can extend a subscription's trial period using `extendTrial`:
+
+```php
+$subscription = $user->subscription('default');
+
+$subscription->extendTrial(now()->addDays(7)); // Extend trial by 7 days.
+$subscription->extendTrial($subscription->trial_ends_at->addDays(5)); // Add 5 extra days.
+```
+
+> [!WARNING]
+> The `extendTrial` method will throw an exception if the subscription is already active. Ensure that the status is `future`, `in_trial`, or `cancelled` before calling this method.
 
 <a name="single-charges"></a>
 ## Single Charges
@@ -1045,3 +1963,144 @@ $payment = $user->findPayment('id_123456789');
 ```
 
 If the payment intent exists, it is returned as a `Laravel\CashierChargebee\Payment` instance. If the payment intent is not found, a `PaymentNotFound` exception is thrown.
+
+<a name="charge-with-invoice"></a>
+### Charge With Invoice
+
+Sometimes you may need to make a one-time charge and offer a PDF invoice to your customer. The `invoicePrice` method lets you do just that. For example, let's invoice a customer for five new shirts:
+
+    $user->invoicePrice('price_tshirt', 5);
+
+The invoice will be immediately charged against the user's default payment method. The `invoicePrice` method also accepts an array as its third argument. This array contains the billing options for the invoice item. The fourth argument accepted by the method is also an array which should contain the billing options for the invoice itself:
+
+    $user->invoicePrice('price_tshirt', 5, [
+    ], [
+        'couponIds' => ['SUMMER21SALE']
+    ]);
+
+To create a one-time charge for multiple items, you may use the `newInvoice` method and then adding them to the customer's "tab" and then invoicing the customer. For example, we may invoice a customer for five shirts and two mugs:
+
+    $user->newInvoice()
+        ->tabPrice('price_tshirt', 5);
+        ->tabPrice('price_mug', 2);
+        ->invoice();
+
+Alternatively, you may use the `tabFor` method to make a "one-off" charge against the customer's default payment method:
+
+    $user->newInvoice()
+        ->tabFor('One Time Fee', 500)
+        ->invoice();
+
+
+<a name="invoices"></a>
+## Invoices
+
+<a name="retrieving-invoices"></a>
+### Retrieving Invoices
+
+You may easily retrieve an array of a billable model's invoices using the `invoices` method. The `invoices` method returns a collection of `Laravel\Cashier\Invoice` instances:
+
+    $invoices = $user->invoices();
+
+If you would like to include pending invoices in the results, you may use the `invoicesIncludingPending` method:
+
+    $invoices = $user->invoicesIncludingPending();
+
+You may use the `findInvoice` method to retrieve a specific invoice by its ID:
+
+    $invoice = $user->findInvoice($invoiceId);
+
+<a name="displaying-invoice-information"></a>
+#### Displaying Invoice Information
+
+When listing the invoices for the customer, you may use the invoice's methods to display the relevant invoice information. For example, you may wish to list every invoice in a table, allowing the user to easily download any of them:
+
+    <table>
+        @foreach ($invoices as $invoice)
+            <tr>
+                <td>{{ $invoice->date()->toFormattedDateString() }}</td>
+                <td>{{ $invoice->total() }}</td>
+                <td><a href="/user/invoice/{{ $invoice->id }}">Download</a></td>
+            </tr>
+        @endforeach
+    </table>
+
+<a name="upcoming-invoices"></a>
+### Upcoming Invoices
+
+To retrieve the upcoming invoice for a customer, you may use the `upcomingInvoice` method:
+
+    $invoice = $user->upcomingInvoice();
+
+Similarly, if the customer has multiple subscriptions, you can also retrieve the upcoming invoice for a specific subscription:
+
+    $invoice = $user->subscription('default')->upcomingInvoice();
+
+<a name="previewing-subscription-invoices"></a>
+### Previewing Subscription Invoices
+
+Using the `previewInvoice` method, you can preview an invoice before making price changes. This will allow you to determine what your customer's invoice will look like when a given price change is made:
+
+    $invoice = $user->subscription('default')->previewInvoice('price_yearly');
+
+You may pass an array of prices to the `previewInvoice` method in order to preview invoices with multiple new prices:
+
+    $invoice = $user->subscription('default')->previewInvoice(['price_yearly', 'price_metered']);
+
+<a name="generating-invoice-pdfs"></a>
+### Generating Invoice PDFs
+
+Before generating invoice PDFs, you should use Composer to install the Dompdf library, which is the default invoice renderer for Cashier:
+
+```php
+composer require dompdf/dompdf
+```
+
+From within a route or controller, you may use the `downloadInvoice` method to generate a PDF download of a given invoice. This method will automatically generate the proper HTTP response needed to download the invoice:
+
+    use Illuminate\Http\Request;
+
+    Route::get('/user/invoice/{invoice}', function (Request $request, string $invoiceId) {
+        return $request->user()->downloadInvoice($invoiceId);
+    });
+
+By default, all data on the invoice is derived from the customer and invoice data stored in Chargebee. The filename is based on your `app.name` config value. However, you can customize some of this data by providing an array as the second argument to the `downloadInvoice` method. This array allows you to customize information such as your company and product details:
+
+    return $request->user()->downloadInvoice($invoiceId, [
+        'vendor' => 'Your Company',
+        'product' => 'Your Product',
+        'street' => 'Main Str. 1',
+        'location' => '2000 Antwerp, Belgium',
+        'phone' => '+32 499 00 00 00',
+        'email' => 'info@example.com',
+        'url' => 'https://example.com',
+        'vendorVat' => 'BE123456789',
+    ]);
+
+The `downloadInvoice` method also allows for a custom filename via its third argument. This filename will automatically be suffixed with `.pdf`:
+
+    return $request->user()->downloadInvoice($invoiceId, [], 'my-invoice');
+
+<a name="custom-invoice-render"></a>
+#### Custom Invoice Renderer
+
+Cashier also makes it possible to use a custom invoice renderer. By default, Cashier uses the `DompdfInvoiceRenderer` implementation, which utilizes the [dompdf](https://github.com/dompdf/dompdf) PHP library to generate Cashier's invoices. However, you may use any renderer you wish by implementing the `Laravel\Cashier\Contracts\InvoiceRenderer` interface. For example, you may wish to render an invoice PDF using an API call to a third-party PDF rendering service:
+
+    use Illuminate\Support\Facades\Http;
+    use Laravel\Cashier\Contracts\InvoiceRenderer;
+    use Laravel\Cashier\Invoice;
+
+    class ApiInvoiceRenderer implements InvoiceRenderer
+    {
+        /**
+         * Render the given invoice and return the raw PDF bytes.
+         */
+        public function render(Invoice $invoice, array $data = [], array $options = []): string
+        {
+            $html = $invoice->view($data)->render();
+
+            return Http::get('https://example.com/html-to-pdf', ['html' => $html])->get()->body();
+        }
+    }
+
+Once you have implemented the invoice renderer contract, you should update the `cashier.invoices.renderer` configuration value in your application's `config/cashier.php` configuration file. This configuration value should be set to the class name of your custom renderer implementation.

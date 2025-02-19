@@ -51,7 +51,7 @@ final class Cashier
     public static bool $deactivateIncomplete = true;
 
     /**
-     * Indicates if Cashier will automatically calculate taxes using Stripe Tax.
+     * Indicates if Cashier will automatically calculate taxes using Chargebee Tax.
      */
     public static bool $calculatesTaxes = false;
 

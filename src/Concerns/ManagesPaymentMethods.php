@@ -85,7 +85,7 @@ trait ManagesPaymentMethods
         $this->assertCustomerExists();
 
         if ($setAsDefault) {
-            $this->setDefaultPaymentMethod($paymentSource);
+            $this->updateDefaultPaymentMethod($paymentSource);
         }
 
         return new PaymentMethod($this, $paymentSource);
@@ -182,7 +182,7 @@ trait ManagesPaymentMethods
      * @throws InvalidRequestException
      * @throws CustomerNotFound
      */
-    public function setDefaultPaymentMethod(PaymentSource|string $paymentSource): ?Customer
+    public function updateDefaultPaymentMethod(PaymentSource|string $paymentSource): ?Customer
     {
         $this->assertCustomerExists();
 

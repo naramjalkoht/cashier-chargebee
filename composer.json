@@ -5,7 +5,8 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Laravel\\CashierChargebee\\": "src/"
+            "Laravel\\CashierChargebee\\": "src/",
+            "Laravel\\CashierChargebee\\Database\\Factories\\": "database/factories/"
         }
     },
     "extra": {
@@ -37,13 +38,18 @@
         "chargebee/chargebee-php": "^3.38"
     },
     "require-dev": {
+        "dompdf/dompdf": "^2.0",
         "orchestra/testbench": "^8.18|^9.0",
         "phpunit/phpunit": "^10.4",
         "phpstan/phpstan": "^1.10"
     },
+    "suggest": {
+        "dompdf/dompdf": "Required when generating and downloading invoice PDF's using Dompdf (^1.0.1|^2.0)."
+    },
     "autoload-dev": {
         "psr-4": {
-            "Laravel\\CashierChargebee\\Tests\\": "tests/"
+            "Laravel\\CashierChargebee\\Tests\\": "tests/",
+            "Laravel\\CashierChargebee\\Tests\\Fixtures\\": "tests/Fixtures/"
         }
     },
     "minimum-stability": "dev",
