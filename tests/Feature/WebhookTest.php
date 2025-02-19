@@ -2,7 +2,6 @@
 
 namespace Laravel\CashierChargebee\Tests\Feature;
 
-use ChargeBee\ChargeBee\Models\ItemPrice;
 use ChargeBee\ChargeBee\Models\PaymentSource;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
