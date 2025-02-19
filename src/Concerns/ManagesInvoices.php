@@ -71,7 +71,7 @@ trait ManagesInvoices
      */
     public function upcomingInvoice(array $options = [])
     {
-        if (!$this->hasChargebeeId()) {
+        if (! $this->hasChargebeeId()) {
             return;
         }
 
@@ -160,7 +160,7 @@ trait ManagesInvoices
      */
     public function invoices($includePending = false, $parameters = [])
     {
-        if (!$this->hasChargebeeId()) {
+        if (! $this->hasChargebeeId()) {
             return new Collection();
         }
 
@@ -172,7 +172,7 @@ trait ManagesInvoices
             ['customerId[is]' => $this->chargebeeId()] + $parameters
         );
 
-        if (!is_null($chargebeeInvoices)) {
+        if (! is_null($chargebeeInvoices)) {
             foreach ($chargebeeInvoices as $chargebeeInvoice) {
                 $invoice = $chargebeeInvoice->invoice();
                 if ($invoice->status == 'paid' || $includePending) {
@@ -210,13 +210,13 @@ trait ManagesInvoices
      */
     public function cursorPaginateInvoices($perPage = 24, array $parameters = [], $cursorName = 'cursor', $cursor = null)
     {
-        if (!$cursor instanceof Cursor) {
+        if (! $cursor instanceof Cursor) {
             $cursor = is_string($cursor)
                 ? Cursor::fromEncoded($cursor)
                 : CursorPaginator::resolveCurrentCursor($cursorName, $cursor);
         }
 
-        if (!is_null($cursor)) {
+        if (! is_null($cursor)) {
             $parameters['offset'] = $cursor->parameter('next_offset');
         }
 
