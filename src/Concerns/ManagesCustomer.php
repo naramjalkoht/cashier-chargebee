@@ -252,9 +252,9 @@ trait ManagesCustomer
     /**
      * Get the default metadata.
      */
-    public function chargebeeMetaData(): string|null
+    public function chargebeeMetaData(): string
     {
-        return $this->chargebee_metadata ?? null;
+        return $this->chargebee_metadata ?? '';
     }
 
     /**
