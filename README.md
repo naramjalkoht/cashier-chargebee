@@ -34,6 +34,8 @@
     - [Deleting a Payment Method](#payment-methods-delete)
     - [Deleting Payment Methods of a Specific Type](#payment-methods-delete-multiple)
 - [Subscriptions](#subscriptions)
+    - [Setting Up Subscriptions in Chargebeee](#setting-up-subscriptions-in-chargebee)
+    - [Subscription Lifecycle & Statuses](#subscription-lifecycle--statuses)
     - [Creating Subscriptions](#creating-subscriptions)
     - [Checking Subscription Status](#checking-subscription-status)
     - [Subscription Items](#subscription-items)
@@ -977,7 +979,32 @@ try {
 <a name="subscriptions"></a>
 ## Subscriptions
 
-Subscriptions allow you to set up recurring payments for users. Cashier for Chargebee supports multiple pricing plans, subscription quantities, trial periods, and more.
+Subscriptions enable businesses to offer their products or services on a recurring basis, allowing customers to be billed at regular intervals. In Chargebee, each subscription is linked to exactly one plan, which defines the pricing, billing frequency, and renewal terms. Additionally, subscriptions can include addons, charge and coupons.
+
+<a name="setting-up-subscriptions-in-chargebee"></a>
+### Setting Up Subscriptions in Chargebee
+
+Before you can start managing subscriptions with this package, you must first configure your [Product Catalog](https://www.chargebee.com/docs/2.0/product-catalog.html) in Chargebee. This involves creating:
+
+- **Product Families** – Groupings of related plans, addons, and charges.
+- **Plans** – Core subscription offerings that define pricing and billing cycles.
+- **Addons & Charges** – Additional recurring (addons) or one-time (charges) fees that can be attached to a subscription.
+- **Price Points** (Item Prices) – Variations of plans and addons based on currency and billing frequency.
+- **Coupons** – Discounts and promotional offers applied to subscriptions.
+
+<a name="subscription-lifecycle-statuses"></a>
+### Subscription Lifecycle & Statuses
+
+Every subscription in Chargebee progresses through multiple statuses:
+
+- **Future** – The subscription is scheduled to start at a later date.
+- **In Trial** – The subscription is active but in a trial period, during which the customer is not billed.
+- **Active** – The subscription is fully operational, and recurring charges apply.
+- **Non Renewing** – The subscription remains active but is scheduled to be canceled at the end of the current billing cycle.
+- **Paused** – The subscription is temporarily suspended but can be resumed later.
+- **Cancelled** – The subscription is no longer active and will not renew.
+
+For a more detailed overview of how subscriptions work in Chargebee, refer to the [Chargebee Subscriptions Documentation](https://www.chargebee.com/docs/2.0/subscriptions.html).
 
 <a name="creating-subscriptions"></a>
 ### Creating Subscriptions
@@ -1251,7 +1278,7 @@ if ($subscription->hasExpiredTrial()) {
 }
 ```
 
-#### Retrieving the Chargebee Subscription Object
+##### Retrieving the Chargebee Subscription Object
 
 If you need to access the raw Chargebee subscription data, use the `asChargebeeSubscription` method. This method fetches the subscription object directly from Chargebee:
 
