@@ -34,7 +34,7 @@ class InvoicesTest extends FeatureTestCase
     {
         $user = $this->createCustomerWithPaymentSource('customer_can_be_invoiced_with_coupon');
 
-        $id = 'coupon_' . now()->timestamp;
+        $id = 'coupon_'.now()->timestamp;
         $coupon = Coupon::createForItems([
             'id' => $id,
             'name' => $id,
@@ -46,7 +46,7 @@ class InvoicesTest extends FeatureTestCase
         ])->coupon();
 
         $invoice = $user->invoiceFor('Laracon', 49900, [], [
-            'couponIds' => [$coupon->id]
+            'couponIds' => [$coupon->id],
         ]);
 
         $this->assertNotNull($invoice->discounts()[0]->coupon());
@@ -116,7 +116,6 @@ class InvoicesTest extends FeatureTestCase
         $user = $this->createCustomerWithPaymentSource('find_invoice_by_id_or_fail');
         $otherUser = $this->createCustomerWithPaymentSource('other_user');
         $invoice = $user->invoiceFor('Laracon', 49900);
-
 
         $this->expectException(AccessDeniedHttpException::class);
         $otherUser->findInvoiceOrFail($invoice->id);
@@ -351,7 +350,6 @@ class InvoicesTest extends FeatureTestCase
 
         $this->assertTrue($invoice->isNotTaxExempt());
         $this->assertFalse($invoice->isTaxExempt());
-
     }
 
     protected function createCustomerWithPaymentSource($description = 'testuser', array $options = []): User

@@ -15,7 +15,6 @@ use Illuminate\Support\Collection;
 use IteratorAggregate;
 use JsonSerializable;
 
-
 /**
  * @template TKey of array-key
  *
@@ -73,7 +72,7 @@ class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAcces
 
         $this->items = $this->items->slice(0, $this->perPage);
 
-        if (!is_null($this->cursor) && $this->cursor->pointsToPreviousItems()) {
+        if (! is_null($this->cursor) && $this->cursor->pointsToPreviousItems()) {
             $this->items = $this->items->reverse()->values();
         }
     }
@@ -112,8 +111,8 @@ class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAcces
     public function hasMorePages(): bool
     {
         return (is_null($this->cursor) && $this->hasMore) ||
-            (!is_null($this->cursor) && $this->cursor->pointsToNextItems() && $this->hasMore) ||
-            (!is_null($this->cursor) && $this->cursor->pointsToPreviousItems());
+            (! is_null($this->cursor) && $this->cursor->pointsToNextItems() && $this->hasMore) ||
+            (! is_null($this->cursor) && $this->cursor->pointsToPreviousItems());
     }
 
     /**
@@ -123,7 +122,7 @@ class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAcces
      */
     public function hasPages(): bool
     {
-        return !$this->onFirstPage() || $this->hasMorePages();
+        return ! $this->onFirstPage() || $this->hasMorePages();
     }
 
     /**
@@ -133,7 +132,7 @@ class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAcces
      */
     public function onFirstPage(): bool
     {
-        return is_null($this->cursor) || ($this->cursor->pointsToPreviousItems() && !$this->hasMore);
+        return is_null($this->cursor) || ($this->cursor->pointsToPreviousItems() && ! $this->hasMore);
     }
 
     /**
@@ -143,7 +142,7 @@ class Paginator extends AbstractCursorPaginator implements Arrayable, ArrayAcces
      */
     public function onLastPage()
     {
-        return !$this->hasMorePages();
+        return ! $this->hasMorePages();
     }
 
     /**

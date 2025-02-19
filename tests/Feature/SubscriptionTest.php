@@ -5,7 +5,6 @@ namespace Laravel\CashierChargebee\Tests\Feature;
 use Carbon\Carbon;
 use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
 use ChargeBee\ChargeBee\Models\Coupon;
-use ChargeBee\ChargeBee\Models\Discount;
 use ChargeBee\ChargeBee\Models\Invoice;
 use ChargeBee\ChargeBee\Models\Item;
 use ChargeBee\ChargeBee\Models\ItemFamily;
@@ -19,9 +18,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Laravel\CashierChargebee\Estimate;
-use Laravel\CashierChargebee\Exceptions\IncompletePayment;
 use Laravel\CashierChargebee\Exceptions\SubscriptionUpdateFailure;
-use Laravel\CashierChargebee\Payment;
 use Laravel\CashierChargebee\Subscription;
 use Laravel\CashierChargebee\SubscriptionBuilder;
 use Laravel\CashierChargebee\Transaction;
@@ -933,7 +930,7 @@ class SubscriptionTest extends FeatureTestCase
         ]);
 
         $this->expectException(ModelNotFoundException::class);
-        $this->expectExceptionMessage("Subscription item with price '" . static::$secondPriceId . "' not found in Chargebee.");
+        $this->expectExceptionMessage("Subscription item with price '".static::$secondPriceId."' not found in Chargebee.");
 
         $subscription->findItemOrFail(static::$secondPriceId)->asChargebeeSubscriptionItem();
     }
@@ -985,7 +982,6 @@ class SubscriptionTest extends FeatureTestCase
         $this->assertFalse($subscription->onTrial());
     }
 
-
     public function test_upcoming_invoice()
     {
         $user = $this->createCustomer('subscription_upcoming_invoice');
@@ -1019,16 +1015,14 @@ class SubscriptionTest extends FeatureTestCase
         $user->createAsChargebeeCustomer();
         $paymentSource = $this->createCard($user);
 
-
         $subscription = $user->newSubscription('main', static::$firstPriceId)
             ->create($paymentSource, [], [
-                'autoCollection' => 'on'
+                'autoCollection' => 'on',
             ]);
 
         $latestPayment = $subscription->latestPayment();
         $this->assertInstanceOf(Transaction::class, $latestPayment);
         $this->assertSame(5000, $latestPayment->rawAmount());
-
     }
 
     public function skip_test_invoice_subscription_directly()
@@ -1044,7 +1038,7 @@ class SubscriptionTest extends FeatureTestCase
 
         $invoice = $subscription->invoice();
 
-        $latestInvoice = ($subscription->latestInvoice());
+        $latestInvoice = $subscription->latestInvoice();
 
         $this->assertEquals($latestInvoice->id, $invoice->id);
         $this->assertSame('paid', $invoice->status);

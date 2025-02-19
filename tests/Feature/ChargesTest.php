@@ -2,14 +2,12 @@
 
 namespace Laravel\CashierChargebee\Tests\Feature;
 
-use Laravel\CashierChargebee\Exceptions\IncompletePayment;
+use ChargeBee\ChargeBee\Models\PaymentSource;
 use Laravel\CashierChargebee\Payment;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
-use ChargeBee\ChargeBee\Models\PaymentSource;
 
 class ChargesTest extends FeatureTestCase
 {
-
     public function test_customer_can_pay()
     {
         $user = $this->createCustomer('customer_can_pay');
@@ -36,7 +34,7 @@ class ChargesTest extends FeatureTestCase
         $invoice = $user->newInvoice()
             ->tabFor('Laravel Cashier', 1000)
             ->invoice();
-        
+
         $this->assertEquals('$10.00', $invoice->total());
         $this->assertEquals('Laravel Cashier', $invoice->invoiceItems()[0]->asChargebeeInvoiceLineItem()->description);
     }
@@ -50,7 +48,7 @@ class ChargesTest extends FeatureTestCase
         $invoice = $user->newInvoice()
             ->tabFor('Laravel Cashier', 1000)
             ->invoice();
-                    
+
         $refund = $user->refund($invoice->id);
         $this->assertEquals(1000, $refund->transaction()->amount);
     }
