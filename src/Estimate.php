@@ -5,6 +5,7 @@ namespace Laravel\CashierChargebee;
 use ChargeBee\ChargeBee\Models\InvoiceEstimate as ChargeBeeEstimate;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
+use Illuminate\Database\Eloquent\Model;
 use JsonSerializable;
 use Laravel\CashierChargebee\Exceptions\InvalidEstimate;
 use Laravel\CashierChargebee\Exceptions\InvalidInvoice;
@@ -49,7 +50,7 @@ class Estimate implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \Illuminate\Database\Eloquent\Model
      */
-    public function owner()
+    public function owner(): Model
     {
         return $this->owner;
     }
@@ -69,7 +70,7 @@ class Estimate implements Arrayable, Jsonable, JsonSerializable
      *
      * @return array
      */
-    public function toArray()
+    public function toArray(): mixed
     {
         return $this->asChargebeeEstimate()->getValues();
     }
@@ -80,7 +81,7 @@ class Estimate implements Arrayable, Jsonable, JsonSerializable
      * @param  int  $options
      * @return string
      */
-    public function toJson($options = 0)
+    public function toJson($options = 0): bool|string
     {
         return json_encode($this->jsonSerialize(), $options);
     }
@@ -102,7 +103,7 @@ class Estimate implements Arrayable, Jsonable, JsonSerializable
      * @param  string  $key
      * @return mixed
      */
-    public function __get($key)
+    public function __get($key): mixed
     {
         return $this->estimate->{$key};
     }

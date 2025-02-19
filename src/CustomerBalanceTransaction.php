@@ -45,7 +45,7 @@ class CustomerBalanceTransaction
      *
      * @return string
      */
-    public function amount()
+    public function amount(): string
     {
         return $this->formatAmount($this->rawAmount());
     }
@@ -55,7 +55,7 @@ class CustomerBalanceTransaction
      *
      * @return int
      */
-    public function rawAmount()
+    public function rawAmount(): mixed
     {
         return $this->transaction->amount;
     }
@@ -65,7 +65,7 @@ class CustomerBalanceTransaction
      *
      * @return string
      */
-    public function endingBalance()
+    public function endingBalance(): string
     {
         return $this->formatAmount($this->rawEndingBalance());
     }
@@ -75,7 +75,7 @@ class CustomerBalanceTransaction
      *
      * @return int
      */
-    public function rawEndingBalance()
+    public function rawEndingBalance(): mixed
     {
         return $this->transaction->closingBalance;
     }
@@ -106,7 +106,7 @@ class CustomerBalanceTransaction
      *
      * @return array
      */
-    public function toArray()
+    public function toArray(): mixed
     {
         return $this->asChargebeeCustomerBalanceTransaction()->getValues();
     }
@@ -117,7 +117,7 @@ class CustomerBalanceTransaction
      * @param  int  $options
      * @return string
      */
-    public function toJson($options = 0)
+    public function toJson($options = 0): bool|string
     {
         return json_encode($this->jsonSerialize(), $options);
     }
@@ -128,7 +128,7 @@ class CustomerBalanceTransaction
      * @return array
      */
     #[\ReturnTypeWillChange]
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return $this->toArray();
     }
@@ -139,7 +139,7 @@ class CustomerBalanceTransaction
      * @param  string  $key
      * @return mixed
      */
-    public function __get($key)
+    public function __get($key): mixed
     {
         return $this->transaction->{$key};
     }

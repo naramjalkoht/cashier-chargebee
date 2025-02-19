@@ -2,7 +2,7 @@
 
 namespace Laravel\CashierChargebee;
 
-use ChargeBee\ChargeBee\Models\Coupon as ChargebeeCoupon;
+use ChargeBee\ChargeBee\Models\Coupon as ChargeBeeCoupon;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use JsonSerializable;
@@ -22,7 +22,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      * @param  \ChargeBee\ChargeBee\Models\Coupon  $coupon
      * @return void
      */
-    public function __construct(ChargebeeCoupon $coupon)
+    public function __construct(ChargeBeeCoupon $coupon)
     {
         $this->coupon = $coupon;
     }
@@ -32,7 +32,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      *
      * @return string
      */
-    public function name()
+    public function name(): mixed
     {
         return $this->coupon->name ?: $this->coupon->id;
     }
@@ -42,7 +42,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      *
      * @return bool
      */
-    public function isPercentage()
+    public function isPercentage(): bool
     {
         return $this->coupon->discountType == 'percentage';
     }
@@ -52,7 +52,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      *
      * @return float|null
      */
-    public function percentOff()
+    public function percentOff(): mixed
     {
         return $this->coupon->discountPercentage;
     }
@@ -62,11 +62,13 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      *
      * @return string|null
      */
-    public function amountOff()
+    public function amountOff(): string|null
     {
         if (! is_null($this->coupon->discountAmount)) {
             return $this->formatAmount($this->rawAmountOff());
         }
+
+        return null;
     }
 
     /**
@@ -74,7 +76,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      *
      * @return int|null
      */
-    public function rawAmountOff()
+    public function rawAmountOff(): mixed
     {
         return $this->coupon->discountAmount;
     }
@@ -95,7 +97,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \ChargeBee\ChargeBee\Models\Coupon
      */
-    public function asChargebeeCoupon()
+    public function asChargebeeCoupon(): ChargeBeeCoupon
     {
         return $this->coupon;
     }
@@ -105,7 +107,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      *
      * @return array
      */
-    public function toArray()
+    public function toArray(): mixed
     {
         return $this->asChargebeeCoupon()->getValues();
     }
@@ -116,7 +118,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      * @param  int  $options
      * @return string
      */
-    public function toJson($options = 0)
+    public function toJson($options = 0): bool|string
     {
         return json_encode($this->jsonSerialize(), $options);
     }
@@ -138,7 +140,7 @@ class Coupon implements Arrayable, Jsonable, JsonSerializable
      * @param  string  $key
      * @return mixed
      */
-    public function __get($key)
+    public function __get($key): mixed
     {
         return $this->coupon->{$key};
     }

@@ -40,7 +40,7 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \Laravel\CashierChargebee\Coupon|null
      */
-    public function coupon()
+    public function coupon(): Coupon|null
     {
         if (! is_null($this->coupon)) {
             return new Coupon($this->coupon);
@@ -54,6 +54,8 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
 
             return new Coupon($this->coupon);
         }
+
+        return null;
     }
 
     /**
@@ -73,11 +75,13 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \Carbon\Carbon|null
      */
-    public function end()
+    public function end(): Carbon|null
     {
         if (! is_null($this->discount->end)) {
             return Carbon::createFromTimestamp($this->discount->end);
         }
+
+        return null;
     }
 
     /**
@@ -85,7 +89,7 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
      *
      * @return \ChargeBee\ChargeBee\Models\Discount
      */
-    public function asChargebeeDiscount()
+    public function asChargebeeDiscount(): ChargeBeeDiscount
     {
         return $this->discount;
     }
@@ -95,7 +99,7 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
      *
      * @return array
      */
-    public function toArray()
+    public function toArray(): mixed
     {
         return $this->asChargebeeDiscount()->getValues();
     }
@@ -106,7 +110,7 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
      * @param  int  $options
      * @return string
      */
-    public function toJson($options = 0)
+    public function toJson($options = 0): bool|string
     {
         return json_encode($this->jsonSerialize(), $options);
     }
@@ -128,7 +132,7 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
      * @param  string  $key
      * @return mixed
      */
-    public function __get($key)
+    public function __get($key): mixed
     {
         return $this->discount->{$key};
     }

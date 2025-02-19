@@ -179,7 +179,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      */
     public function discountFor(Discount $discount): string|null
     {
-        if (! is_null($discountAmount = $this->rawDiscountFor($discount))) {
+        if (!is_null($discountAmount = $this->rawDiscountFor($discount))) {
             return $this->formatAmount($discountAmount);
         }
 
@@ -340,7 +340,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
      */
     public function invoiceLineItems(): array
     {
-        if (! is_null($this->items)) {
+        if (!is_null($this->items)) {
             return $this->items;
         }
 
@@ -549,7 +549,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     public function download(array $data = []): Response
     {
         $filename = $data['product'] ?? Str::slug(config('app.name'));
-        $filename .= '_'.$this->date()->month.'_'.$this->date()->year;
+        $filename .= '_' . $this->date()->month . '_' . $this->date()->year;
 
         return $this->downloadAs($filename, $data);
     }
@@ -565,7 +565,7 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     {
         return new Response($this->pdf($data), 200, [
             'Content-Description' => 'File Transfer',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'.pdf"',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '.pdf"',
             'Content-Transfer-Encoding' => 'binary',
             'Content-Type' => 'application/pdf',
             'X-Vapor-Base64-Encode' => 'True',
