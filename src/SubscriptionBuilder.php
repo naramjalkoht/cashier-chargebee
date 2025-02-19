@@ -267,7 +267,7 @@ class SubscriptionBuilder
 
     /**
      * Build the payload for subscription creation.
-     * 
+     *
      * @todo Clarify startDate
      */
     protected function buildPayload(): array

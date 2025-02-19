@@ -93,7 +93,7 @@ class SubscriptionTest extends FeatureTestCase
     public function test_find_item_or_fail_with_no_item(): void
     {
         $this->expectException(ModelNotFoundException::class);
-        
+
         $subscription = Subscription::factory()->create();
         $subscription->findItemOrFail('nonexistent_price');
     }
@@ -259,9 +259,9 @@ class SubscriptionTest extends FeatureTestCase
     public function test_mark_as_canceled(): void
     {
         $subscription = Subscription::factory()->create(['chargebee_status' => 'active', 'ends_at' => null]);
-        
+
         $subscription->markAsCanceled();
-        
+
         $this->assertEquals('cancelled', $subscription->chargebee_status);
         $this->assertNotNull($subscription->ends_at);
         $this->assertTrue($subscription->ends_at->isToday());

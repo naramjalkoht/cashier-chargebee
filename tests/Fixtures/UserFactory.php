@@ -5,7 +5,6 @@ namespace Laravel\CashierChargebee\Tests\Fixtures;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Laravel\CashierChargebee\Tests\Fixtures\User;
 
 class UserFactory extends Factory
 {
