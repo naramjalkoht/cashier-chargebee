@@ -9,6 +9,5 @@ use Laravel\CashierChargebee\Billable;
 class UserSoftDeletable extends User
 {
     use Billable, Notifiable, SoftDeletes;
-
     protected $table = 'users';
 }

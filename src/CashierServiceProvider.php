@@ -5,7 +5,9 @@ namespace Laravel\CashierChargebee;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Laravel\CashierChargebee\Contracts\InvoiceRenderer;
 use Laravel\CashierChargebee\Events\WebhookReceived;
+use Laravel\CashierChargebee\Invoices\DompdfInvoiceRenderer;
 use Laravel\CashierChargebee\Listeners\HandleWebhookReceived;
 
 class CashierServiceProvider extends ServiceProvider
@@ -32,6 +34,7 @@ class CashierServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->configure();
+        $this->bindInvoiceRenderer();
     }
 
     /**
@@ -43,6 +46,18 @@ class CashierServiceProvider extends ServiceProvider
             __DIR__.'/../config/cashier.php',
             'cashier'
         );
+    }
+
+    /**
+     * Bind the default invoice renderer.
+     *
+     * @return void
+     */
+    protected function bindInvoiceRenderer(): void
+    {
+        $this->app->bind(InvoiceRenderer::class, function ($app) {
+            return $app->make(config('cashier.invoices.renderer', DompdfInvoiceRenderer::class));
+        });
     }
 
     /**

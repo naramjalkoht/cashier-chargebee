@@ -2,6 +2,7 @@
 
 namespace Laravel\CashierChargebee\Tests;
 
+use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Laravel\CashierChargebee\Cashier;
@@ -22,5 +23,21 @@ abstract class TestCase extends OrchestraTestCase
         }
 
         Cashier::useCustomerModel(User::class);
+    }
+
+    protected function defineEnvironment($app)
+    {
+        tap($app['config'], function (Repository $config) {
+            $config->set('cashier.currency', env('CASHIER_CURRENCY', 'USD'));
+        });
+    }
+
+    protected function getProtectedProperty($object, string $property): mixed
+    {
+        $reflection = new \ReflectionClass($object);
+        $property = $reflection->getProperty($property);
+        $property->setAccessible(true);
+
+        return $property->getValue($object);
     }
 }

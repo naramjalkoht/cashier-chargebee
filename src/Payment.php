@@ -126,7 +126,7 @@ class Payment implements Arrayable, Jsonable, JsonSerializable
      *
      * @return array
      */
-    public function toArray()
+    public function toArray(): mixed
     {
         return $this->asChargebeePaymentIntent()->getValues();
     }
@@ -137,7 +137,7 @@ class Payment implements Arrayable, Jsonable, JsonSerializable
      * @param  int  $options
      * @return string
      */
-    public function toJson($options = 0)
+    public function toJson($options = 0): bool|string
     {
         return json_encode($this->jsonSerialize(), $options);
     }
@@ -159,7 +159,7 @@ class Payment implements Arrayable, Jsonable, JsonSerializable
      * @param  string  $key
      * @return mixed
      */
-    public function __get($key)
+    public function __get($key): mixed
     {
         return $this->paymentIntent->{$key};
     }
