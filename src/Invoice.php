@@ -594,6 +594,16 @@ class Invoice implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
+     * Determine if the invoice is pending.
+     *
+     * @return bool
+     */
+    public function isPending()
+    {
+        return $this->invoice->status === 'pending';
+    }
+
+    /**
      * Determine if the invoice is paid.
      *
      * @return bool

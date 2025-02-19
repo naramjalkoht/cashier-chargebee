@@ -36,7 +36,7 @@ class SubscriptionTest extends TestCase
 
     public function test_user_relationship(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->make();
         $subscription = Subscription::factory()->create(['user_id' => $user->id]);
 
         $this->assertEquals($user->id, $subscription->user->id);

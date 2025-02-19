@@ -10,6 +10,7 @@ use Laravel\CashierChargebee\Exceptions\InvalidInvoice;
 use Laravel\CashierChargebee\Invoice;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class InvoicesTest extends FeatureTestCase
 {
@@ -23,9 +24,7 @@ class InvoicesTest extends FeatureTestCase
     public function test_customer_can_be_invoiced()
     {
         $user = $this->createCustomerWithPaymentSource('customer_can_be_invoiced');
-        $invoice = $user->newInvoice()
-            ->tabFor('Laracon', 49900)
-            ->invoice();
+        $invoice = $user->invoiceFor('Laracon', 49900);
 
         $this->assertInstanceOf(Invoice::class, $invoice);
         $this->assertEquals(49900, $invoice->total);
@@ -46,11 +45,9 @@ class InvoicesTest extends FeatureTestCase
             'currencyCode' => config('cashier.currency'),
         ])->coupon();
 
-        $invoice = $user->newInvoice()
-            ->tabFor('Laracon', 49900)
-            ->invoice([
-                'couponIds' => [$coupon->id]
-            ]);
+        $invoice = $user->invoiceFor('Laracon', 49900, [], [
+            'couponIds' => [$coupon->id]
+        ]);
 
         $this->assertNotNull($invoice->discounts()[0]->coupon());
         $this->assertEquals($id, $invoice->discounts()[0]->coupon()->id);
@@ -63,9 +60,7 @@ class InvoicesTest extends FeatureTestCase
         $user = $this->createCustomerWithPaymentSource('customer_can_be_invoiced');
         $price = $this->createPrice('Laravel T-shirt', amount: 499);
 
-        $invoice = $user->newInvoice()
-            ->tabPrice($price->id, 2)
-            ->invoice();
+        $invoice = $user->invoicePrice($price->id, 2);
 
         $this->assertInstanceOf(Invoice::class, $invoice);
         $this->assertEquals(998, $invoice->total);
@@ -75,11 +70,7 @@ class InvoicesTest extends FeatureTestCase
     {
         $user = $this->createCustomerWithPaymentSource('customer_can_be_invoiced_with_inline_price_data');
 
-        $response = $user->newInvoice()
-            ->tabFor('Laravel T-shirt', 599, [
-                'taxable' => false,
-            ])
-            ->invoice();
+        $response = $user->invoiceFor('Laravel T-shirt', 599, ['taxable' => false]);
 
         $this->assertInstanceOf(Invoice::class, $response);
         $this->assertEquals(599, $response->total);
@@ -89,9 +80,7 @@ class InvoicesTest extends FeatureTestCase
     public function test_find_invoice_by_id()
     {
         $user = $this->createCustomerWithPaymentSource('find_invoice_by_id');
-        $invoice = $user->newInvoice()
-            ->tabFor('Laravel T-shirt', 49900)
-            ->invoice();
+        $invoice = $user->invoiceFor('Laravel T-shirt', 49900);
 
         $invoice = $user->findInvoice($invoice->id);
 
@@ -112,9 +101,7 @@ class InvoicesTest extends FeatureTestCase
         $user = $this->createCustomerWithPaymentSource('throws_exception_invoice_doesnt_belong_to_user');
 
         $otherUser = $this->createCustomer('other_user');
-        $invoice = $user->newInvoice()
-            ->tabFor('Laracon', 49900)
-            ->invoice();
+        $invoice = $user->invoiceFor('Laravel T-shirt', 49900);
 
         $this->expectException(InvalidInvoice::class);
         $this->expectExceptionMessage(
@@ -128,21 +115,26 @@ class InvoicesTest extends FeatureTestCase
     {
         $user = $this->createCustomerWithPaymentSource('find_invoice_by_id_or_fail');
         $otherUser = $this->createCustomerWithPaymentSource('other_user');
-        $invoice = $user->newInvoice()
-            ->tabFor('Laracon', 49900)
-            ->invoice();
+        $invoice = $user->invoiceFor('Laracon', 49900);
+
 
         $this->expectException(AccessDeniedHttpException::class);
         $otherUser->findInvoiceOrFail($invoice->id);
+    }
+
+    public function test_find_invoice_by_id_or_fail_no_invoice()
+    {
+        $user = $this->createCustomerWithPaymentSource('find_invoice_by_id_or_fail_no_invoice');
+
+        $this->expectException(NotFoundHttpException::class);
+        $user->findInvoiceOrFail('test');
     }
 
     public function test_customer_can_be_invoiced_with_quantity()
     {
         $user = $this->createCustomerWithPaymentSource('customer_can_be_invoiced_with_quantity');
 
-        $response = $user->newInvoice()
-            ->tabFor('Laracon', amount: 5000)
-            ->invoice();
+        $response = $user->invoiceFor('Laracon', amount: 5000);
 
         $this->assertInstanceOf(Invoice::class, $response);
         $this->assertEquals(5000, $response->total);
@@ -296,7 +288,7 @@ class InvoicesTest extends FeatureTestCase
         );
 
         $invoice = $user->invoicesIncludingPending()->first();
-        $this->assertTrue($invoice->isOpen());
+        $this->assertTrue($invoice->isPending());
         $price = $this->createPrice('Laravel T-shirt', amount: 499);
         $invoice = $invoice->tabPrice($price->id);
         $this->assertEquals(5499, $invoice->total);

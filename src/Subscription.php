@@ -7,6 +7,7 @@ use Carbon\CarbonInterface;
 use ChargeBee\ChargeBee\Exceptions\PaymentException;
 use ChargeBee\ChargeBee\Models\ItemPrice;
 use ChargeBee\ChargeBee\Models\Subscription as ChargebeeSubscription;
+use ChargeBee\ChargeBee\Models\Transaction as ChargebeeTransaction;
 use ChargeBee\ChargeBee\Models\Usage;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -969,13 +970,32 @@ class Subscription extends Model
     }
 
     /**
-     * Get the latest payment for a Subscription.
+     * Get the latest transaction for a Subscription.
      *
-     * @return \Laravel\Cashier\Payment|null
+     * @return \Laravel\CashierChargebee\Transaction|null
      */
     public function latestPayment()
     {
-        dd($this->latestInvoice());
+        $items = ChargebeeTransaction::all([
+            'limit' => 1,
+            'sortBy[desc]' => 'date',
+            'subscriptionId[is]' => $this->chargebee_id
+        ]);
+
+        return $items->count() > 0 ? new Transaction($items[0]->transaction()) : null;
+    }
+
+    /**
+     * The discounts that applies to the subscription, if applicable.
+     *
+     * @return \Laravel\CashierChargebee\Discount[]
+     */
+    public function discounts()
+    {
+        $subscription = $this->asChargebeeSubscription();
+        return Collection::make($subscription->discounts)
+            ->mapInto(Discount::class)
+            ->all();
     }
 
     /**

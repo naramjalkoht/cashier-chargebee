@@ -30,11 +30,6 @@ class User extends Model
         ];
     }
 
-    public function preferredCurrency()
-    {
-        return config('cashier.currency');
-    }
-
     /**
      * Create a new factory instance for the model.
      */

@@ -76,16 +76,16 @@ trait ManagesInvoices
         }
 
         try {
-
             if (Arr::has($options, 'subscriptionId')) {
                 $chargebeeEstimate = ChargeBeeEstimate::advanceInvoiceEstimate(
                     $options['subscriptionId'],
                     $options
                 );
+                return new Estimate($this, $chargebeeEstimate->estimate()->invoiceEstimate);
             } else {
                 $chargebeeEstimate = ChargeBeeEstimate::upcomingInvoicesEstimate($this->chargebeeId());
+                return new Estimate($this, $chargebeeEstimate->estimate()->invoiceEstimates[0]);
             }
-            return new Estimate($this, $chargebeeEstimate->estimate()->invoiceEstimates[0]);
         } catch (InvalidRequestException $exception) {
             //
         }

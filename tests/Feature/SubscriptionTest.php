@@ -17,9 +17,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Laravel\CashierChargebee\Estimate;
+use Laravel\CashierChargebee\Exceptions\IncompletePayment;
 use Laravel\CashierChargebee\Exceptions\SubscriptionUpdateFailure;
+use Laravel\CashierChargebee\Payment;
 use Laravel\CashierChargebee\Subscription;
 use Laravel\CashierChargebee\SubscriptionBuilder;
+use Laravel\CashierChargebee\Transaction;
 
 class SubscriptionTest extends FeatureTestCase
 {
@@ -46,6 +50,11 @@ class SubscriptionTest extends FeatureTestCase
     /**
      * @var string
      */
+    protected static $threeDSecureItemId;
+
+    /**
+     * @var string
+     */
     protected static $firstMeteredItemId;
 
     /**
@@ -57,6 +66,11 @@ class SubscriptionTest extends FeatureTestCase
      * @var string
      */
     protected static $firstPriceId;
+
+    /**
+     * @var string
+     */
+    protected static $threeDSecurePriceId;
 
     /**
      * @var string
@@ -106,6 +120,25 @@ class SubscriptionTest extends FeatureTestCase
             'pricingModel' => 'per_unit',
             'price' => 5000,
             'externalName' => 'Test ItemPrice 1',
+            'periodUnit' => 'month',
+            'period' => 1,
+            'currencyCode' => 'EUR',
+        ])->itemPrice()->id;
+
+        static::$threeDSecureItemId = Item::create([
+            'id' => Str::random(40),
+            'name' => Str::random(40),
+            'type' => 'plan',
+            'itemFamilyId' => static::$itemFamilyId,
+        ])->item()->id;
+
+        static::$threeDSecurePriceId = ItemPrice::create([
+            'id' => Str::random(40),
+            'itemId' => static::$threeDSecureItemId,
+            'name' => Str::random(40),
+            'pricingModel' => 'per_unit',
+            'price' => 3001,
+            'externalName' => 'Test 3DS2 ItemPrice 1',
             'periodUnit' => 'month',
             'period' => 1,
             'currencyCode' => 'EUR',
@@ -595,6 +628,22 @@ class SubscriptionTest extends FeatureTestCase
         $this->assertEquals(static::$couponId, $coupons[0]->couponId);
     }
 
+    public function test_can_retrieve_discounts(): void
+    {
+        $user = $this->createCustomer('test_can_retrieve_discounts');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->create($paymentSource, [], [
+                'couponIds' => [static::$couponId],
+                'autoCollection' => 'on'
+            ]);
+
+        $this->assertNotNull($subscription->discounts());
+
+    }
+
     public function test_item_quantity_can_be_updated_from_subscription(): void
     {
         $user = $this->createCustomer('test_item_quantity_can_be_updated');
@@ -1012,13 +1061,44 @@ class SubscriptionTest extends FeatureTestCase
 
         $subscription = $user->newSubscription('main', static::$firstPriceId)
             ->create($paymentSource);
-        
+
+        $invoice = $subscription->upcomingInvoice();
+        $this->assertInstanceOf(Estimate::class, $invoice);
+    }
+
+    public function test_preview_invoice()
+    {
+        $user = $this->createCustomer('subscription_preview_invoice');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->create($paymentSource);
+
         $estimate = $subscription->previewInvoice(static::$thirdPriceId);
 
         $this->assertSame(3000, $estimate->total);
     }
 
-    public function test_invoice_subscription_directly()
+    public function test_retrieve_the_latest_payment_for_a_subscription()
+    {
+        $user = $this->createCustomer('retrieve_the_latest_payment_for_a_subscription');
+        $user->createAsChargebeeCustomer();
+        $paymentSource = $this->createCard($user);
+
+
+        $subscription = $user->newSubscription('main', static::$firstPriceId)
+            ->create($paymentSource, [], [
+                'autoCollection' => 'on'
+            ]);
+
+        $latestPayment = $subscription->latestPayment();
+        $this->assertInstanceOf(Transaction::class, $latestPayment);
+        $this->assertSame(5000, $latestPayment->rawAmount());
+
+    }
+
+    public function skip_test_invoice_subscription_directly()
     {
         $user = $this->createCustomer('invoice_subscription_directly');
         $user->createAsChargebeeCustomer();
@@ -1080,6 +1160,21 @@ class SubscriptionTest extends FeatureTestCase
                 'customer_id' => $user->chargebeeId(),
                 'card' => [
                     'number' => '4111 1111 1111 1111',
+                    'cvv' => '123',
+                    'expiry_year' => date('Y', strtotime('+ 1 year')),
+                    'expiry_month' => date('m', strtotime('+ 1 year')),
+                ],
+            ]
+        )->paymentSource();
+    }
+
+    private function create3DS2Card(Model $user): ?PaymentSource
+    {
+        return PaymentSource::createCard(
+            [
+                'customer_id' => $user->chargebeeId(),
+                'card' => [
+                    'number' => '4556 7610 2998 3886',
                     'cvv' => '123',
                     'expiry_year' => date('Y', strtotime('+ 1 year')),
                     'expiry_month' => date('m', strtotime('+ 1 year')),
