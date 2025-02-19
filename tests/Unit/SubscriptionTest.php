@@ -10,7 +10,6 @@ use Laravel\CashierChargebee\Subscription;
 use Laravel\CashierChargebee\SubscriptionItem;
 use Laravel\CashierChargebee\Tests\Feature\FeatureTestCase;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
-use Laravel\CashierChargebee\Tests\TestCase;
 
 class SubscriptionTest extends FeatureTestCase
 {
