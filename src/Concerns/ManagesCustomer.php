@@ -29,7 +29,7 @@ trait ManagesCustomer
      */
     public function hasChargebeeId(): bool
     {
-        return !is_null($this->chargebee_id);
+        return ! is_null($this->chargebee_id);
     }
 
     /**
@@ -39,7 +39,7 @@ trait ManagesCustomer
      */
     protected function assertCustomerExists()
     {
-        if (!$this->hasChargebeeId()) {
+        if (! $this->hasChargebeeId()) {
             throw CustomerNotFound::notFound($this);
         }
     }
@@ -143,7 +143,7 @@ trait ManagesCustomer
 
         $filteredData = array_filter(
             $chargebeeData,
-            fn($key) => Schema::hasColumn($table, $key),
+            fn ($key) => Schema::hasColumn($table, $key),
             ARRAY_FILTER_USE_KEY
         );
 
@@ -295,7 +295,7 @@ trait ManagesCustomer
      */
     public function rawBalance(): int
     {
-        if (!$this->hasChargebeeId()) {
+        if (! $this->hasChargebeeId()) {
             return 0;
         }
 
@@ -361,7 +361,7 @@ trait ManagesCustomer
      */
     public function balanceTransactions(int $limit = 10, array $options = []): Collection
     {
-        if (!$this->hasChargebeeId()) {
+        if (! $this->hasChargebeeId()) {
             return new Collection();
         }
 
