@@ -38,7 +38,6 @@ class InvoiceBuilder
      * @param  int  $amount
      * @param  array  $tabOptions
      * @return \Laravel\CashierChargebee\InvoiceBuilder
-     *
      */
     public function tabFor($description, $amount, array $tabOptions = [])
     {
@@ -57,7 +56,6 @@ class InvoiceBuilder
      * @param  int  $quantity
      * @param  array  $tabOptions
      * @return \Laravel\CashierChargebee\InvoiceBuilder
-     *
      */
     public function tabPrice($price, $quantity = 1, array $tabOptions = [])
     {
@@ -74,7 +72,6 @@ class InvoiceBuilder
      *
      * @param  array  $options
      * @return \Laravel\CashierChargebee\Invoice
-     * 
      */
     public function invoice(?array $options = [])
     {

@@ -2,8 +2,8 @@
 
 namespace Laravel\CashierChargebee\Exceptions;
 
-use Exception;
 use ChargeBee\ChargeBee\Models\PromotionalCredit;
+use Exception;
 
 class InvalidCustomerBalanceTransaction extends Exception
 {

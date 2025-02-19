@@ -25,7 +25,7 @@ class CustomerBalanceTransaction
      * Create a new CustomerBalanceTransaction instance.
      *
      * @param  \Illuminate\Database\Eloquent\Model  $owner
-     * @param  \ChargeBee\ChargeBee\Models\PromotionalCredit $transaction
+     * @param  \ChargeBee\ChargeBee\Models\PromotionalCredit  $transaction
      * @return void
      *
      * @throws \Laravel\CashierChargebee\Exceptions\InvalidCustomerBalanceTransaction

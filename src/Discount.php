@@ -3,10 +3,9 @@
 namespace Laravel\CashierChargebee;
 
 use Carbon\Carbon;
+use ChargeBee\ChargeBee\Models\Coupon as ChargeBeeCoupon;
 use ChargeBee\ChargeBee\Models\Discount as ChargeBeeDiscount;
 use ChargeBee\ChargeBee\Models\InvoiceDiscount as ChargeBeeInvoiceDiscount;
-use ChargeBee\ChargeBee\Models\Coupon as ChargeBeeCoupon;
-
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use JsonSerializable;
@@ -21,7 +20,7 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
     protected $discount;
 
     /**
-     * @var ChargeBeeCoupon 
+     * @var ChargeBeeCoupon
      */
     protected $coupon;
 
@@ -43,7 +42,7 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
      */
     public function coupon()
     {
-        if (!is_null($this->coupon)) {
+        if (! is_null($this->coupon)) {
             return new Coupon($this->coupon);
         }
 
@@ -52,6 +51,7 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
             $this->discount->entityType == 'document_level_coupon'
         ) {
             $this->coupon = ChargeBeeCoupon::retrieve($this->discount->entityId)->coupon();
+
             return new Coupon($this->coupon);
         }
     }
@@ -63,7 +63,7 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
      */
     public function start()
     {
-        if (!is_null($this->discount->start)) {
+        if (! is_null($this->discount->start)) {
             return Carbon::createFromTimestamp($this->discount->start);
         }
     }
@@ -75,7 +75,7 @@ class Discount implements Arrayable, Jsonable, JsonSerializable
      */
     public function end()
     {
-        if (!is_null($this->discount->end)) {
+        if (! is_null($this->discount->end)) {
             return Carbon::createFromTimestamp($this->discount->end);
         }
     }

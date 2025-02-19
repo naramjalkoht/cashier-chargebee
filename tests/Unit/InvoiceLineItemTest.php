@@ -96,7 +96,7 @@ class InvoiceLineItemTest extends TestCase
         $invoice = new Invoice($user, $chargebeeInvoice);
 
         $chargebeeInvoiceLineItem = new ChargeBeeInvoiceLineItem([
-            'subscriptionId' => 'foo'
+            'subscriptionId' => 'foo',
         ]);
 
         $item = new InvoiceLineItem($invoice, $chargebeeInvoiceLineItem);

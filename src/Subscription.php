@@ -4,7 +4,7 @@ namespace Laravel\CashierChargebee;
 
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
-use ChargeBee\ChargeBee\Exceptions\PaymentException;
+use ChargeBee\ChargeBee\Models\Estimate as ChargeBeeEstimate;
 use ChargeBee\ChargeBee\Models\ItemPrice;
 use ChargeBee\ChargeBee\Models\Subscription as ChargebeeSubscription;
 use ChargeBee\ChargeBee\Models\Transaction as ChargebeeTransaction;
@@ -21,12 +21,8 @@ use InvalidArgumentException;
 use Laravel\CashierChargebee\Concerns\AllowsCoupons;
 use Laravel\CashierChargebee\Concerns\Prorates;
 use Laravel\CashierChargebee\Database\Factories\SubscriptionFactory;
-use Laravel\CashierChargebee\Exceptions\IncompletePayment;
 use Laravel\CashierChargebee\Exceptions\SubscriptionUpdateFailure;
 use LogicException;
-use ChargeBee\ChargeBee\Models\Estimate as ChargeBeeEstimate;
-use ChargeBee\ChargeBee\Models\Invoice as ChargeBeeInvoice;
-use ChargeBee\ChargeBee\Models\UnbilledCharge;
 
 class Subscription extends Model
 {
@@ -101,7 +97,7 @@ class Subscription extends Model
      */
     public function hasSinglePrice(): bool
     {
-        return !$this->hasMultiplePrices();
+        return ! $this->hasMultiplePrices();
     }
 
     /**
@@ -191,7 +187,7 @@ class Subscription extends Model
      */
     public function recurring(): bool
     {
-        return !$this->onTrial() && !$this->canceled();
+        return ! $this->onTrial() && ! $this->canceled();
     }
 
     /**
@@ -207,7 +203,7 @@ class Subscription extends Model
      */
     public function canceled(): bool
     {
-        return !is_null($this->ends_at);
+        return ! is_null($this->ends_at);
     }
 
     /**
@@ -231,7 +227,7 @@ class Subscription extends Model
      */
     public function ended(): bool
     {
-        return $this->canceled() && !$this->onGracePeriod();
+        return $this->canceled() && ! $this->onGracePeriod();
     }
 
     /**
@@ -374,7 +370,7 @@ class Subscription extends Model
             'subscriptionItems' => array_values($subscriptionItems),
         ];
 
-        if (!is_null($this->prorateBehavior())) {
+        if (! is_null($this->prorateBehavior())) {
             $updateData['prorate'] = $this->prorateBehavior();
         }
 
@@ -409,7 +405,7 @@ class Subscription extends Model
      */
     public function reportUsage(int $quantity = 1, DateTimeInterface|int|null $timestamp = null, ?string $price = null): Usage
     {
-        if (!$price) {
+        if (! $price) {
             $this->guardAgainstMultiplePrices();
         }
 
@@ -429,7 +425,7 @@ class Subscription extends Model
      */
     public function usageRecords(array $options = [], ?string $price = null): Collection
     {
-        if (!$price) {
+        if (! $price) {
             $this->guardAgainstMultiplePrices();
         }
 
@@ -481,7 +477,7 @@ class Subscription extends Model
 
         $updateData = ['trialEnd' => 0];
 
-        if (!is_null($this->prorateBehavior())) {
+        if (! is_null($this->prorateBehavior())) {
             $updateData['prorate'] = $this->prorateBehavior();
         }
 
@@ -498,18 +494,18 @@ class Subscription extends Model
      */
     public function extendTrial(CarbonInterface $date): self
     {
-        if (!$date->isFuture()) {
+        if (! $date->isFuture()) {
             throw new InvalidArgumentException("Extending a subscription's trial requires a date in the future.");
         }
 
         $chargebeeSubscription = $this->asChargebeeSubscription();
-        if (!in_array($chargebeeSubscription->status, ['future', 'in_trial', 'cancelled'])) {
+        if (! in_array($chargebeeSubscription->status, ['future', 'in_trial', 'cancelled'])) {
             throw new SubscriptionUpdateFailure("Cannot extend trial for a subscription with status '{$chargebeeSubscription->status}'.");
         }
 
         $updateData = ['trialEnd' => $date->getTimestamp()];
 
-        if (!is_null($this->prorateBehavior())) {
+        if (! is_null($this->prorateBehavior())) {
             $updateData['prorate'] = $this->prorateBehavior();
         }
 
@@ -606,7 +602,7 @@ class Subscription extends Model
                 'itemPriceId' => $price,
             ];
 
-            if ($isSinglePriceSwap && !is_null($this->quantity)) {
+            if ($isSinglePriceSwap && ! is_null($this->quantity)) {
                 $payload['quantity'] = $this->quantity;
             }
 
@@ -625,7 +621,7 @@ class Subscription extends Model
             'couponIds' => $this->couponIds,
             'trialEnd' => $this->trialExpires ? $this->trialExpires->getTimestamp() : 0,
             'prorate' => $this->prorateBehavior(),
-        ], fn($value) => !is_null($value));
+        ], fn ($value) => ! is_null($value));
 
         $payload = array_merge($payload, $options);
 
@@ -647,14 +643,14 @@ class Subscription extends Model
             'itemPriceId' => $price,
         ];
 
-        if (!is_null($quantity)) {
+        if (! is_null($quantity)) {
             $subscriptionItem['quantity'] = $quantity;
         }
 
         $chargebeeSubscription = $this->updateChargebeeSubscription(array_filter(array_merge([
             'subscriptionItems' => [$subscriptionItem],
             'prorate' => $this->prorateBehavior(),
-        ], $options)), fn($value) => !is_null($value));
+        ], $options)), fn ($value) => ! is_null($value));
 
         $this->items()->create([
             'chargebee_product' => ItemPrice::retrieve($price)->itemPrice()->itemId,
@@ -719,14 +715,14 @@ class Subscription extends Model
             return $item->itemPriceId !== $price;
         });
 
-        $subscriptionItems = array_map(fn($item) => $item->getValues(), $subscriptionItems);
+        $subscriptionItems = array_map(fn ($item) => $item->getValues(), $subscriptionItems);
 
         $updateData = [
             'replaceItemsList' => true,
             'subscriptionItems' => array_values($subscriptionItems),
         ];
 
-        if (!is_null($this->prorateBehavior())) {
+        if (! is_null($this->prorateBehavior())) {
             $updateData['prorate'] = $this->prorateBehavior();
         }
 
@@ -840,7 +836,7 @@ class Subscription extends Model
      */
     public function resume(): self
     {
-        if (!$this->paused()) {
+        if (! $this->paused()) {
             throw new LogicException('Only paused subscriptions can be resumed.');
         }
 
@@ -865,7 +861,7 @@ class Subscription extends Model
         $invoices = $this->user->invoices(true, [
             'limit' => 1,
             'sortBy[desc]' => 'date',
-            'subscriptionId[is]' => $this->chargebee_id
+            'subscriptionId[is]' => $this->chargebee_id,
         ]);
 
         if ($invoices && $invoices->first()) {
@@ -905,10 +901,10 @@ class Subscription extends Model
             throw new InvalidArgumentException('Please provide at least one price when previewing.');
         }
 
-        $items = ($this->getSwapOptions($this->parseSwapPrices($prices), $options));
+        $items = $this->getSwapOptions($this->parseSwapPrices($prices), $options);
 
         $chargebeeEstimate = ChargeBeeEstimate::updateSubscriptionForItems(array_merge($items, [
-            'subscription' => ['id' => $this->chargebee_id]
+            'subscription' => ['id' => $this->chargebee_id],
         ]));
 
         return new Estimate($this->owner, $chargebeeEstimate->estimate()->invoiceEstimate);
@@ -950,7 +946,7 @@ class Subscription extends Model
         $items = ChargebeeTransaction::all([
             'limit' => 1,
             'sortBy[desc]' => 'date',
-            'subscriptionId[is]' => $this->chargebee_id
+            'subscriptionId[is]' => $this->chargebee_id,
         ]);
 
         return $items->count() > 0 ? new Transaction($items[0]->transaction()) : null;
