@@ -8,7 +8,6 @@ use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Database\Eloquent\Model;
 use JsonSerializable;
 use Laravel\CashierChargebee\Exceptions\InvalidEstimate;
-use Laravel\CashierChargebee\Exceptions\InvalidInvoice;
 
 class Estimate implements Arrayable, Jsonable, JsonSerializable
 {

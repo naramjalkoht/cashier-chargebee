@@ -84,7 +84,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      */
     public function hasTaxRates(): bool
     {
-        return !empty($this->item->taxRate);
+        return ! empty($this->item->taxRate);
     }
 
     /**
@@ -150,7 +150,7 @@ class InvoiceLineItem implements Arrayable, Jsonable, JsonSerializable
      */
     public function hasPeriod(): bool
     {
-        return !is_null($this->item->dateFrom) && !is_null($this->item->dateTo);
+        return ! is_null($this->item->dateFrom) && ! is_null($this->item->dateTo);
     }
 
     /**
