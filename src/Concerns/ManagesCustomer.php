@@ -79,7 +79,6 @@ trait ManagesCustomer
 
     /**
      * Get the Chargebee customer for the model.
-     *
      */
     public function asChargebeeCustomer(): Customer
     {
