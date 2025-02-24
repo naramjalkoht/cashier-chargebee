@@ -3,7 +3,6 @@
 namespace Laravel\CashierChargebee\Tests\Unit;
 
 use Carbon\Carbon;
-use DateTimeImmutable;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use InvalidArgumentException;
 use Laravel\CashierChargebee\Subscription;

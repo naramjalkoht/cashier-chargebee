@@ -3,7 +3,6 @@
 namespace Laravel\CashierChargebee\Tests\Unit;
 
 use Carbon\Carbon;
-use DateTimeImmutable;
 use Exception;
 use Laravel\CashierChargebee\SubscriptionBuilder;
 use Laravel\CashierChargebee\Tests\Fixtures\User;

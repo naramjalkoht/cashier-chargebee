@@ -53,7 +53,6 @@ class Subscription extends Model
         'trial_ends_at' => 'datetime',
     ];
 
-
     /**
      * Get the user that owns the subscription.
      */

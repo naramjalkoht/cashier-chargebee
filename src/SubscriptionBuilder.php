@@ -8,7 +8,6 @@ use ChargeBee\ChargeBee\Models\Customer;
 use ChargeBee\ChargeBee\Models\ItemPrice;
 use ChargeBee\ChargeBee\Models\PaymentSource;
 use ChargeBee\ChargeBee\Models\Subscription as ChargebeeSubscription;
-use DateTimeInterface;
 use Exception;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -244,7 +243,6 @@ class SubscriptionBuilder
 
     /**
      * Build the payload for subscription creation.
-     *
      */
     protected function buildPayload(): array
     {
