@@ -93,13 +93,12 @@ trait PerformsCharges
      *
      * @param  int  $amount
      * @param  string  $name
-     * @param  int  $quantity
      * @param  array  $sessionOptions
      * @param  array  $customerOptions
      * @param  array  $productData
      * @return \Laravel\CashierChargebee\Checkout
      */
-    public function checkoutCharge($amount, $name, $quantity = 1, array $sessionOptions = [], array $customerOptions = [], array $productData = [])
+    public function checkoutCharge($amount, $name, array $sessionOptions = [], array $customerOptions = [], array $productData = [])
     {
         $charges = Arr::get($sessionOptions, 'charges', []);
 

@@ -97,7 +97,7 @@ class SubscriptionItem extends Model
 
         $itemOptions = array_merge($item, $itemOptions);
 
-        if (! is_null($this->prorateBehavior())) {
+        if (!is_null($this->prorateBehavior())) {
             $subscriptionOptions['prorate'] = $this->prorateBehavior();
         }
 
@@ -151,11 +151,9 @@ class SubscriptionItem extends Model
             'itemPriceId[is]' => $this->chargebee_price,
         ], $options));
 
-        $usageRecords = collect($all)->map(function ($entry) {
+        return collect($all)->map(function ($entry) {
             return $entry->usage();
         });
-
-        return $usageRecords;
     }
 
     /**
@@ -180,7 +178,7 @@ class SubscriptionItem extends Model
 
         $subscriptionItem = collect($chargebeeSubscription->subscriptionItems)->firstWhere('itemPriceId', $this->chargebee_price);
 
-        if (! $subscriptionItem) {
+        if (!$subscriptionItem) {
             throw new ModelNotFoundException("Subscription item with price '{$this->chargebee_price}' not found in Chargebee.");
         }
 

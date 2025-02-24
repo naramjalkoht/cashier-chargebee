@@ -13,7 +13,7 @@ class CheckoutTest extends FeatureTestCase
      */
     protected function defineRoutes($router): void
     {
-        $router->get('/home', fn () => 'Hello World!')->name('home');
+        $router->get('/home', fn() => 'Hello World!')->name('home');
     }
 
     public function test_customers_can_start_a_product_checkout_session()
@@ -40,7 +40,7 @@ class CheckoutTest extends FeatureTestCase
 
         $shirtPrice = $this->createPrice('T-shirt', 1500);
 
-        $id = 'coupon_'.now()->timestamp;
+        $id = 'coupon_' . now()->timestamp;
         $coupon = Coupon::createForItems([
             'id' => $id,
             'name' => $id,
@@ -65,7 +65,7 @@ class CheckoutTest extends FeatureTestCase
     {
         $user = $this->createCustomer('can_start_one_off_checkout_session');
 
-        $checkout = $user->checkoutCharge(1200, 'T-shirt', 1, [
+        $checkout = $user->checkoutCharge(1200, 'T-shirt', [
             'success_url' => 'http://example.com',
             'cancel_url' => 'http://example.com',
         ]);
@@ -101,7 +101,7 @@ class CheckoutTest extends FeatureTestCase
         $this->assertInstanceOf(Checkout::class, $checkout);
         $this->assertSame('checkout_new', $checkout->type);
 
-        $id = 'coupon_'.now()->timestamp;
+        $id = 'coupon_' . now()->timestamp;
         $coupon = Coupon::createForItems([
             'id' => $id,
             'name' => $id,

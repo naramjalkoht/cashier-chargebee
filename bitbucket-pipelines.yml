@@ -6,16 +6,6 @@ options:
 
 image: threadable/linuxnginxphp_ci_20.04:2025.01.01
 
-definitions:
-  services:
-    mysql:
-      image: mysql:8
-      environment:
-        MYSQL_ROOT_PASSWORD: root
-        MYSQL_DATABASE: app
-        MYSQL_USER: user
-        MYSQL_PASSWORD: password
-
 pipelines:
   branches:
     "{feature/*,bugfix/*}":
@@ -68,8 +58,6 @@ pipelines:
           name: Run Tests - PHP 8.1, Laravel 10
           size: 2x
           image: threadable/php81-laravel
-          services:
-            - mysql
           caches:
             - docker
             - composer
@@ -93,8 +81,6 @@ pipelines:
           name: Run Tests - PHP 8.2, Laravel 10
           size: 2x
           image: threadable/php82-laravel
-          services:
-            - mysql
           caches:
             - docker
             - composer
@@ -118,8 +104,6 @@ pipelines:
           name: Run Tests - PHP 8.3, Laravel 10
           size: 2x
           image: threadable/php83-laravel
-          services:
-            - mysql
           caches:
             - docker
             - composer
@@ -143,8 +127,6 @@ pipelines:
           name: Run Tests - PHP 8.2, Laravel 11
           size: 2x
           image: threadable/php82-laravel
-          services:
-            - mysql
           caches:
             - docker
             - composer
@@ -168,8 +150,6 @@ pipelines:
           name: Run Tests - PHP 8.3, Laravel 11
           size: 2x
           image: threadable/php83-laravel
-          services:
-            - mysql
           caches:
             - docker
             - composer
@@ -193,8 +173,6 @@ pipelines:
           name: Run Tests - PHP 8.4, Laravel 11 & Code Coverage
           size: 2x
           image: threadable/php84-laravel
-          services:
-            - mysql
           caches:
             - docker
             - composer
@@ -272,8 +250,6 @@ pipelines:
           name: Sonar Cloud
           size: 2x
           image: threadable/php84-laravel
-          services:
-            - mysql
           caches:
             - composer
             - docker

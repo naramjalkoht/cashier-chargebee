@@ -96,11 +96,11 @@ class SubscriptionBuilder
 
         $quantity = $price['quantity'] ?? $quantity;
 
-        if (! is_null($quantity)) {
+        if (!is_null($quantity)) {
             $options['quantity'] = $quantity;
         }
 
-        if (! isset($options['itemPriceId'])) {
+        if (!isset($options['itemPriceId'])) {
             throw new InvalidArgumentException('Each price must include an "itemPriceId" key.');
         }
 
@@ -213,9 +213,7 @@ class SubscriptionBuilder
             $subscriptionOptions
         ));
 
-        $subscription = $this->createSubscription($chargebeeSubscription->subscription());
-
-        return $subscription;
+        return $this->createSubscription($chargebeeSubscription->subscription());
     }
 
     /**
@@ -236,7 +234,7 @@ class SubscriptionBuilder
             'chargebee_status' => $chargebeeSubscription->status,
             'chargebee_price' => $isSinglePrice ? $firstItem->itemPriceId : null,
             'quantity' => $isSinglePrice ? ($firstItem->quantity ?? null) : null,
-            'trial_ends_at' => ! $this->skipTrial ? $this->trialExpires : null,
+            'trial_ends_at' => !$this->skipTrial ? $this->trialExpires : null,
             'ends_at' => null,
         ]);
 
@@ -279,7 +277,7 @@ class SubscriptionBuilder
             'autoCollection' => 'off',
         ]);
 
-        if (! empty($this->metadata)) {
+        if (!empty($this->metadata)) {
             $payload['metaData'] = json_encode($this->metadata);
         }
 
@@ -326,7 +324,7 @@ class SubscriptionBuilder
             throw new Exception('At least one price is required when starting subscriptions.');
         }
 
-        if (! $this->skipTrial && $this->trialExpires) {
+        if (!$this->skipTrial && $this->trialExpires) {
             $minimumTrialPeriod = Carbon::now()->addHours(48)->addSeconds(10);
 
             $trialEnd = $this->trialExpires->gt($minimumTrialPeriod) ? $this->trialExpires : $minimumTrialPeriod;

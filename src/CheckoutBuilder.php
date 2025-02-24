@@ -66,26 +66,22 @@ class CheckoutBuilder
             'mode' => Session::MODE_PAYMENT,
         ], $sessionOptions);
 
-        switch ($data['mode']) {
-            case Session::MODE_PAYMENT:
-            default:
-                $payload = array_filter([
-                    'mode' => Session::MODE_PAYMENT,
-                    'coupon_ids' => $this->checkoutDiscounts(),
-                    'itemPrices' => Collection::make((array) $items)->map(function ($item, $key) {
-                        if (is_string($key)) {
-                            return ['itemPriceId' => $key, 'quantity' => $item];
-                        }
+        $payload = array_filter([
+            'mode' => Session::MODE_PAYMENT,
+            'coupon_ids' => $this->checkoutDiscounts(),
+            'itemPrices' => Collection::make((array) $items)->map(function ($item, $key) {
+                if (is_string($key)) {
+                    return ['itemPriceId' => $key, 'quantity' => $item];
+                }
 
-                        $item = is_string($item) ? ['itemPriceId' => $item] : $item;
+                $item = is_string($item) ? ['itemPriceId' => $item] : $item;
 
-                        $item['quantity'] = $item['quantity'] ?? 1;
+                $item['quantity'] = $item['quantity'] ?? 1;
 
-                        return $item;
-                    })->values()->all(),
-                ]);
-                break;
-        }
+                return $item;
+            })->values()->all(),
+        ]);
+
 
         return Checkout::create($this->owner, array_merge($payload, $data), $customerOptions);
     }
