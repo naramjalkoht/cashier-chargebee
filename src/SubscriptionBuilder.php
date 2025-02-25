@@ -8,7 +8,6 @@ use ChargeBee\ChargeBee\Models\Customer;
 use ChargeBee\ChargeBee\Models\ItemPrice;
 use ChargeBee\ChargeBee\Models\PaymentSource;
 use ChargeBee\ChargeBee\Models\Subscription as ChargebeeSubscription;
-use DateTimeInterface;
 use Exception;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -59,13 +58,6 @@ class SubscriptionBuilder
      * @var bool
      */
     protected $skipTrial = false;
-
-    /**
-     * The date on which the billing cycle should be anchored.
-     *
-     * @var int|null
-     */
-    protected $billingCycleAnchor = null;
 
     /**
      * The metadata to apply to the subscription.
@@ -164,20 +156,6 @@ class SubscriptionBuilder
     }
 
     /**
-     * Change the billing cycle anchor on a subscription creation.
-     */
-    public function anchorBillingCycleOn(DateTimeInterface|int $date): static
-    {
-        if ($date instanceof DateTimeInterface) {
-            $date = $date->getTimestamp();
-        }
-
-        $this->billingCycleAnchor = $date;
-
-        return $this;
-    }
-
-    /**
      * The metadata to apply to a new subscription.
      */
     public function withMetadata(array $metadata): static
@@ -213,9 +191,7 @@ class SubscriptionBuilder
             $subscriptionOptions
         ));
 
-        $subscription = $this->createSubscription($chargebeeSubscription->subscription());
-
-        return $subscription;
+        return $this->createSubscription($chargebeeSubscription->subscription());
     }
 
     /**
@@ -267,8 +243,6 @@ class SubscriptionBuilder
 
     /**
      * Build the payload for subscription creation.
-     *
-     * @todo Clarify startDate
      */
     protected function buildPayload(): array
     {
@@ -333,8 +307,6 @@ class SubscriptionBuilder
         } else {
             $trialEnd = null;
         }
-
-        $billingCycleAnchor = $trialEnd === null ? $this->billingCycleAnchor : null;
 
         $payload = array_filter([
             'subscriptionItems' => Collection::make($this->items)->values()->all(),

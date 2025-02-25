@@ -79,8 +79,6 @@ trait ManagesCustomer
 
     /**
      * Get the Chargebee customer for the model.
-     *
-     * @todo Add retrieving subscription info.
      */
     public function asChargebeeCustomer(): Customer
     {
@@ -370,11 +368,9 @@ trait ManagesCustomer
             'customerId[is]' => $this->chargebeeId(),
         ], $options));
 
-        $promotionalCredits = collect($all)->map(function ($entry) {
+        return collect($all)->map(function ($entry) {
             return $entry->promotionalCredit();
         });
-
-        return $promotionalCredits;
     }
 
     /*

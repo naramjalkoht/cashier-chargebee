@@ -69,10 +69,10 @@ trait ManagesInvoices
      * @param  array  $options
      * @return \Laravel\CashierChargebee\Estimate|null
      */
-    public function upcomingInvoice(array $options = [])
+    public function upcomingInvoice(array $options = []): Estimate|null
     {
         if (! $this->hasChargebeeId()) {
-            return;
+            return null;
         }
 
         try {
@@ -89,7 +89,7 @@ trait ManagesInvoices
                 return new Estimate($this, $chargebeeEstimate->estimate()->invoiceEstimates[0]);
             }
         } catch (InvalidRequestException $exception) {
-            //
+            return null;
         }
     }
 

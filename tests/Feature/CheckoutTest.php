@@ -65,7 +65,7 @@ class CheckoutTest extends FeatureTestCase
     {
         $user = $this->createCustomer('can_start_one_off_checkout_session');
 
-        $checkout = $user->checkoutCharge(1200, 'T-shirt', 1, [
+        $checkout = $user->checkoutCharge(1200, 'T-shirt', [
             'success_url' => 'http://example.com',
             'cancel_url' => 'http://example.com',
         ]);
