@@ -93,6 +93,11 @@ class SubscriptionTest extends FeatureTestCase
     /**
      * @var string
      */
+    protected static $firstPriceWithTrial;
+
+    /**
+     * @var string
+     */
     protected static $couponId;
 
     protected function setUp(): void
@@ -199,6 +204,20 @@ class SubscriptionTest extends FeatureTestCase
             'periodUnit' => 'month',
             'period' => 1,
             'currencyCode' => 'EUR',
+        ])->itemPrice()->id;
+
+        static::$firstPriceWithTrial = ItemPrice::create([
+            'id' => Str::random(40),
+            'itemId' => static::$firstItemId,
+            'name' => Str::random(40),
+            'pricingModel' => 'per_unit',
+            'price' => 5000,
+            'externalName' => 'Test ItemPrice 1',
+            'periodUnit' => 'year',
+            'period' => 1,
+            'currencyCode' => 'EUR',
+            'trialPeriod' => 7,
+            'trialPeriodUnit' => 'day',
         ])->itemPrice()->id;
 
         static::$couponId = Coupon::createForItems([
@@ -376,6 +395,21 @@ class SubscriptionTest extends FeatureTestCase
         $this->assertTrue($subscription->onTrial());
         $this->assertSame('in_trial', $subscription->asChargebeeSubscription()->status);
         $this->assertEquals(Carbon::today()->addDays(7)->day, $user->trialEndsAt('main')->day);
+    }
+
+    public function test_create_subscription_with_skipped_trial(): void
+    {
+        $user = $this->createCustomer('test_create_subscription_with_skipped_trial');
+        $user->createAsChargebeeCustomer();
+
+        $user->newSubscription('main', static::$firstPriceWithTrial)
+            ->skipTrial()
+            ->create();
+
+        $subscription = $user->subscription('main');
+
+        $this->assertFalse($subscription->onTrial());
+        $this->assertSame('active', $subscription->asChargebeeSubscription()->status);
     }
 
     public function test_trial_can_be_extended(): void
