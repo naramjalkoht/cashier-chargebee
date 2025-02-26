@@ -82,7 +82,6 @@ class CheckoutBuilder
             })->values()->all(),
         ]);
 
-
         return Checkout::create($this->owner, array_merge($payload, $data), $customerOptions);
     }
 }
