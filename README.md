@@ -25,7 +25,6 @@
     - [Product Checkouts](#product-checkouts)
     - [Single Charge Checkouts](#single-charge-checkouts)
     - [Subscription Checkouts](#subscription-checkouts)
-    - [Collecting Tax IDs](#collecting-tax-ids)
     - [Guest Checkouts](#guest-checkouts)
 - [Manage Payment Methods](#manage-payment-methods)
     - [Creating a SetupIntent](#payment-methods-create-setupintent)
