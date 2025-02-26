@@ -3,7 +3,6 @@
 namespace Laravel\CashierChargebee\Tests\Unit;
 
 use Carbon\Carbon;
-use DateTimeImmutable;
 use Exception;
 use Laravel\CashierChargebee\SubscriptionBuilder;
 use Laravel\CashierChargebee\Tests\Fixtures\User;
@@ -113,20 +112,6 @@ class SubscriptionBuilderTest extends TestCase
         $builder->skipTrial();
 
         $this->assertTrue($this->getProtectedProperty($builder, 'skipTrial'));
-    }
-
-    public function test_anchor_billing_cycle_on(): void
-    {
-        $date = Carbon::now()->addDays(30)->getTimestamp();
-        $builder = new SubscriptionBuilder(new User, 'default');
-        $builder->anchorBillingCycleOn($date);
-
-        $this->assertSame($date, $this->getProtectedProperty($builder, 'billingCycleAnchor'));
-
-        $newDate = new DateTimeImmutable('2025-03-15 12:00:00');
-        $builder->anchorBillingCycleOn($newDate);
-
-        $this->assertSame($newDate->getTimestamp(), $this->getProtectedProperty($builder, 'billingCycleAnchor'));
     }
 
     public function test_with_metadata(): void

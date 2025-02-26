@@ -54,11 +54,6 @@ class Subscription extends Model
     ];
 
     /**
-     * The date on which the billing cycle should be anchored.
-     */
-    protected ?int $billingCycleAnchor = null;
-
-    /**
      * Get the user that owns the subscription.
      */
     public function user(): BelongsTo
@@ -438,20 +433,6 @@ class Subscription extends Model
     public function usageRecordsFor(string $price, array $options = []): Collection
     {
         return $this->usageRecords($options, $price);
-    }
-
-    /**
-     * Change the billing cycle anchor on a price change.
-     */
-    public function anchorBillingCycleOn(DateTimeInterface|int|string $date = 'now'): static
-    {
-        if ($date instanceof DateTimeInterface) {
-            $date = $date->getTimestamp();
-        }
-
-        $this->billingCycleAnchor = $date;
-
-        return $this;
     }
 
     /**

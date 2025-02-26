@@ -151,11 +151,9 @@ class SubscriptionItem extends Model
             'itemPriceId[is]' => $this->chargebee_price,
         ], $options));
 
-        $usageRecords = collect($all)->map(function ($entry) {
+        return collect($all)->map(function ($entry) {
             return $entry->usage();
         });
-
-        return $usageRecords;
     }
 
     /**
