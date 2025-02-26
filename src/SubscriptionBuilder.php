@@ -212,7 +212,7 @@ class SubscriptionBuilder
             'chargebee_status' => $chargebeeSubscription->status,
             'chargebee_price' => $isSinglePrice ? $firstItem->itemPriceId : null,
             'quantity' => $isSinglePrice ? ($firstItem->quantity ?? null) : null,
-            'trial_ends_at' => ! $this->skipTrial ? $this->trialExpires : null,
+            'trial_ends_at' => $chargebeeSubscription->trialEnd ?? null,
             'ends_at' => null,
         ]);
 
@@ -251,7 +251,7 @@ class SubscriptionBuilder
             'subscriptionItems' => Collection::make($this->items)->values()->all(),
             'trialEnd' => $this->getTrialEndForPayload(),
             'autoCollection' => 'off',
-        ]);
+        ], fn ($value) => ! is_null($value));
 
         if (! empty($this->metadata)) {
             $payload['metaData'] = json_encode($this->metadata);
@@ -263,13 +263,17 @@ class SubscriptionBuilder
     /**
      * Get the trial ending date for the Chargebee payload.
      */
-    protected function getTrialEndForPayload(): int
+    protected function getTrialEndForPayload(): int|null
     {
+        if ($this->skipTrial) {
+            return 0;
+        }
+
         if ($this->trialExpires) {
             return $this->trialExpires->getTimestamp();
         }
 
-        return 0;
+        return null;
     }
 
     /**
