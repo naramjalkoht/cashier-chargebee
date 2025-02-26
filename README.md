@@ -546,6 +546,112 @@ If you need to modify the default behavior for these webhook events, or handle a
 ```init
 'webhook_listener' => \Laravel\CashierChargebee\Listeners\HandleWebhookReceived::class,
 ```
+a name="checkout"></a>
+## Checkout
+
+Cashier Chargebee also provides support for [Chargebee Hosted Pages](https://apidocs.chargebee.com/docs/api/hosted_pages). Chargebee Hosted Pages takes the pain out of implementing custom pages to accept payments by providing a pre-built, hosted payment page.
+
+The following documentation contains information on how to get started using Chargebee Checkout with Cashier.
+
+<a name="product-checkouts"></a>
+### Product Checkouts
+
+You may perform a checkout for an existing product that has been created within your Chargebee dashboard using the `checkout` method on a billable model. The `checkout` method will initiate a new Chargebee `checkout_one_time` Hosted Page. By default, you're required to pass a Chargebee ItemPrices ID:
+
+    use Illuminate\Http\Request;
+
+    Route::get('/product-checkout', function (Request $request) {
+        return $request->user()->checkout('price_tshirt');
+    });
+
+If needed, you may also specify a product quantity:
+
+    use Illuminate\Http\Request;
+
+    Route::get('/product-checkout', function (Request $request) {
+        return $request->user()->checkout(['price_tshirt' => 15]);
+    });
+
+When a customer visits this route they will be redirected to Chargebee's Checkout page. By default, when a user successfully completes or cancels a purchase they will be redirected to your `home` route location, but you may specify custom callback URLs using the `success_url` and `cancel_url` options:
+
+    use Illuminate\Http\Request;
+
+    Route::get('/product-checkout', function (Request $request) {
+        return $request->user()->checkout(['price_tshirt' => 1], [
+            'success_url' => route('your-success-route'),
+            'cancel_url' => route('your-cancel-route'),
+        ]);
+    });
+
+<a name="single-charge-checkouts"></a>
+### Single Charge Checkouts
+
+You can also perform a simple charge for an ad-hoc product that has not been created in your Chargebee dashboard. To do so you may use the `checkoutCharge` method on a billable model and pass it a chargeable amount and a product name. When a customer visits this route they will be redirected to Chargebee's Checkout page:
+
+    use Illuminate\Http\Request;
+
+    Route::get('/charge-checkout', function (Request $request) {
+        return $request->user()->checkoutCharge(1200, 'T-Shirt');
+    });
+
+
+<a name="subscription-checkouts"></a>
+### Subscription Checkouts
+
+> [!WARNING]  
+> Using Chargebee Checkout for subscriptions requires you to enable the `subscription_created` webhook in your Chargebee dashboard. This webhook will create the subscription record in your database and store all of the relevant subscription items.
+
+You may also use Chargebee Checkout to initiate subscriptions. After defining your subscription with Cashier's subscription builder methods, you may call the `checkout `method. When a customer visits this route they will be redirected to Chargebee's Checkout page:
+
+    use Illuminate\Http\Request;
+
+    Route::get('/subscription-checkout', function (Request $request) {
+        return $request->user()
+            ->newSubscription('default', 'price_monthly')
+            ->checkout();
+    });
+
+Just as with product checkouts, you may customize the success and cancellation URLs:
+
+    use Illuminate\Http\Request;
+
+    Route::get('/subscription-checkout', function (Request $request) {
+        return $request->user()
+            ->newSubscription('default', 'price_monthly')
+            ->checkout([
+                'success_url' => route('your-success-route'),
+                'cancel_url' => route('your-cancel-route'),
+            ]);
+    });
+
+<a name="guest-checkouts"></a>
+### Guest Checkouts
+
+Using the `Checkout::guest` method, you may initiate checkout sessions for guests of your application that do not have an "account":
+
+    use Illuminate\Http\Request;
+    use Laravel\CashierChargebee\Checkout;
+
+    Route::get('/product-checkout', function (Request $request) {
+        return Checkout::guest()->create('price_tshirt', [
+            'success_url' => route('your-success-route'),
+            'cancel_url' => route('your-cancel-route'),
+        ]);
+    });
+
+Similarly to when creating checkout sessions for existing users, you may utilize additional methods available on the `Laravel\Cashier\CheckoutBuilder` instance to customize the guest checkout session:
+
+    use Illuminate\Http\Request;
+    use Laravel\CashierChargebee\Checkout;
+
+    Route::get('/product-checkout', function (Request $request) {
+        return Checkout::guest()
+            ->withPromotionCode('promo-code')
+            ->create('price_tshirt', [
+                'success_url' => route('your-success-route'),
+                'cancel_url' => route('your-cancel-route'),
+            ]);
+    });
 
 <a name="manage-payment-methods"></a>
 ## Managing Payment Methods
