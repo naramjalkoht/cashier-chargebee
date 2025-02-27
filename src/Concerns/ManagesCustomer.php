@@ -108,7 +108,7 @@ trait ManagesCustomer
             $response = Customer::update($this->chargebeeId(), $options);
 
             // Call updateBillingInfo only if billingAddress is not empty and contains at least one non-null, non-empty value.
-            if (! empty($options['billingAddress']) && collect($options['billingAddress'])->reject(fn($value) => is_null($value) || $value === '')->isNotEmpty()) {
+            if (! empty($options['billingAddress']) && collect($options['billingAddress'])->reject(fn ($value) => is_null($value) || $value === '')->isNotEmpty()) {
                 $response = Customer::updateBillingInfo($this->chargebeeId(), $options);
             }
 

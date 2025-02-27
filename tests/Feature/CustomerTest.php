@@ -245,7 +245,6 @@ class CustomerTest extends FeatureTestCase
         $this->assertSame($customer->billingAddress->country, 'US');
     }
 
-
     public function test_create_or_get_chargebee_customer(): void
     {
         $user = $this->createCustomer('testuser');
