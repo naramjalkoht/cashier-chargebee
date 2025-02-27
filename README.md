@@ -283,23 +283,7 @@ $customer = $user->updateChargebeeCustomer($options);
 ```
 
 > [!NOTE]
-> The `billingAddress` key is required for the `updateChargebeeCustomer` method and it must contain a non-empty array of address details (e.g., `line1`, `city`, `zip`, etc.). You can provide it directly in the `options` input array or override the `chargebeeBillingAddress()` method in your model to provide default values. For example:
-
-```php
-/**
- * Provide a default billing address.
- */
-public function chargebeeBillingAddress(): array
-{
-    return [
-        'line1' => $this->address_line_1,
-        'city' => $this->address_city,
-        'state' => $this->address_state,
-        'zip' => $this->address_zip,
-        'country' => $this->address_country,
-    ];
-}
-```
+> If you want to update the customer's billing information, you must provide a valid `billingAddress` in the options array. The `billingAddress` must be a non-empty array that contains at least one non-null, non-empty value (e.g., `line1`, `city`, `zip`, etc.). If `billingAddress` is missing or contains only `null` or empty strings, the billing update request will not be sent to Chargebee.
 
 If `chargebee_id` on your model is missing or invalid, the method will throw a `CustomerNotFound` exception.
 

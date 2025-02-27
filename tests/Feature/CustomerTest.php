@@ -75,7 +75,7 @@ class CustomerTest extends FeatureTestCase
         $this->assertSame($user->chargebeeId(), $customer->id);
     }
 
-    public function test_update_chargebee_customer_with_valid_chargebee_id(): void
+    public function test_update_chargebee_customer_with_billing_address(): void
     {
         $user = $this->createCustomer();
 
@@ -107,7 +107,7 @@ class CustomerTest extends FeatureTestCase
                 'city' => 'London',
                 'state' => 'England',
                 'zip' => 'NW1 6XE',
-                'country' => 'GB',
+                'country' => null,
             ],
         ];
 
@@ -123,7 +123,7 @@ class CustomerTest extends FeatureTestCase
         $this->assertSame($customer->billingAddress->city, 'London');
         $this->assertSame($customer->billingAddress->state, 'England');
         $this->assertSame($customer->billingAddress->zip, 'NW1 6XE');
-        $this->assertSame($customer->billingAddress->country, 'GB');
+        $this->assertNull($customer->billingAddress->country);
 
         $this->assertSame($customer->metaData['info'], 'This is a test customer.');
     }
@@ -164,6 +164,87 @@ class CustomerTest extends FeatureTestCase
 
         $this->assertSame($customer->metaData['info'], 'This is a test customer.');
     }
+
+    public function test_update_chargebee_customer_with_empty_billing_address(): void
+    {
+        $user = $this->createCustomer();
+
+        $createOptions = [
+            'firstName' => 'Test',
+            'lastName' => 'User',
+            'metaData' => json_encode([
+                'info' => 'This is a test customer.',
+            ]),
+        ];
+
+        $user->createAsChargebeeCustomer($createOptions);
+
+        $updateOptions = [
+            'firstName' => 'UpdateTest',
+            'phone' => '123456789',
+            'billingAddress' => [],
+        ];
+
+        $customer = $user->updateChargebeeCustomer($updateOptions);
+
+        $this->assertSame($customer->firstName, 'UpdateTest');
+        $this->assertSame($customer->lastName, 'User');
+        $this->assertSame($customer->phone, '123456789');
+
+        $this->assertSame($customer->billingAddress->country, 'US');
+        $this->assertSame($customer->billingAddress->firstName, 'Test');
+        $this->assertSame($customer->billingAddress->lastName, 'User');
+        $this->assertSame($customer->billingAddress->line1, 'PO Box 9999');
+        $this->assertSame($customer->billingAddress->city, 'Walnut');
+        $this->assertSame($customer->billingAddress->state, 'California');
+        $this->assertSame($customer->billingAddress->zip, '91789');
+        $this->assertSame($customer->billingAddress->country, 'US');
+    }
+
+    public function test_update_chargebee_customer_with_null_or_empty_billing_address_values(): void
+    {
+        $user = $this->createCustomer();
+
+        $createOptions = [
+            'firstName' => 'Test',
+            'lastName' => 'User',
+            'metaData' => json_encode([
+                'info' => 'This is a test customer.',
+            ]),
+        ];
+
+        $user->createAsChargebeeCustomer($createOptions);
+
+        $updateOptions = [
+            'firstName' => 'UpdateTest',
+            'phone' => '123456789',
+            'billingAddress' => [
+                'firstName' => null,
+                'lastName' => null,
+                'line1' => null,
+                'city' => '',
+                'state' => '',
+                'zip' => null,
+                'country' => null,
+            ],
+        ];
+
+        $customer = $user->updateChargebeeCustomer($updateOptions);
+
+        $this->assertSame($customer->firstName, 'UpdateTest');
+        $this->assertSame($customer->lastName, 'User');
+        $this->assertSame($customer->phone, '123456789');
+
+        $this->assertSame($customer->billingAddress->country, 'US');
+        $this->assertSame($customer->billingAddress->firstName, 'Test');
+        $this->assertSame($customer->billingAddress->lastName, 'User');
+        $this->assertSame($customer->billingAddress->line1, 'PO Box 9999');
+        $this->assertSame($customer->billingAddress->city, 'Walnut');
+        $this->assertSame($customer->billingAddress->state, 'California');
+        $this->assertSame($customer->billingAddress->zip, '91789');
+        $this->assertSame($customer->billingAddress->country, 'US');
+    }
+
 
     public function test_create_or_get_chargebee_customer(): void
     {
