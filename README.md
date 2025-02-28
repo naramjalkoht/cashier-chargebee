@@ -23,8 +23,10 @@
     - [Handling Webhook Events](#handling-webhook-events)
 - [Checkout](#checkout)
     - [Product Checkouts](#product-checkouts)
+    - [Checkout Modes](#checkout-modes)
     - [Single Charge Checkouts](#single-charge-checkouts)
     - [Subscription Checkouts](#subscription-checkouts)
+    - [Capturing a Card in Checkout](#capturing-a-card-in-checkout)
     - [Guest Checkouts](#guest-checkouts)
 - [Manage Payment Methods](#manage-payment-methods)
     - [Creating a SetupIntent](#payment-methods-create-setupintent)
@@ -283,23 +285,7 @@ $customer = $user->updateChargebeeCustomer($options);
 ```
 
 > [!NOTE]
-> The `billingAddress` key is required for the `updateChargebeeCustomer` method and it must contain a non-empty array of address details (e.g., `line1`, `city`, `zip`, etc.). You can provide it directly in the `options` input array or override the `chargebeeBillingAddress()` method in your model to provide default values. For example:
-
-```php
-/**
- * Provide a default billing address.
- */
-public function chargebeeBillingAddress(): array
-{
-    return [
-        'line1' => $this->address_line_1,
-        'city' => $this->address_city,
-        'state' => $this->address_state,
-        'zip' => $this->address_zip,
-        'country' => $this->address_country,
-    ];
-}
-```
+> If you want to update the customer's billing information, you must provide a valid `billingAddress` in the options array. The `billingAddress` must be a non-empty array that contains at least one non-null, non-empty value (e.g., `line1`, `city`, `zip`, etc.). If `billingAddress` is missing or contains only `null` or empty strings, the billing update request will not be sent to Chargebee.
 
 If `chargebee_id` on your model is missing or invalid, the method will throw a `CustomerNotFound` exception.
 
@@ -545,12 +531,22 @@ If you need to modify the default behavior for these webhook events, or handle a
 ```init
 'webhook_listener' => \Laravel\CashierChargebee\Listeners\HandleWebhookReceived::class,
 ```
-a name="checkout"></a>
+<a name="checkout"></a>
 ## Checkout
 
 Cashier Chargebee also provides support for [Chargebee Hosted Pages](https://apidocs.chargebee.com/docs/api/hosted_pages). Chargebee Hosted Pages takes the pain out of implementing custom pages to accept payments by providing a pre-built, hosted payment page.
 
 The following documentation contains information on how to get started using Chargebee Checkout with Cashier.
+
+### Checkout Modes
+
+Cashier Chargebee supports different checkout modes depending on the type of transaction you want to perform:
+
+- [`Session::MODE_PAYMENT`](https://apidocs.chargebee.com/docs/api/hosted_pages?prod_cat_ver=2&lang=php#checkout_charge-items_and_one-time_charges) (default): Used for processing charge-items and one-time charges.
+
+- [`Session::MODE_SUBSCRIPTION`](https://apidocs.chargebee.com/docs/api/hosted_pages?prod_cat_ver=2&lang=php#create_checkout_for_a_new_subscription): Used to initiate a new subscription checkout session.
+
+- [`Session::MODE_SETUP`](https://apidocs.chargebee.com/docs/api/hosted_pages?prod_cat_ver=2&lang=php#manage_payment_sources): Used to add new or update existing payment sources for the customer.
 
 <a name="product-checkouts"></a>
 ### Product Checkouts
@@ -622,6 +618,32 @@ Just as with product checkouts, you may customize the success and cancellation U
                 'cancel_url' => route('your-cancel-route'),
             ]);
     });
+
+### Capturing a Card in Checkout
+
+You can capture a customer's card details using a Chargebee Checkout session. To do this, you need to create a checkout session with `Session::MODE_SETUP`:
+
+    use Illuminate\Http\Request;
+
+    public function captureCard(Request $request) {
+        return $request->user()->checkout([], [
+            'mode' => Session::MODE_SETUP,
+        ]);
+    }
+
+When a customer visits this route, they will be redirected to a Chargebee Checkout page where they can enter their card details.
+
+You can also specify success and cancellation URLs:
+
+    use Illuminate\Http\Request;
+
+    public function captureCard(Request $request) {
+        return $request->user()->checkout([], [
+            'mode' => Session::MODE_SETUP,
+            'success_url' => route('your-success-route'),
+            'cancel_url' => route('your-cancel-route'),
+        ]);
+    }
 
 <a name="guest-checkouts"></a>
 ### Guest Checkouts
