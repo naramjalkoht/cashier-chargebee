@@ -23,8 +23,10 @@
     - [Handling Webhook Events](#handling-webhook-events)
 - [Checkout](#checkout)
     - [Product Checkouts](#product-checkouts)
+    - [Checkout Modes](#checkout-modes)
     - [Single Charge Checkouts](#single-charge-checkouts)
     - [Subscription Checkouts](#subscription-checkouts)
+    - [Capturing a Card in Checkout](#capturing-a-card-in-checkout)
     - [Guest Checkouts](#guest-checkouts)
 - [Manage Payment Methods](#manage-payment-methods)
     - [Creating a SetupIntent](#payment-methods-create-setupintent)
@@ -545,12 +547,22 @@ If you need to modify the default behavior for these webhook events, or handle a
 ```init
 'webhook_listener' => \Laravel\CashierChargebee\Listeners\HandleWebhookReceived::class,
 ```
-a name="checkout"></a>
+<a name="checkout"></a>
 ## Checkout
 
 Cashier Chargebee also provides support for [Chargebee Hosted Pages](https://apidocs.chargebee.com/docs/api/hosted_pages). Chargebee Hosted Pages takes the pain out of implementing custom pages to accept payments by providing a pre-built, hosted payment page.
 
 The following documentation contains information on how to get started using Chargebee Checkout with Cashier.
+
+### Checkout Modes
+
+Cashier Chargebee supports different checkout modes depending on the type of transaction you want to perform:
+
+- [`Session::MODE_PAYMENT`](https://apidocs.chargebee.com/docs/api/hosted_pages?prod_cat_ver=2&lang=php#checkout_charge-items_and_one-time_charges) (default): Used for processing charge-items and one-time charges.
+
+- [`Session::MODE_SUBSCRIPTION`](https://apidocs.chargebee.com/docs/api/hosted_pages?prod_cat_ver=2&lang=php#create_checkout_for_a_new_subscription): Used to initiate a new subscription checkout session.
+
+- [`Session::MODE_SETUP`](https://apidocs.chargebee.com/docs/api/hosted_pages?prod_cat_ver=2&lang=php#manage_payment_sources): Used to add new or update existing payment sources for the customer.
 
 <a name="product-checkouts"></a>
 ### Product Checkouts
@@ -622,6 +634,32 @@ Just as with product checkouts, you may customize the success and cancellation U
                 'cancel_url' => route('your-cancel-route'),
             ]);
     });
+
+### Capturing a Card in Checkout
+
+You can capture a customer's card details using a Chargebee Checkout session. To do this, you need to create a checkout session with `Session::MODE_SETUP`:
+
+    use Illuminate\Http\Request;
+
+    public function captureCard(Request $request) {
+        return $request->user()->checkout([], [
+            'mode' => Session::MODE_SETUP,
+        ]);
+    }
+
+When a customer visits this route, they will be redirected to a Chargebee Checkout page where they can enter their card details.
+
+You can also specify success and cancellation URLs:
+
+    use Illuminate\Http\Request;
+
+    public function captureCard(Request $request) {
+        return $request->user()->checkout([], [
+            'mode' => Session::MODE_SETUP,
+            'success_url' => route('your-success-route'),
+            'cancel_url' => route('your-cancel-route'),
+        ]);
+    }
 
 <a name="guest-checkouts"></a>
 ### Guest Checkouts
