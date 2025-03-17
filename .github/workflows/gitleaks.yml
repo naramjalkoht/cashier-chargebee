@@ -1,0 +1,46 @@
+name: CB Secret Scan
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  sast:
+    runs-on: ubuntu-latest
+    name: CB Secret Scan
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: aws-actions/configure-aws-credentials@v1
+        name: Configure AWS Credentials for CodeArtifact
+        with:
+          aws-access-key-id: ${{ secrets.CI_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.CI_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup AWS
+        run: |
+          export AWS_DEFAULT_REGION=us-east-1
+          export AWS_ACCOUNT_ID=$(aws sts get-caller-identity | jq -r '.Account')
+          echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
+            docker login --username AWS --password-stdin \
+            $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - name: Gitleaks Secret Scan
+        run: |
+          docker run \
+            --user=$(id -u):$(id -g) \
+            -v `pwd`:/app \
+            $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/cb-secrets-scanner:latest \
+            -target /app -output /app/gitleaks-scan-output.json
+      - name: Upload Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gitleaks Secret Scan Report
+          retention-days: 30
+          path: |
+            gitleaks-scan-output.json
