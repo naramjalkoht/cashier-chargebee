@@ -20,14 +20,7 @@ final class Cashier
      * @var string
      */
     public const VERSION = '1.0.0-beta.1';
-
-    /**
-     * The Chargebee API version.
-     *
-     * @var string
-     */
-    public const CHARGEBEE_API_VERSION = '2025-03-06';
-
+    
     /**
      * The custom currency formatter.
      *
