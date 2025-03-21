@@ -19,15 +19,8 @@ final class Cashier
      *
      * @var string
      */
-    public const VERSION = '0.1.0';
-
-    /**
-     * The Chargebee API version.
-     *
-     * @var string
-     */
-    public const CHARGEBEE_API_VERSION = '2024-12-19';
-
+    public const VERSION = '1.0.0-beta.1';
+    
     /**
      * The custom currency formatter.
      *
@@ -95,6 +88,7 @@ final class Cashier
         $apiKey = config('cashier.api_key');
 
         Environment::configure($site, $apiKey);
+        Environment::setUserAgentSuffix("Cashier " . self::VERSION);
     }
 
     /**
