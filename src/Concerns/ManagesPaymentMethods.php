@@ -2,13 +2,14 @@
 
 namespace Chargebee\Cashier\Concerns;
 
+use Chargebee\Cashier\Cashier;
 use Chargebee\Cashier\Exceptions\CustomerNotFound;
 use Chargebee\Cashier\Exceptions\InvalidPaymentMethod;
 use Chargebee\Cashier\PaymentMethod;
-use ChargeBee\ChargeBee\Exceptions\InvalidRequestException;
-use ChargeBee\ChargeBee\Models\Customer;
-use ChargeBee\ChargeBee\Models\PaymentIntent;
-use ChargeBee\ChargeBee\Models\PaymentSource;
+use Chargebee\Exceptions\InvalidRequestException;
+use Chargebee\Resources\Customer\Customer;
+use Chargebee\Resources\PaymentIntent\PaymentIntent;
+use Chargebee\Resources\PaymentSource\PaymentSource;
 use Illuminate\Support\Collection;
 
 trait ManagesPaymentMethods
@@ -29,20 +30,21 @@ trait ManagesPaymentMethods
                 ? $options['currency_code']
                 : config('cashier.currency'),
         ];
+        $chargebee = Cashier::chargebee();
+        $paymentIntent = $chargebee->paymentIntent()->create(array_merge($options, $defaultOptions));
 
-        $paymentIntent = PaymentIntent::create(array_merge($options, $defaultOptions));
-
-        return $paymentIntent?->paymentIntent();
+        return $paymentIntent?->payment_intent;
     }
 
     /**
-     * Retrieve a PaymentIntent from ChargeBee.
+     * Retrieve a PaymentIntent from chargebee.
      */
     public function findSetupIntent(string $id): ?PaymentIntent
     {
-        $paymentIntent = PaymentIntent::retrieve($id);
+        $chargebee = Cashier::chargebee();
+        $paymentIntent = $chargebee->paymentIntent()->retrieve($id);
 
-        return $paymentIntent?->paymentIntent();
+        return $paymentIntent?->payment_intent;
     }
 
     /**
@@ -63,13 +65,13 @@ trait ManagesPaymentMethods
         }
 
         $parameters = array_merge(['limit' => 24], $parameters);
-
-        $paymentSources = PaymentSource::all(
+        $chargebee = Cashier::chargebee();
+        $paymentSources = $chargebee->paymentSource()->all(
             array_filter(['customer_id[is]' => $this->chargebeeId(), 'type[is]' => $type]) + $parameters
         );
 
-        return Collection::make($paymentSources)->map(function ($paymentSource) {
-            return $paymentSource->paymentSource();
+        return Collection::make($paymentSources->list)->map(function ($paymentSource) {
+            return $paymentSource->payment_source;
         });
     }
 
@@ -101,20 +103,20 @@ trait ManagesPaymentMethods
     {
         $this->assertCustomerExists();
 
-        if ($this->chargebeeId() !== $paymentSource->customerId) {
+        if ($this->chargebeeId() !== $paymentSource->customer_id) {
             throw InvalidPaymentMethod::invalidOwner($paymentSource, $this);
         }
 
         $customer = $this->asChargebeeCustomer();
 
-        if (! empty($customer->primaryPaymentSourceId) && $paymentSource->id === $customer->primaryPaymentSourceId) {
+        if (! empty($customer->primary_payment_source_id) && $paymentSource->id === $customer->primary_payment_source_id) {
             $this->forceFill([
                 'pm_type' => null,
                 'pm_last_four' => null,
             ])->save();
         }
-
-        PaymentSource::delete($paymentSource->id);
+        $chargebee = Cashier::chargebee();
+        $chargebee->paymentSource()->delete($paymentSource->id);
     }
 
     /**
@@ -143,8 +145,8 @@ trait ManagesPaymentMethods
 
         $customer = $this->asChargebeeCustomer();
 
-        if (! empty($customer->primaryPaymentSourceId)) {
-            return new PaymentMethod($this, $this->resolveChargebeePaymentMethod($customer->primaryPaymentSourceId));
+        if (! empty($customer->primary_payment_source_id)) {
+            return new PaymentMethod($this, $this->resolveChargebeePaymentMethod($customer->primary_payment_source_id));
         }
 
         return null;
@@ -160,7 +162,6 @@ trait ManagesPaymentMethods
     public function updateDefaultPaymentMethodFromChargebee(): self
     {
         $defaultPaymentMethod = $this->defaultPaymentMethod();
-
         if ($defaultPaymentMethod && $defaultPaymentMethod instanceof PaymentMethod) {
             $this->fillPaymentMethodDetails(
                 $defaultPaymentMethod->asChargebeePaymentMethod()
@@ -187,9 +188,10 @@ trait ManagesPaymentMethods
         $this->assertCustomerExists();
 
         $paymentSource = $this->resolveChargebeePaymentMethod($paymentSource);
+        $chargebee = Cashier::chargebee();
 
         if ($paymentSource) {
-            Customer::assignPaymentRole(
+            $chargebee->customer()->assignPaymentRole(
                 $this->chargebeeId(),
                 [
                     'payment_source_id' => $paymentSource->id,
@@ -208,11 +210,11 @@ trait ManagesPaymentMethods
      */
     protected function fillPaymentMethodDetails(PaymentSource $paymentSource): self
     {
-        if ($paymentSource->type === 'card') {
+        if ($paymentSource->type->value === 'card') {
             $this->pm_type = $paymentSource->card->brand;
             $this->pm_last_four = $paymentSource->card->last4;
         } else {
-            $this->pm_type = $type = $paymentSource->type;
+            $this->pm_type = $type = $paymentSource->type->value;
             $this->pm_last_four = $paymentSource?->$type->last4 ?? null;
         }
 
@@ -245,7 +247,7 @@ trait ManagesPaymentMethods
         if ($paymentSource instanceof PaymentSource) {
             return $paymentSource;
         }
-
-        return PaymentSource::retrieve($paymentSource)?->paymentSource();
+        $chargebee = Cashier::chargebee();
+        return $chargebee->paymentSource()->retrieve($paymentSource)?->payment_source;
     }
 }

@@ -2,8 +2,8 @@
 
 namespace Chargebee\Cashier;
 
-use ChargeBee\ChargeBee\Environment;
-use ChargeBee\ChargeBee\Models\Customer;
+use Chargebee\ChargebeeClient;
+use Chargebee\Resources\Customer\Customer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Money\Currencies\ISOCurrencies;
@@ -15,11 +15,16 @@ use NumberFormatter;
 final class Cashier
 {
     /**
+     * The chargebeeclient stance
+     * @var ChargebeeClient
+     */
+    public static $chargebeeClient;
+    /**
      * The Cashier for Chargebee library version.
      *
      * @var string
      */
-    public const VERSION = '1.0.0-beta.1';
+    public const VERSION = '1.0.0-beta.2';
     
     /**
      * The custom currency formatter.
@@ -86,11 +91,21 @@ final class Cashier
     {
         $site = config('cashier.site');
         $apiKey = config('cashier.api_key');
-
-        Environment::configure($site, $apiKey);
-        Environment::setUserAgentSuffix("Cashier " . self::VERSION);
+        self::$chargebeeClient = new ChargebeeClient([
+            "site" => $site,
+            "apiKey" => $apiKey,
+            "userAgentSuffix" => "Cashier" . self::VERSION
+        ]);
     }
 
+    /**
+     * Returns chargebee Client
+     * @return ChargebeeClient
+     */
+    public static function chargebee(): ChargebeeClient
+    {
+        return self::$chargebeeClient;
+    }
     /**
      * Set the custom currency formatter.
      */
