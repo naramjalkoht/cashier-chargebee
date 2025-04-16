@@ -1,3 +1,8 @@
+### v1.0.0-beta.2 (2025-04-16)
+
+- Upgraded to `chargebee-php` version `v4.x.x` stable.
+- removed minimum stability tag from the composer.
+
 ### v1.0.0-beta.2 (2025-04-10)
 
 - Upgraded to `chargebee-php` version `v4.x.x`.
