@@ -20,7 +20,9 @@ class CashierServiceProvider extends ServiceProvider
         $this->registerRoutes();
         $this->registerResources();
         $this->registerPublishing();
-        Cashier::configureEnvironment();
+        if (config('cashier.site') && config('cashier.api_key')) {
+            Cashier::configureEnvironment();
+        }
 
         Event::listen(
             WebhookReceived::class,
