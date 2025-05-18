@@ -6,3 +6,4 @@ composer.lock
 /compose-dev.yaml
 /coverage.xml
 /report
+.idea
