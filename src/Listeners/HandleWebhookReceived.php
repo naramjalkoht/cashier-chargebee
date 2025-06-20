@@ -18,7 +18,7 @@ class HandleWebhookReceived
         $eventType = $event->payload['event_type'] ?? null;
 
         if (! $eventType) {
-            Log::warning('WebhookReceived: Missing event_type in payload.', $event->payload);
+            
 
             return;
         }
@@ -27,10 +27,7 @@ class HandleWebhookReceived
 
         if (method_exists($this, $handlerMethod)) {
             $this->{$handlerMethod}($event->payload);
-        } else {
-            Log::info("WebhookReceived: No handler found for event_type: {$eventType}", $event->payload);
-        }
-    }
+        } 
 
     /**
      * Get the handler method name for a given event type.
@@ -53,10 +50,7 @@ class HandleWebhookReceived
                 'pm_last_four' => null,
             ])->save();
 
-            Log::info('Customer deleted successfully.', [
-                'customer_id' => $payload['content']['customer']['id'],
-                'user_id' => $user->id,
-            ]);
+           
         } else {
             Log::info('Customer deletion attempted, but no matching user found.', [
                 'customer_id' => $payload['content']['customer']['id'],
@@ -73,10 +67,7 @@ class HandleWebhookReceived
             $user->updateCustomerFromChargebee();
             $user->updateDefaultPaymentMethodFromChargebee();
 
-            Log::info('Customer updated successfully.', [
-                'customer_id' => $payload['content']['customer']['id'],
-                'user_id' => $user->id,
-            ]);
+           
         } else {
             Log::info('Customer update attempted, but no matching user found.', [
                 'customer_id' => $payload['content']['customer']['id'],
@@ -93,10 +84,7 @@ class HandleWebhookReceived
             if (! $user->subscriptions->contains('chargebee_id', $payload['content']['subscription']['id'])) {
                 $subscription = $this->updateOrCreateSubscriptionFromPayload($user, $payload['content']['subscription']);
 
-                Log::info('Subscription created successfully.', [
-                    'subscription_id' => $subscription->id,
-                    'chargebee_subscription_id' => $payload['content']['subscription']['id'],
-                ]);
+               
             } else {
                 $subscription = $user->subscriptions()->where('chargebee_id', $payload['content']['subscription']['id'])->first();
 
@@ -125,10 +113,7 @@ class HandleWebhookReceived
         if ($user = Cashier::findBillable($payload['content']['subscription']['customer_id'])) {
             $subscription = $this->updateOrCreateSubscriptionFromPayload($user, $payload['content']['subscription']);
 
-            Log::info('Subscription updated successfully.', [
-                'subscription_id' => $subscription->id,
-                'chargebee_subscription_id' => $payload['content']['subscription']['id'],
-            ]);
+         
         } else {
             Log::info('Subscription update attempted, but no matching user found.', [
                 'customer_id' => $payload['content']['subscription']['customer_id'],
@@ -144,10 +129,7 @@ class HandleWebhookReceived
         if ($user = Cashier::findBillable($payload['content']['subscription']['customer_id'])) {
             $subscription = $this->updateOrCreateSubscriptionFromPayload($user, $payload['content']['subscription']);
 
-            Log::info('Subscription renewed successfully.', [
-                'subscription_id' => $subscription->id,
-                'chargebee_subscription_id' => $payload['content']['subscription']['id'],
-            ]);
+            
         } else {
             Log::info('Subscription renewal attempted, but no matching user found.', [
                 'customer_id' => $payload['content']['subscription']['customer_id'],

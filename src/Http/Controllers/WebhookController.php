@@ -19,10 +19,6 @@ class WebhookController extends Controller
 
         unset($headers['authorization'], $headers['php-auth-user'], $headers['php-auth-pw']);
 
-        Log::info('Chargebee Webhook Received', [
-            'headers' => $headers,
-            'payload' => $request->getContent(),
-        ]);
 
         $payload = json_decode($request->getContent(), true);
 
