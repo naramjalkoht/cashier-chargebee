@@ -28,6 +28,7 @@ class HandleWebhookReceived
         if (method_exists($this, $handlerMethod)) {
             $this->{$handlerMethod}($event->payload);
         } 
+    }
 
     /**
      * Get the handler method name for a given event type.
